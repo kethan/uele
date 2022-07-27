@@ -1,6 +1,6 @@
 # UEle
 
-[![Version](https://img.shields.io/npm/v/uele.svg?color=success&style=flat-square)](https://www.npmjs.com/package/ulive)
+[![Version](https://img.shields.io/npm/v/uele.svg?color=success&style=flat-square)](https://www.npmjs.com/package/uele)
 ![Badge size](https://img.badgesize.io/https://unpkg.com/uele?compression=gzip&label=gzip&style=flat-square)
 
 **npm**: `npm i uele`
@@ -9,7 +9,7 @@
 
 **cdn**: https://unpkg.com/uele  
 
-**module**: https://unpkg.com/ulive?module
+**module**: https://unpkg.com/uele?module
 
 -   **Small** less than 1KB bytes gzip.
 -   **Fast**
