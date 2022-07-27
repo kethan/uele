@@ -1,7 +1,7 @@
 {
   "name": "uele",
   "description": "uele reactive elements",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "source": "./src/index.ts",
   "type": "module",
   "exports": {
@@ -59,6 +59,11 @@
   "homepage": "https://github.com/kethan/uele#readme",
   "types": "./dist/index.d.ts",
   "dependencies": {
-    "ulive": "^0.1.2"
+    "ulive": "^0.2.0"
   }
+  ,
+  "browserslist": [
+		"defaults",
+		"dead"
+	]
 }
