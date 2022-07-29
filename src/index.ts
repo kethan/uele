@@ -55,7 +55,8 @@ export function h<F extends Factory<P>, P>(
     ...children: (string | Node)[]
 ): Node {
     if (typeof tagName === "function") {
-        return tagName({ ...(jsxProps as P), children });
+        (jsxProps || (jsxProps = {})).children = children;
+        return tagName(jsxProps as P & { children: (string | Node)[] });
     } else if (typeof tagName === "string") {
         const htmlElement = createElement(tagName, unR(jsxProps));
         appendChildren(htmlElement, ...children);
@@ -64,6 +65,16 @@ export function h<F extends Factory<P>, P>(
         throw `Invalid ${tagName}`;
     }
 }
+
+const lazy = (file: Function, fallback = null) => {
+    const content = r(fallback);
+    return (props: Props & { children: (string | Node)[] }) => {
+        file().then((f: any) => {
+            content.value = f.default(props);
+        });
+        return content;
+    };
+};
 
 function createElement(tagName: string, props?: Props) {
     if (tagName === Fragment) {
@@ -92,12 +103,12 @@ function createElement(tagName: string, props?: Props) {
                     else if (prop === 'className') {
                         element.setAttribute('class', propsValue)
                     }
-                    else if (prop === 'htmlFor') {
-                        element.setAttribute('for', propsValue)
-                    }
-                    else if (prop === 'xlinkHref') {
-                        element.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', propsValue)
-                    }
+                    // else if (prop === 'htmlFor') {
+                    //     element.setAttribute('for', propsValue)
+                    // }
+                    // else if (prop === 'xlinkHref') {
+                    //     element.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', propsValue)
+                    // }
                     else if (prop.startsWith("on") && prop.toLowerCase() in window) {
                         element.addEventListener(prop.toLowerCase().substring(2), propsValue);
                     } else {
@@ -109,4 +120,4 @@ function createElement(tagName: string, props?: Props) {
         return element;
     }
 }
-export { Fragment, effect, isR, unR, toR, r };
+export { Fragment, effect, lazy, isR, unR, toR, r };

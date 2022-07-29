@@ -25,7 +25,7 @@
 
 ### Example
 ```jsx
-import { h, r, effect, Fragment } from "uele";
+import { h, r, effect, Fragment, lazy } from "uele";
 
 const counter = r(0);
 const inc = () => counter.value++;

@@ -11,4 +11,7 @@ export declare function h<K extends keyof HTMLElementTagNameMap>(tagName: K, jsx
 export declare function h(tagName: string, jsxProps?: Props, ...children: (string | Node)[]): HTMLElement;
 export declare function h(tagName: typeof Fragment, jsxProps?: Props, ...children: (string | Node)[]): DocumentFragment;
 export declare function h<F extends Factory<P>, P>(tagName: F, jsxProps?: P, ...children: (string | Node)[]): ReturnType<F>;
-export { Fragment, effect, isR, unR, toR, r };
+declare const lazy: (file: Function, fallback?: any) => (props: Props & {
+    children: (string | Node)[];
+}) => Observable<any>;
+export { Fragment, effect, lazy, isR, unR, toR, r };
