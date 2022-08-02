@@ -1,12 +1,13 @@
 {
 	"name": "uele",
 	"description": "uele reactive elements",
-	"version": "0.0.5",
+	"version": "0.0.6",
 	"source": "./src/index.ts",
 	"type": "module",
 	"exports": {
 		".": {
 			"types": "./src/index.d.ts",
+			"browser" : "./dist/index.min.js",
 			"require": "./dist/index.cjs",
 			"import": "./dist/index.modern.js",
 			"default": "./dist/index.modern.js"
@@ -14,10 +15,12 @@
 	},
 	"main": "./dist/index.cjs",
 	"module": "./dist/index.module.js",
-	"unpkg": "./dist/index.cjs",
+	"unpkg": "./dist/index.min.js",
 	"scripts": {
-		"build": "microbundle build --sourcemap false -f modern,esm,cjs,umd --jsx h --jsxFragment",
-		"dev": "microbundle watch"
+		"build": "npm run build:min && npm run build:formats",
+		"dev": "microbundle watch",
+		"build:formats": "microbundle build src/index.js --sourcemap false -f modern,esm,cjs --jsx h --jsxFragment",
+		"build:min": "microbundle build --no-pkg-main --raw --sourcemap false --external none -f modern src/index.cjs -o dist/index.min.js"
 	},
 	"files": [
 		"dist"
