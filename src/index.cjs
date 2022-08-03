@@ -1,3 +1,3 @@
-import * as uele from './index.js';
+import * as uele from './index.ts';
 if (typeof module < 'u') module.exports = uele;
 else self.uele = uele;

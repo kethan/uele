@@ -1,7 +1,7 @@
 {
 	"name": "uele",
 	"description": "uele reactive elements",
-	"version": "0.0.6",
+	"version": "0.0.7",
 	"source": "./src/index.ts",
 	"type": "module",
 	"exports": {
@@ -19,7 +19,7 @@
 	"scripts": {
 		"build": "npm run build:min && npm run build:formats",
 		"dev": "microbundle watch",
-		"build:formats": "microbundle build src/index.js --sourcemap false -f modern,esm,cjs --jsx h --jsxFragment",
+		"build:formats": "microbundle build src/index.ts --sourcemap false -f modern,esm,cjs --jsx h --jsxFragment",
 		"build:min": "microbundle build --no-pkg-main --raw --sourcemap false --external none -f modern src/index.cjs -o dist/index.min.js"
 	},
 	"files": [
