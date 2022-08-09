@@ -1,12 +1,17 @@
 import { effect, Observable, r } from "ulive";
 export type Props = { [K in string]: any };
 export type Factory<P> = (props?: P, ...children: (string | Node)[]) => Node;
-const isR = (x: any) => x?._r;
-const unR = (x: any): any => (isR(x) ? x.value : x);
-const toR = <T = any>(x: any): Observable<T> => (isR(x) ? x : r(x));
-const Fragment = ({ children }) => children;
-const isSVG = (el: string) => {
-    const svgRe = /^(t(ext$|s)|s[vwy]|g)|^set|tad|ker|p(at|s)|s(to|c$|ca|k)|r(ec|cl)|ew|us|f($|e|s)|cu|n[ei]|l[ty]|[GOP]/; //URL: https://regex101.com/r/Ck4kFp/1
+
+let isR = (x: any) => x?._r;
+
+let unR = (x: any): any => (isR(x) ? x.value : x);
+
+let toR = <T = any>(x: any): Observable<T> => (isR(x) ? x : r(x));
+
+let Fragment = ({ children }) => children;
+
+let isSVG = (el: string) => {
+    let svgRe = /^(t(ext$|s)|s[vwy]|g)|^set|tad|ker|p(at|s)|s(to|c$|ca|k)|r(ec|cl)|ew|us|f($|e|s)|cu|n[ei]|l[ty]|[GOP]/; //URL: https://regex101.com/r/Ck4kFp/1
     return svgRe.test(el);
 };
 
@@ -18,14 +23,14 @@ let toNode = (x) => {
     else return document.createTextNode(x);
 };
 
-const appendChildren = <T extends Node>(element: T, ...children: (string | Node)[]) =>
+let appendChildren = <T extends Node>(element: T, ...children: (string | Node)[]) =>
     children.flat(Infinity).flatMap((child) => {
         if (!isR(child)) return [toNode(child)];
         let prev: Node[] = [];
         effect(() => {
-            let arr = [null, unR(toR(child))].flat(Infinity);
-            const newNodes = arr.map(c => {
-                const node = toNode(c);
+            let arr = [unR(toR(child))].flat(Infinity);
+            let newNodes = arr.map(c => {
+                let node = toNode(c);
                 element.insertBefore(node, prev[0] || null)
                 return node
             })
@@ -66,16 +71,14 @@ export function h<F extends Factory<P>, P>(
         (props || (props = {})).children = children;
         return tagName(props as P | P & { children: (string | Node)[] });
     } else if (typeof tagName === "string") {
-        const element = createElement(tagName, unR(props));
+        let element = createElement(tagName, unR(props));
         element.append(...appendChildren(element, ...children));
         return element;
-    } else {
-        throw `Invalid ${tagName}`;
     }
 }
 
-const lazy = (file: Function, fallback = null) => {
-    const content = r(fallback);
+let lazy = (file: Function, fallback = null) => {
+    let content = r(fallback);
     return (props: Props & { children: (string | Node)[] }) => {
         file().then((f: any) => {
             content.value = f.default(props);
@@ -84,8 +87,8 @@ const lazy = (file: Function, fallback = null) => {
     };
 };
 
-function createElement(tagName: string, props?: Props) {
-    const element = isSVG(tagName)
+let createElement = (tagName: string, props?: Props) => {
+    let element = isSVG(tagName)
         ? document.createElementNS("http://www.w3.org/2000/svg", tagName)
         : document.createElement(tagName);
     effect(() => {
@@ -96,8 +99,8 @@ function createElement(tagName: string, props?: Props) {
                     if (typeof propsValue === "string") {
                         element.style.cssText = propsValue;
                     } else if (typeof propsValue === "object") {
-                        for (const k of Object.keys(propsValue)) {
-                            const property = unR(propsValue[k]);
+                        for (let k of Object.keys(propsValue)) {
+                            let property = unR(propsValue[k]);
                             element.style.setProperty(k, property);
                         }
                     }
