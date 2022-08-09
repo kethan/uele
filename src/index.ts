@@ -28,7 +28,7 @@ let appendChildren = <T extends Node>(element: T, ...children: (string | Node)[]
         if (!isR(child)) return [toNode(child)];
         let prev: Node[] = [];
         effect(() => {
-            let arr = [unR(toR(child))].flat(Infinity);
+            let arr = [unR(toR(child))];
             let newNodes = arr.map(c => {
                 let node = toNode(c);
                 element.insertBefore(node, prev[0] || null)

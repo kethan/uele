@@ -1,7 +1,7 @@
 {
 	"name": "uele",
-	"description": "uele reactive elements",
-	"version": "0.0.8",
+	"description": "uele reactive frontend library",
+	"version": "0.0.9",
 	"source": "./src/index.ts",
 	"type": "module",
 	"exports": {
@@ -18,7 +18,7 @@
 	"unpkg": "./dist/index.min.js",
 	"scripts": {
 		"build": "npm run build:min && npm run build:formats",
-		"dev": "microbundle watch",
+		"dev": "vite",
 		"build:formats": "microbundle build src/index.ts --sourcemap false -f modern,esm,cjs --jsx h --jsxFragment",
 		"build:min": "microbundle build --no-pkg-main --raw --sourcemap false --external none -f modern src/index.cjs -o dist/index.min.js"
 	},
@@ -27,7 +27,8 @@
 	],
 	"devDependencies": {
 		"microbundle": "^0.15.0",
-		"typescript": "^4.6.4"
+		"typescript": "^4.6.4",
+		"vite": "^3.0.4"
 	},
 	"repository": {
 		"type": "git",
