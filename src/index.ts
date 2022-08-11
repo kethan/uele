@@ -1,12 +1,12 @@
-import { effect, Observable, r } from "ulive";
+import { effect, Observable, o } from "ulive";
 export type Props = { [K in string]: any };
 export type Factory<P> = (props?: P, ...children: (string | Node)[]) => Node;
 
-let isR = (x: any) => x?._r;
+let isR = (x: any) => x?._o;
 
-let unR = (x: any): any => (isR(x) ? x.value : x);
+let unR = (x: any): any => (isR(x) ? x() : x);
 
-let toR = <T = any>(x: any): Observable<T> => (isR(x) ? x : r(x));
+let toR = <T = any>(x: any): Observable<T> => (isR(x) ? x : o(x));
 
 let Fragment = ({ children }) => children;
 
@@ -78,10 +78,10 @@ export function h<F extends Factory<P>, P>(
 }
 
 let lazy = (file: Function, fallback = null) => {
-    let content = r(fallback);
+    let content = o(fallback);
     return (props: Props & { children: (string | Node)[] }) => {
         file().then((f: any) => {
-            content.value = f.default(props);
+            content(f.default(props));
         });
         return content;
     };
@@ -118,6 +118,8 @@ let createElement = (tagName: string, props?: Props) => {
                 //     element.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', propsValue)
                 // }
                 else if (prop.startsWith("on") && prop.toLowerCase() in window) {
+                    console.log("event click");
+                    
                     element.addEventListener(prop.toLowerCase().substring(2), propsValue);
                 } else {
                     element.setAttribute(prop, propsValue)
@@ -128,4 +130,4 @@ let createElement = (tagName: string, props?: Props) => {
     return element;
 }
 
-export { Fragment, effect, lazy, isR, unR, toR, r };
+export { Fragment, effect, lazy, isR, unR, toR, o };

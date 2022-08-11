@@ -1,18 +1,19 @@
-import { h, Fragment, effect, r } from './src';
+import { h, Fragment, effect, o } from './src';
 const React = {
     createElement: h,
     Fragment
 };
-const count = r(0);
-const inc = () => count.value++;
-const dec = () => count.value--;
+const count = o(0);
+const inc = () => count(count() + 1);
+const dec = () => count(count() - 1);
 
 const Counter = () => {
-    effect(() => console.log("count", count.value));
-    const mul = effect(() => count.value * 2);
+    effect(() => console.log("count", count()));
+    const square = effect(() => count() * count());
+    const cube = effect(() => square() * count());
     return (
         <div>
-            <div>Count: {count} {mul}</div>
+            <div>Count: {count} {square} {cube}</div>
             <button onclick={inc}>+</button>
             <button onclick={dec}>-</button>
         </div>

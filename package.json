@@ -1,7 +1,7 @@
 {
 	"name": "uele",
 	"description": "uele reactive frontend library",
-	"version": "0.0.9",
+	"version": "0.1.0",
 	"source": "./src/index.ts",
 	"type": "module",
 	"exports": {
@@ -62,6 +62,6 @@
 	"homepage": "https://github.com/kethan/uele#readme",
 	"types": "./dist/index.d.ts",
 	"dependencies": {
-		"ulive": "^0.2.0"
+		"ulive": "^0.3.1"
 	}
 }
