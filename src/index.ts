@@ -33,7 +33,7 @@ let appendChildren = <T extends Node>(element: T, ...children: (string | Node)[]
         if (isR(child)) {
             let prev: Node[] = [];
             effect(() => {
-                let arr = [unR(toR(child))];
+                let arr = [unR(toR(child))].flat(Infinity);
                 let newNodes = arr.map(c => {
                     let node = toNode(c);
                     element.insertBefore(node, prev[0] || null)
@@ -149,9 +149,8 @@ let createElement = (tagName: string, props?: Props) => {
             if (name === 'ref' && typeof props.ref === 'function')
                 props.ref(element, props)
             // Event listener functions
-            if (name.startsWith("on") && typeof props[name] === "function") {
-                element.addEventListener(name.slice(2), props[name])
-                delete props[name]
+            if (name.startsWith("on") && name.toLowerCase() in window) {
+                element.addEventListener(name.toLowerCase().substring(2), props[name]);
             }
         }
 

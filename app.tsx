@@ -7,6 +7,41 @@ const count = o(0);
 const inc = () => count(count() + 1);
 const dec = () => count(count() - 1);
 let color = o("red");
+const Counter = () => {
+    const square = (() => count() * count());
+    const cube = (() => square() * count());
+    effect(() => console.log(count(), square(), cube()));
+
+    return (
+        <div>
+            <div style={{ color: color }}>A</div>
+            {() => count() % 2 === 0 ? color("red") : color("green")}
+            <div>Count: {count} {square} {cube}</div>
+            <button onclick={inc}>+</button>
+            <button onclick={dec}>-</button>
+            <button
+                ref={(e) => {
+                    console.log(e);
+                    e.onclick = () => {
+                        console.log("hi");
+                    };
+                }}
+            >
+                Try
+            </button>
+            <div>
+                {() => count() % 2 === 0 ? <Ice /> : <>
+            Wonder
+            <>
+              <div>ok</div>
+            </>
+          </>}
+            </div>
+        </div>
+    );
+};
+
+
 
 const Ice = () => <svg version="1.1" id="Food_Icons" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
     width="56.205px" height="85.403px" viewBox="0 0 56.205 85.403" enable-background="new 0 0 56.205 85.403" xml:space="preserve">
@@ -70,34 +105,6 @@ const Ice = () => <svg version="1.1" id="Food_Icons" xmlns="http://www.w3.org/20
         </g>
     </g>
 </svg>
-const Counter = () => {
-    const square = (() => count() * count());
-    const cube = (() => square() * count());
-    effect(() => console.log(count(), square(), cube()));
-
-    return (
-        <div>
-            <div style={{ color: color }}>A</div>
-            {() => count() % 2 === 0 ? color("red") : color("green")}
-            <div>Count: {count} {square} {cube}</div>
-            <button onclick={inc}>+</button>
-            <button onclick={dec}>-</button>
-            <button
-                ref={(e) => {
-                    console.log(e);
-                    e.onclick = () => {
-                        console.log("hi");
-                    };
-                }}
-            >
-                Try
-            </button>
-            <div>
-                {() => count() % 2 === 0 ? <Ice /> : <></>}
-            </div>
-        </div>
-    );
-};
 
 const App = () => (
     <main>
