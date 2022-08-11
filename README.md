@@ -28,23 +28,23 @@ A Reactive frontend library.
 -   **Lazy Components**
 -   **Reactive Methods** (isR, unR, toR)
 -   **Reactive Subscribe and UnSubscribe**
-
 ### Example
 
 ```jsx
-import { h, r, effect, Fragment, lazy } from "uele";
+import { h, o, effect, Fragment, lazy } from "uele";
 
-const count = r(0);
-const inc = () => count.value++;
-const dec = () => count.value--;
+const count = o(0);
+const inc = () => count(count() + 1);
+const dec = () => count(count() - 1);
 
 const Counter = () => {
-	effect(() => console.log("count", count.value));
-	const mul = effect(() => count.value * 2);
+	let square = () => count() * count();
+	let cube = () => square() * count();
+	effect(() => console.log(count(), square(), cube()));
 	return (
 		<div>
 			<div>
-				Count: {counter} {mul}
+				Count: {count} {square} {cube}
 			</div>
 			<button onclick={inc}>+</button>
 			<button onclick={dec}>-</button>

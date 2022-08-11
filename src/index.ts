@@ -17,29 +17,37 @@ let isSVG = (el: string) => {
 
 let toNode = (x) => {
     if (x instanceof Node) return x;
-    else if (typeof x === "function") return x();
     else if (typeof x === "boolean" || x === undefined || x === null)
         return document.createComment(x);
     else return document.createTextNode(x);
 };
 
+let react = (x, f) => {
+    x?._o ? effect(() => f(x())) : f(x);
+};
+
 let appendChildren = <T extends Node>(element: T, ...children: (string | Node)[]) =>
     children.flat(Infinity).flatMap((child) => {
-        if (!isR(child)) return [toNode(child)];
-        let prev: Node[] = [];
-        effect(() => {
-            let arr = [unR(toR(child))];
-            let newNodes = arr.map(c => {
-                let node = toNode(c);
-                element.insertBefore(node, prev[0] || null)
-                return node
-            })
-            for (let i = 0; i < prev.length; i++) {
-                element.removeChild(prev[i]);
-            }
-            prev = newNodes
-        });
-        return prev;
+        // @ts-ignore
+        if (typeof child === "function") child = effect(child);
+        if (isR(child)) {
+            let prev: Node[] = [];
+            effect(() => {
+                let arr = [unR(toR(child))];
+                let newNodes = arr.map(c => {
+                    let node = toNode(c);
+                    element.insertBefore(node, prev[0] || null)
+                    return node
+                })
+                for (let i = 0; i < prev.length; i++) {
+                    element.removeChild(prev[i]);
+                }
+                prev = newNodes
+            });
+            return prev;
+        }
+        else return [toNode(child)];
+
     });
 
 export function h<K extends keyof HTMLElementTagNameMap>(
@@ -87,46 +95,70 @@ let lazy = (file: Function, fallback = null) => {
     };
 };
 
+let applyStyles = (element, styles) => {
+    for (const property in styles)
+        react(styles[property], value => {
+            if (value !== undefined)
+                element.style.setProperty(property, value)
+            else
+                element.style.removeProperty(property)
+        })
+}
+
+// Class list from an object mapping from
+// class names to potentially reactive booleans
+let applyClasses = (element, classes) => {
+    for (const name in classes)
+        react(classes[name], value => {
+            element.classList.toggle(name, value)
+        })
+}
+
+
+// Attributes from an object with
+// potentially reactive and/or undefined values
+let applyAttributes = (element, attributes) => {
+    for (const name in attributes)
+        react(attributes[name], value => {
+            if (value !== undefined)
+                element.setAttribute(name, value)
+            else
+                element.removeAttribute(name)
+        })
+}
+
 let createElement = (tagName: string, props?: Props) => {
     let element = isSVG(tagName)
         ? document.createElementNS("http://www.w3.org/2000/svg", tagName)
         : document.createElement(tagName);
-    effect(() => {
-        if (props != null) {
-            Object.keys(props || {}).forEach(prop => {
-                let propsValue = unR(props[prop]);
-                if (prop === 'style') {
-                    if (typeof propsValue === "string") {
-                        element.style.cssText = propsValue;
-                    } else if (typeof propsValue === "object") {
-                        for (let k of Object.keys(propsValue)) {
-                            let property = unR(propsValue[k]);
-                            element.style.setProperty(k, property);
-                        }
-                    }
-                }
-                else if (prop === 'ref' && typeof props.ref === 'function') {
-                    props.ref(element, props)
-                }
-                else if (prop === 'className') {
-                    element.setAttribute('class', propsValue)
-                }
-                // else if (prop === 'htmlFor') {
-                //     element.setAttribute('for', propsValue)
-                // }
-                // else if (prop === 'xlinkHref') {
-                //     element.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', propsValue)
-                // }
-                else if (prop.startsWith("on") && prop.toLowerCase() in window) {
-                    console.log("event click");
-                    
-                    element.addEventListener(prop.toLowerCase().substring(2), propsValue);
-                } else {
-                    element.setAttribute(prop, propsValue)
-                }
-            })
+
+    if (props != null) {
+        // Apply overloaded props, if possible
+        // Inline style object
+        if (typeof props.style === "object" && !isR(props.style)) {
+            applyStyles(element, props.style)
+            delete props.style
         }
-    });
+        // Classes object
+        if (typeof props.class === "object" && !isR(props.class)) {
+            applyClasses(element, props.class)
+            delete props.class
+        }
+
+        for (const name in props) {
+            if (name === 'ref' && typeof props.ref === 'function')
+                props.ref(element, props)
+            // Event listener functions
+            if (name.startsWith("on") && typeof props[name] === "function") {
+                element.addEventListener(name.slice(2), props[name])
+                delete props[name]
+            }
+        }
+
+        // The rest of the props are attributes
+        applyAttributes(element, props)
+
+    }
     return element;
 }
 
