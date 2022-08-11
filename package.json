@@ -1,25 +1,26 @@
 {
 	"name": "uele",
 	"description": "uele reactive frontend library",
-	"version": "0.2.1",
+	"version": "0.2.2",
 	"source": "./src/index.ts",
 	"type": "module",
+	"types": "./dist/index.d.ts",
 	"exports": {
 		".": {
-			"types": "./src/index.d.ts",
+			"types": "./dist/index.d.ts",
 			"browser": "./dist/index.min.js",
-			"require": "./dist/index.cjs",
+			"require": "./dist/index.min.js",
 			"import": "./dist/index.modern.js",
 			"default": "./dist/index.modern.js"
 		}
 	},
-	"main": "./dist/index.cjs",
+	"main": "./dist/index.min.js",
 	"module": "./dist/index.module.js",
 	"unpkg": "./dist/index.min.js",
 	"scripts": {
 		"build": "npm run build:min && npm run build:formats",
 		"dev": "vite",
-		"build:formats": "microbundle build src/index.ts --sourcemap false -f modern,esm,cjs --jsx h --jsxFragment",
+		"build:formats": "microbundle build src/index.ts --sourcemap false -f modern,esm --jsx h --jsxFragment",
 		"build:min": "microbundle build --no-pkg-main --raw --sourcemap false --external none -f modern src/index.cjs -o dist/index.min.js"
 	},
 	"files": [
@@ -60,7 +61,6 @@
 		"url": "https://github.com/kethan/uele/issues"
 	},
 	"homepage": "https://github.com/kethan/uele#readme",
-	"types": "./dist/index.d.ts",
 	"dependencies": {
 		"ulive": "^0.3.1"
 	}

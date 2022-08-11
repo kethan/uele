@@ -3,9 +3,9 @@ export declare type Props = {
     [K in string]: any;
 };
 export declare type Factory<P> = (props?: P, ...children: (string | Node)[]) => Node;
-declare let isR: (x: any) => any;
-declare let unR: (x: any) => any;
-declare let toR: <T = any>(x: any) => Observable<T>;
+declare let isO: (x: any) => any;
+declare let unO: (x: any) => any;
+declare let toO: <T = any>(x: any) => Observable<T>;
 declare let Fragment: ({ children }: {
     children: any;
 }) => any;
@@ -16,4 +16,4 @@ export declare function h<F extends Factory<P>, P>(tagName: F, props?: P, ...chi
 declare let lazy: (file: Function, fallback?: any) => (props: Props & {
     children: (string | Node)[];
 }) => Observable<any>;
-export { Fragment, effect, lazy, isR, unR, toR, o };
+export { Fragment, effect, lazy, isO as isR, unO as unR, toO as toR, o };

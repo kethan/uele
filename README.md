@@ -26,7 +26,7 @@ A Reactive frontend library.
 -   **Automatic Derivation**
 -   **Simple API**
 -   **Lazy Components**
--   **Reactive Methods** (isR, unR, toR)
+-   **Reactive Methods** (isO, unO, toO)
 -   **Reactive Subscribe and UnSubscribe**
 ### Example
 

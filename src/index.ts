@@ -2,11 +2,11 @@ import { effect, Observable, o } from "ulive";
 export type Props = { [K in string]: any };
 export type Factory<P> = (props?: P, ...children: (string | Node)[]) => Node;
 
-let isR = (x: any) => x?._o;
+let isO = (x: any) => x?._o;
 
-let unR = (x: any): any => (isR(x) ? x() : x);
+let unO = (x: any): any => (isO(x) ? x() : x);
 
-let toR = <T = any>(x: any): Observable<T> => (isR(x) ? x : o(x));
+let toO = <T = any>(x: any): Observable<T> => (isO(x) ? x : o(x));
 
 let Fragment = ({ children }) => children;
 
@@ -30,10 +30,10 @@ let appendChildren = <T extends Node>(element: T, ...children: (string | Node)[]
     children.flat(Infinity).flatMap((child) => {
         // @ts-ignore
         if (typeof child === "function") child = effect(child);
-        if (isR(child)) {
+        if (isO(child)) {
             let prev: Node[] = [];
             effect(() => {
-                let arr = [unR(toR(child))].flat(Infinity);
+                let arr = [unO(toO(child))].flat(Infinity);
                 let newNodes = arr.map(c => {
                     let node = toNode(c);
                     element.insertBefore(node, prev[0] || null)
@@ -79,7 +79,7 @@ export function h<F extends Factory<P>, P>(
         (props || (props = {})).children = children;
         return tagName(props as P | P & { children: (string | Node)[] });
     } else if (typeof tagName === "string") {
-        let element = createElement(tagName, unR(props));
+        let element = createElement(tagName, unO(props));
         element.append(...appendChildren(element, ...children));
         return element;
     }
@@ -135,12 +135,12 @@ let createElement = (tagName: string, props?: Props) => {
     if (props != null) {
         // Apply overloaded props, if possible
         // Inline style object
-        if (typeof props.style === "object" && !isR(props.style)) {
+        if (typeof props.style === "object" && !isO(props.style)) {
             applyStyles(element, props.style)
             delete props.style
         }
         // Classes object
-        if (typeof props.class === "object" && !isR(props.class)) {
+        if (typeof props.class === "object" && !isO(props.class)) {
             applyClasses(element, props.class)
             delete props.class
         }
@@ -161,4 +161,4 @@ let createElement = (tagName: string, props?: Props) => {
     return element;
 }
 
-export { Fragment, effect, lazy, isR, unR, toR, o };
+export { Fragment, effect, lazy, isO as isR, unO as unR, toO as toR, o };
