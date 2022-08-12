@@ -1,24 +1,26 @@
 {
 	"name": "uele",
 	"description": "uele reactive frontend library",
-	"version": "0.2.3",
-	"source": "./src/index.ts",
+	"version": "0.2.4",
 	"type": "module",
-	"types": "./dist/index.d.ts",
+	"types": "dist/index.d.ts",
+	"main": "dist/index.cjs",
+	"module": "dist/index.module.js",
+	"umd:main" : "dist/index.umd.js",
+	"unpkg": "dist/index.min.js",
+	"source": "src/index.ts",
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
-			"browser": "./dist/index.min.js",
-			"require": "./dist/index.cjs",
+			"browser": "./dist/index.module.js",
+			"umd" : "./dist/index.umd.js",
 			"import": "./dist/index.modern.js",
+			"require": "./dist/index.cjs",
 			"default": "./dist/index.modern.js"
 		}
 	},
-	"main": "./dist/index.cjs",
-	"module": "./dist/index.module.js",
-	"unpkg": "./dist/index.min.js",
 	"scripts": {
-		"build": "npm run build:formats",
+		"build": "npm run build:min && npm run build:formats",
 		"dev": "vite",
 		"build:formats": "microbundle build src/index.ts --sourcemap false",
 		"build:min": "microbundle build --no-pkg-main --raw --sourcemap false --external none -f modern src/index.cjs -o dist/index.min.js"
