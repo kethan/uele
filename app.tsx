@@ -31,11 +31,11 @@ const Counter = () => {
             </button>
             <div>
                 {() => count() % 2 === 0 ? <Ice /> : <>
-            Wonder
-            <>
-              <div>ok</div>
-            </>
-          </>}
+                    Wonder
+                    <>
+                        <div>ok</div>
+                    </>
+                </>}
             </div>
         </div>
     );

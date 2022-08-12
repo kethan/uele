@@ -146,11 +146,14 @@ let createElement = (tagName: string, props?: Props) => {
         }
 
         for (const name in props) {
-            if (name === 'ref' && typeof props.ref === 'function')
-                props.ref(element, props)
+            if (name === 'ref' && typeof props.ref === 'function') {
+                props.ref(element, props);
+                delete props[name];
+            }
             // Event listener functions
             if (name.startsWith("on") && name.toLowerCase() in window) {
                 element.addEventListener(name.toLowerCase().substring(2), props[name]);
+                delete props[name];
             }
         }
 
