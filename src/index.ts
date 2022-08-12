@@ -3,9 +3,7 @@ export type Props = { [K in string]: any };
 export type Factory<P> = (props?: P, ...children: (string | Node)[]) => Node;
 
 let isO = (x: any) => x?._o;
-
 let unO = (x: any): any => (isO(x) ? x() : x);
-
 let toO = <T = any>(x: any): Observable<T> => (isO(x) ? x : o(x));
 
 let Fragment = ({ children }) => children;
@@ -22,7 +20,7 @@ let toNode = (x) => {
     else return document.createTextNode(x);
 };
 
-let react = (x, f) => {
+let r = (x, f) => {
     x?._o ? effect(() => f(x())) : f(x);
 };
 
@@ -47,7 +45,6 @@ let appendChildren = <T extends Node>(element: T, ...children: (string | Node)[]
             return prev;
         }
         else return [toNode(child)];
-
     });
 
 export function h<K extends keyof HTMLElementTagNameMap>(
@@ -97,7 +94,7 @@ let lazy = (file: Function, fallback = null) => {
 
 let applyStyles = (element, styles) => {
     for (const property in styles)
-        react(styles[property], value => {
+        r(styles[property], value => {
             if (value !== undefined)
                 element.style.setProperty(property, value)
             else
@@ -109,7 +106,7 @@ let applyStyles = (element, styles) => {
 // class names to potentially reactive booleans
 let applyClasses = (element, classes) => {
     for (const name in classes)
-        react(classes[name], value => {
+        r(classes[name], value => {
             element.classList.toggle(name, value)
         })
 }
@@ -119,7 +116,7 @@ let applyClasses = (element, classes) => {
 // potentially reactive and/or undefined values
 let applyAttributes = (element, attributes) => {
     for (const name in attributes)
-        react(attributes[name], value => {
+        r(attributes[name], value => {
             if (value !== undefined)
                 element.setAttribute(name, value)
             else

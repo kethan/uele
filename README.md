@@ -27,6 +27,7 @@ A Reactive frontend library.
 -   **Lazy Components**
 -   **Reactive Methods** (isO, unO, toO)
 -   **Reactive Subscribe and UnSubscribe**
+
 ### Example
 
 ```jsx
@@ -62,8 +63,8 @@ document.body.append(<App />);
 
 ## Thanks and Inspiration
 
--   **[yuxinqi-chan](https://github.com/yuxinqi-chan/reactive-jsx-dom)**
 -   **[bruh](https://github.com/Technical-Source/bruh)**
+-   **[yuxinqi-chan](https://github.com/yuxinqi-chan/reactive-jsx-dom)**
 -   **[trkl](https://github.com/jbreckmckye/trkl)**
 -   **[Emnudge](https://github.com/EmNudge)**
 

@@ -1,6 +1,6 @@
 {
 	"name": "uele",
-	"description": "UEle reactive frontend library",
+	"description": "uele reactive frontend library",
 	"version": "0.2.6",
 	"type": "module",
 	"types": "dist/index.d.ts",
