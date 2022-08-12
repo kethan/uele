@@ -161,4 +161,4 @@ let createElement = (tagName: string, props?: Props) => {
     return element;
 }
 
-export { Fragment, effect, lazy, isO as isR, unO as unR, toO as toR, o };
+export { Fragment, effect, lazy, isO, unO, toO, o };

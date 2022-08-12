@@ -1,7 +1,7 @@
 {
 	"name": "uele",
-	"description": "uele reactive frontend library",
-	"version": "0.2.4",
+	"description": "UEle reactive frontend library",
+	"version": "0.2.5",
 	"type": "module",
 	"types": "dist/index.d.ts",
 	"main": "dist/index.cjs",

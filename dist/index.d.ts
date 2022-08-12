@@ -16,4 +16,4 @@ export declare function h<F extends Factory<P>, P>(tagName: F, props?: P, ...chi
 declare let lazy: (file: Function, fallback?: any) => (props: Props & {
     children: (string | Node)[];
 }) => Observable<any>;
-export { Fragment, effect, lazy, isO as isR, unO as unR, toO as toR, o };
+export { Fragment, effect, lazy, isO, unO, toO, o };
