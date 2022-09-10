@@ -4,7 +4,7 @@
 	"version": "0.3.0",
 	"type": "module",
 	"types": "dist/index.d.ts",
-	"main": "dist/uele.js",
+	"main": "dist/uele.min.js",
 	"module": "dist/uele.js",
 	"umd:main": "dist/uele.min.js",
 	"unpkg": "dist/uele.min.js",
