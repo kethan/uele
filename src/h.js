@@ -1,14 +1,22 @@
 let isObs = (arg) =>
-    arg && !!(arg[Symbol.asyncIterator] || arg.on || arg.then || arg.subscribe),
-    sube = (target, next, stop) =>
-        target &&
-        (target.on?.(next) ||
-            target.subscribe?.(next) ||
-            target.then?.((v) => !stop && next(v)) ||
-            ((async (v) => {
-                for await (v of target) { if (stop) return; next(v) }
-            })() &&
-                (() => (stop = 1)))),
+    arg && !!(arg[Symbol.asyncIterator] || arg.then || arg.subscribe),
+    sube = (target, next, stop) => {
+        if (target) {
+            if (target.subscribe?.(next));
+            else if (
+                target.then?.((v) => !stop && next(v)) ||
+                ((async (v) => {
+                    try {
+                        for await (v of target) {
+                            if (stop) return;
+                            next(v);
+                        }
+                    } catch (e) { }
+                })() &&
+                    (() => (stop = 1)))
+            );
+        }
+    },
     Live = () => {
         return {
             startMarker: d.createTextNode(''),
@@ -150,7 +158,6 @@ let isObs = (arg) =>
                     delete props[name];
                 }
             }
-
             // The rest of the props are attributes
             applyAttributes(el, props);
         }
