@@ -1,35 +1,48 @@
 {
 	"name": "uele",
 	"description": "uele reactive frontend library",
-	"version": "0.2.7",
+	"version": "0.3.0",
 	"type": "module",
 	"types": "dist/index.d.ts",
-	"main": "dist/index.cjs",
-	"module": "dist/index.module.js",
-	"umd:main" : "dist/index.umd.js",
-	"unpkg": "dist/index.min.js",
-	"source": "src/index.ts",
+	"main": "dist/uele.js",
+	"module": "dist/uele.js",
+	"umd:main": "dist/uele.min.js",
+	"unpkg": "dist/uele.min.js",
+	"source": "src/h.js",
+	"size-limit": [
+		{
+			"path": "dist/uele.min.js",
+			"limit": "1.1 kB"
+		}
+	],
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
-			"browser": "./dist/index.module.js",
-			"umd" : "./dist/index.umd.js",
-			"import": "./dist/index.modern.js",
-			"require": "./dist/index.cjs",
-			"default": "./dist/index.modern.js"
+			"browser": "./dist/uele.min.js",
+			"umd": "./dist/uele.min.js",
+			"import": "./dist/uele.js",
+			"require": "./dist/uele.min.js",
+			"default": "./dist/uele.js"
 		}
 	},
 	"scripts": {
-		"build": "npm run build:min && npm run build:formats",
+		"size": "size-limit",
+		"build": "npm run build:es && npm run build:min && npm run copy:dts && npm run size",
+		"build:es": "terser src/h.js -o dist/uele.js --module -c passes=3 --mangle-props -m",
+		"build:min": "npm run roll && terser uele.js -o dist/uele.min.js -c passes=3 --module --mangle-props reserved=[Fragment,h,lazy]",
+		"roll": "rollup src/index.js -p @rollup/plugin-node-resolve --file uele.js --no-freeze --format esm",
 		"dev": "vite",
-		"build:formats": "microbundle build src/index.ts --sourcemap false",
-		"build:min": "microbundle build --no-pkg-main --raw --sourcemap false --external none -f modern src/index.cjs -o dist/index.min.js"
+		"copy:dts": "copyfiles -u 1 \"src/**/*.d.ts\" dist"
 	},
 	"files": [
 		"dist"
 	],
 	"devDependencies": {
-		"microbundle": "^0.15.0",
+		"@rollup/plugin-node-resolve": "^14.0.1",
+		"@size-limit/file": "^8.1.0",
+		"copyfiles": "^2.4.1",
+		"size-limit": "^8.1.0",
+		"terser": "^5.15.0",
 		"typescript": "^4.6.4",
 		"vite": "^3.0.4"
 	},
@@ -63,7 +76,5 @@
 		"url": "https://github.com/kethan/uele/issues"
 	},
 	"homepage": "https://github.com/kethan/uele#readme",
-	"dependencies": {
-		"ulive": "^0.3.1"
-	}
+	"dependencies": {}
 }

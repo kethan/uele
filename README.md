@@ -13,7 +13,7 @@ A Reactive frontend library.
 
 **module**: https://unpkg.com/uele?module
 
--   **Small** less than 1000 bytes gzip.
+-   **Small** 1KB gzip.
 -   **Fast**
 -   **JSX**
 -   **Fragment**
@@ -21,52 +21,26 @@ A Reactive frontend library.
 -   **SVG**
 -   **Refs**
 -   **Style Maps**
--   **Reactive State**
--   **Automatic Derivation**
 -   **Simple API**
 -   **Lazy Components**
--   **Reactive Methods** (isO, unO, toO)
--   **Reactive Subscribe and UnSubscribe**
+-   **Promise**
+-   **AscynIterable**
+-   **Rxjs Subscribe**
+-   **Reactive Subscribe**
 
 ### Example
 
 ```jsx
-import { h, o, effect, Fragment, lazy } from "uele";
+import { h, Fragment, lazy } from "uele";
 
-const count = o(0);
-const inc = () => count(count() + 1);
-const dec = () => count(count() - 1);
-
-const Counter = () => {
-	let square = () => count() * count();
-	let cube = () => square() * count();
-	effect(() => console.log(count(), square(), cube()));
-	return (
-		<div>
-			<div>
-				Count: {count} {square} {cube}
-			</div>
-			<button onclick={inc}>+</button>
-			<button onclick={dec}>-</button>
-		</div>
-	);
-};
-
-const App = () => (
-	<main>
-		<Counter />
-	</main>
-);
+const App = () => <main>{Promise.resolve("App")}</main>;
 
 document.body.append(<App />);
 ```
-
 ## Thanks and Inspiration
 
 -   **[bruh](https://github.com/Technical-Source/bruh)**
--   **[yuxinqi-chan](https://github.com/yuxinqi-chan/reactive-jsx-dom)**
--   **[trkl](https://github.com/jbreckmckye/trkl)**
--   **[Emnudge](https://github.com/EmNudge)**
+-   **[dy](https://github.com/dy)**
 
 ## License
 
