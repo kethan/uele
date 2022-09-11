@@ -1,4 +1,4 @@
-import { h, Fragment, effect, o } from "./src";
+import { h, Fragment, effect, o } from "ulive";
 const React = {
 	createElement: h,
 	Fragment,
