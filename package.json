@@ -1,14 +1,14 @@
 {
 	"name": "uele",
 	"description": "uele reactive frontend library",
-	"version": "0.4.0",
+	"version": "0.4.1",
 	"source": "src/index.js",
 	"type": "module",
 	"types": "dist/index.d.ts",
-	"main": "dist/ulive.js",
-	"module": "dist/ulive.es.js",
-	"unpkg": "dist/ulive.min.js",
-	"umd:main": "dist/ulive.umd.js",
+	"main": "dist/uele.js",
+	"module": "dist/uele.es.js",
+	"unpkg": "dist/uele.min.js",
+	"umd:main": "dist/uele.umd.js",
 	"size-limit": [
 		{
 			"path": "dist/uele.min.js",
@@ -18,11 +18,11 @@
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
-			"browser": "./dist/ulive.es.js",
-			"umd": "./dist/ulive.umd.js",
-			"require": "./dist/ulive.js",
-			"import": "./dist/ulive.es.js",
-			"default": "./dist/ulive.es.js"
+			"browser": "./dist/uele.es.js",
+			"umd": "./dist/uele.umd.js",
+			"require": "./dist/uele.js",
+			"import": "./dist/uele.es.js",
+			"default": "./dist/uele.es.js"
 		}
 	},
 	"scripts": {
