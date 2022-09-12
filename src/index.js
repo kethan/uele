@@ -1,3 +1,7 @@
+// MIT License
+
+// Copyright (c) 2021 Daniel Ethridge
+
 let isObs = (arg) =>
     arg && !!(arg[Symbol.asyncIterator] || arg.then || arg.subscribe),
   sube = (target, next, stop) => {
