@@ -4,8 +4,12 @@
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.uele = {}));
 })(this, (function (exports) { 'use strict';
 
+  // MIT License
+
+  // Copyright (c) 2021 Daniel Ethridge
+
   let isObs = (arg) =>
-      arg && !!(arg[Symbol.asyncIterator] || arg.then || arg.subscribe),
+    arg && !!(arg[Symbol.asyncIterator] || arg.then || arg.subscribe),
     sube = (target, next, stop) => {
       if (target) {
         if (target.subscribe?.(next));
@@ -17,7 +21,7 @@
                 if (stop) return;
                 next(v);
               }
-            } catch (e) {}
+            } catch (e) { }
           })() &&
             (() => (stop = 1)))
         );
@@ -27,37 +31,13 @@
       return {
         startMarker: d.createTextNode(''),
         endMarker: d.createTextNode(''),
-
-        remove() {
-          let range = d.createRange();
-          range.setStartBefore(this.startMarker);
-          range.setEndAfter(this.endMarker);
-          range.deleteContents();
-        },
-
         replaceChildren(...xs) {
           let range = d.createRange();
           range.setStartAfter(this.startMarker);
           range.setEndBefore(this.endMarker);
           range.deleteContents();
           this.startMarker.after(...xs);
-        },
-        get childNodes() {
-          let childNodes = [];
-
-          for (
-            let currentNode = this.startMarker.nextSibling;
-            currentNode != this.endMarker && currentNode;
-            currentNode = currentNode.nextSibling
-          )
-            childNodes.push(currentNode);
-
-          return childNodes;
-        },
-
-        get children() {
-          return this.childNodes.filter((node) => node instanceof HTMLElement);
-        },
+        }
       };
     },
     Fragment = ({ children }) => children,
@@ -130,10 +110,10 @@
     },
     lazy =
       (file, fb = '') =>
-      (props) =>
-        file()
-          .then((f) => f.default(props))
-          .catch(() => fb),
+        (props) =>
+          file()
+            .then((f) => f.default(props))
+            .catch(() => fb),
     createElement = (tag, props) => {
       let el = isSVG(tag)
         ? d.createElementNS('http://www.w3.org/2000/svg', tag)
