@@ -2,9 +2,7 @@
 
 A Reactive frontend library.
 
-[![Version](https://img.shields.io/npm/v/uele.svg?color=success&style=flat-square)](https://www.npmjs.com/package/uele)
-[![Badge size](https://img.badgesize.io/https://unpkg.com/uele?compression=brotli&label=brotli&style=flat-square)](https://unpkg.com/uele)
-[![Badge size](https://img.badgesize.io/https://unpkg.com/uele?compression=gzip&label=gzip&style=flat-square)](https://unpkg.com/uele)
+[![Version](https://img.shields.io/npm/v/uele.svg?color=success&style=flat-square)](https://www.npmjs.com/package/uele) [![Badge size](https://img.badgesize.io/https://unpkg.com/uele?compression=brotli&label=brotli&style=flat-square)](https://unpkg.com/uele) [![Badge size](https://img.badgesize.io/https://unpkg.com/uele?compression=gzip&label=gzip&style=flat-square)](https://unpkg.com/uele)
 
 **yarn**: `yarn add uele`
 
@@ -28,7 +26,7 @@ A Reactive frontend library.
 - **AscynIterable**
 - **Rxjs Subscribe**
 - **Reactive Subscribe**
-- **Control Flow Components** - If, For
+- **Control Flow Components** - If, For, Show
 - **Extend with any reactive library** - effect, memo, is, get
 
 ### h
@@ -48,17 +46,19 @@ Load a component lazily with a optional fallback
 ```js
 const LazyComp = lazy(() => import("./SomeComp"), <div>Failed</div>);
 ```
-
 ### Example
 
 ```jsx
 import { h, Fragment, lazy, api, If, For } from "uele";
 import { o, effect, memo } from "ulive";
 
+// ulive settings
 api.effect = effect;
 api.memo = memo;
 api.is = (v) => v.$o;
 api.get = (v) => v();
+
+// Check below for other reactive library settings
 
 const LazyComp = lazy(() => import("./lazy"));
 
@@ -129,6 +129,52 @@ const App = () => (
 );
 
 document.body.append(<App />);
+```
+
+### Control Flow
+
+```js
+<If when={cond} fallback = {<div>False</div>}>
+<div>True</div>
+</If>
+
+<Show when={cond} fallback = {<div>False</div>}>
+<div>True</div>
+</Show>
+
+<For each={[1,2,3]} fallback = {<div>False</div>}>
+{(val) => <div>{val}</div>}
+</For>
+
+```
+
+## Other settings
+
+```js
+
+// preact/signals-core or usignal settings
+api.effect = effect;
+api.memo = computed;
+api.is = (v) => v instanceof Signal;
+api.get = (v) => v?.value;
+
+// oby or sinuous settings
+api.effect = effect; // or api.effect = subscribe
+api.memo = memo; // or api.memo = computed
+api.is = (v) => (v) => isObservable(v); // or api.is = (v) => v?.$o;
+api.get = (v) => v?.();
+
+// solid-js settings
+api.effect = createEffect; // or api.effect = subscribe
+api.memo = createMemo; // or api.memo = computed
+api.is = (v) => v?.name == "bound readSignal";
+api.get = (v) => v?.();
+
+// any other reactive library settings
+api.effect = ...
+api.memo = ...
+api.is = (v) => ...
+api.get = (v) => ..
 ```
 
 ## Thanks and Inspiration

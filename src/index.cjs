@@ -1,3 +1,3 @@
 import * as uele from './index';
-if (typeof module < 'u') module.exports = uele;
-else self.uele = uele;
+// if (typeof module < 'u') module.exports = uele;
+self.uele = uele;
