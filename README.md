@@ -132,6 +132,7 @@ document.body.append(<App />);
 ```
 
 ### Control Flow
+#### Condition can be boolean or reactive values
 
 ```js
 <If when={cond} fallback = {<div>False</div>}>
@@ -142,20 +143,17 @@ document.body.append(<App />);
 <div>True</div>
 </Show>
 
-<For each={[1,2,3]} fallback = {<div>False</div>}>
+<For each={[1,2,3]} fallback = {<div>No Items</div>}>
 {(val) => <div>{val}</div>}
 </For>
-
 ```
-
 ## Other settings
 
 ```js
-
 // preact/signals-core or usignal settings
 api.effect = effect;
 api.memo = computed;
-api.is = (v) => v instanceof Signal;
+api.is = (v) => v instanceof Signal; // or preact signals
 api.get = (v) => v?.value;
 
 // oby or sinuous settings
@@ -165,8 +163,8 @@ api.is = (v) => (v) => isObservable(v); // or api.is = (v) => v?.$o;
 api.get = (v) => v?.();
 
 // solid-js settings
-api.effect = createEffect; // or api.effect = subscribe
-api.memo = createMemo; // or api.memo = computed
+api.effect = createEffect;
+api.memo = createMemo;
 api.is = (v) => v?.name == "bound readSignal";
 api.get = (v) => v?.();
 

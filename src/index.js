@@ -1,5 +1,3 @@
-// MIT License
-// Copyright (c) 2021 Daniel Ethridge
 
 let api = {
     effect: (f) => f(),
@@ -7,25 +5,26 @@ let api = {
     is: (v) => false,
     get: (v) => v
 },
-    get = (v) =>
-        isF(v)
-            ? v()
-            : api.is(v)
-                ? api.get(v)
-                : v,
+    get = (v) => isF(v)
+        ? v()
+        : api.is(v)
+            ? api.get(v)
+            : v
+    ,
     If = ({ when, children, fallback }) =>
         api.memo(() => (!!get(when) ? children : fallback)),
-    For = ({ each, children, fallback }) =>
-        api.memo(() =>
-            get(each).length > 0
-                ? get(each).map(
-                    (value, index) =>
-                        children && children[0] && children[0](value, index)
-                )
-                : fallback
-        ),
+    For = ({ each, children, fallback }) => api.memo(() =>
+        get(each).length > 0
+            ? get(each).map(
+                (value, index) =>
+                    children && children[0] && children[0](value, index)
+            )
+            : fallback),
+    isProm = (arg) => arg && !!(arg[Symbol.asyncIterator] || arg.then || arg.subscribe),
     isObs = (arg) =>
-        arg && !!(arg[Symbol.asyncIterator] || arg.then || arg.subscribe || api.is(arg)),
+        arg && !!(isProm(arg) || api.is(arg)),
+    // MIT License
+    // Copyright (c) 2021 Daniel Ethridge
     sube = (target, next, stop) => {
         if (target) {
             if (api.is(target)) api.effect(() => next(api.get(target)))
@@ -53,7 +52,7 @@ let api = {
             range.setEndBefore(this.endMarker);
             range.deleteContents();
             this.startMarker.after(...xs);
-        }
+        },
     }),
     Fragment = ({ children }) => children,
     d = document,
@@ -69,11 +68,7 @@ let api = {
         if (x instanceof Node) return x;
         else if (isF(x)) return x();
         else if (isFalsey(x)) return d.createComment(x);
-        else if (isO(x))
-            return typeof x.valueOf() != 'object'
-                ? d.createTextNode(x)
-                : d.createTextNode('');
-        else return d.createTextNode(x);
+        else return d.createTextNode(isO(x) ? '' : x);
     },
     r = (x, f) => (isObs(x) ? sube(x, (v) => { f(v) }) && f(x()) : f(x)),
     appendChildren = (...children) =>
@@ -81,21 +76,19 @@ let api = {
             // Non-reactive values
             if (!isObs(child)) return [toNode(child)];
             else {
-                let liveFragment = Live(), done = false;
+                let liveFragment = Live(), node = toNode(child), done = false;
                 sube(child, (value) => {
-                    if (done) {
-                        if (!Array.isArray(value)) value = [value];
-                        liveFragment.replaceChildren(...appendChildren(...value));
-                    }
+                    if (!Array.isArray(value)) value = [value];
+                    if (done) liveFragment.replaceChildren(...appendChildren(...value))
+                    else node = value;
                 });
                 done = true;
                 return [
                     liveFragment.startMarker,
-                    ...appendChildren(toNode(child)),
+                    ...appendChildren(node),
                     liveFragment.endMarker,
                 ];
             }
-
         }),
     h = (tag, props, ...children) => {
         if (isF(tag)) {
