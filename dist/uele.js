@@ -57,8 +57,12 @@ let api = {
             this.startMarker.after(...xs);
         },
     }),
-    Fragment = ({ children }) => children,
     d = document,
+    Fragment = ({ children }) => {
+        let el = d.createDocumentFragment();
+        el.append(...appendChildren(...children));
+        return el;
+    },
     isF = (x) => typeof x === 'function',
     isS = (x) => typeof x === 'string',
     isO = (x) => typeof x === 'object',
