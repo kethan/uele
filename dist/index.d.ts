@@ -26,6 +26,8 @@ export declare function lazy<P = {}>(file: Promise<{
 export declare function If<T = {}>({ when, fallback, children }: { when: T, fallback?: Child, children: Child[] }): Child;
 export declare function Show<T = {}>({ when, fallback, children }: { when: T, fallback?: Child, children: Child[] }): Child;
 export declare function For<T = {}>({ each, fallback, children }: { each: T[], fallback?: Child, children: Child[] }): Child;
+export declare function map<T = {}>(items: T[], fn: (item: T, index: number, items: T[]) => Child, fallback?: Child): Child;
+
 interface Api {
     effect?: () => void;
     memo?: <T>() => T;

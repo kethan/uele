@@ -1,7 +1,7 @@
 {
 	"name": "uele",
 	"description": "uele reactive frontend library",
-	"version": "0.5.2",
+	"version": "0.6.0",
 	"source": "src/index.js",
 	"type": "module",
 	"types": "dist/index.d.ts",
@@ -12,7 +12,7 @@
 	"size-limit": [
 		{
 			"path": "dist/uele.min.js",
-			"limit": "1.25 kB"
+			"limit": "1.6 kB"
 		}
 	],
 	"exports": {
@@ -31,7 +31,7 @@
 		"rm": "sed -i 's/__proto__: null,//' dist/uele.es.js",
 		"build": "npm run build:cjs && npm run build:es && npm run build:min && npm run build:umd && npm run build:esm && npm run copy:dts && npm run size",
 		"build:umd": "rollup src/index.js -p @rollup/plugin-node-resolve --file dist/uele.umd.js --format umd --name uele",
-		"build:min": "npm run rm && terser dist/uele.es.js -o dist/uele.min.js -c passes=3 --module --mangle-props reserved=[h,Fragment,lazy,createElement,api,If,Show,For,effect,memo,get,is,when,each,fallback,children]",
+		"build:min": "npm run rm && terser dist/uele.es.js -o dist/uele.min.js -c passes=3 --module --mangle-props reserved=[h,Fragment,lazy,createElement,api,If,Show,For,effect,memo,get,is,when,each,fallback,children,isObs,sube,map]",
 		"build:es": "rollup src/index.cjs -p @rollup/plugin-node-resolve --file dist/uele.es.js --no-freeze --format esm",
 		"build:cjs": "rollup src/index.js -p @rollup/plugin-node-resolve --file dist/uele.js --format cjs",
 		"build:esm": "rollup src/index.js -p @rollup/plugin-node-resolve --file dist/uele.es.js --no-freeze --format esm"

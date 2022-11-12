@@ -12,7 +12,7 @@ A Reactive frontend library.
 
 **module**: https://unpkg.com/uele?module
 
-- **Small** 1KB gzip.
+- **Tiny** [![Badge size](https://img.badgesize.io/https://unpkg.com/uele?compression=brotli&label=brotli&style=flat-square)](https://unpkg.com/uele)
 - **Simple API**
 - **Fast**
 - **JSX**
@@ -28,6 +28,7 @@ A Reactive frontend library.
 - **Reactive Subscribe**
 - **Control Flow Components** - If, For, Show
 - **Extend with any reactive library** - effect, memo, is, get
+- **Map** - For efficient diffing
 
 ### h
 
@@ -46,10 +47,24 @@ Load a component lazily with a optional fallback
 ```js
 const LazyComp = lazy(() => import("./SomeComp"), <div>Failed</div>);
 ```
+
+### map
+
+Efficient diffing for array of items
+
+```js
+import { map } from 'uele';
+
+let items = o([1,2,3]);
+
+const Items = () => {
+  return map(items, (item,i) => <div>{item} {i}</div>, <div>No items</div>)
+}
+```
 ### Example
 
 ```jsx
-import { h, Fragment, lazy, api, If, For } from "uele";
+import { h, Fragment, lazy, api, If, For, map } from "uele";
 import { o, effect, memo } from "ulive";
 
 // ulive settings
@@ -118,12 +133,15 @@ const asyncIterable = {
   },
 };
 
+let items = o([1,2,3])
+
 const App = () => (
   <main>
     <Counter />
     <LazyComp />
     <TodoItem />
     {asyncIterable}
+    {map(items, (item, i) => <div>{item} {i}</div>)}
     <svg>...</svg>
   </main>
 );
@@ -165,7 +183,7 @@ api.get = (v) => v?.();
 // solid-js settings
 api.effect = createEffect;
 api.memo = createMemo;
-api.is = (v) => v?.name == "bound readSignal";
+api.is = (v) => v?.name?.includes("readSignal");
 api.get = (v) => v?.();
 
 // any other reactive library settings
