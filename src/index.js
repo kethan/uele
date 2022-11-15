@@ -1,94 +1,109 @@
-let api = {
-    effect: (f) => f(),
-    memo: (f) => f(),
-    is: (v) => v?.$o,
-    get: (v) => v?.(),
-};
 
-let get = (v) => (isF(v) ? v() : api.is(v) ? api.get(v) : v);
-
-//https://github.com/dy/sube
-let sube = (target, next, stop) => {
-    if (target) {
-        if (api.is(target)) api.effect(() => next(get(target)));
-        else if (target.subscribe?.(next));
-        else if (
-            target.then?.((v) => !stop && next(v)) ||
-            ((async (v) => {
-                try {
-                    for await (v of target) {
-                        if (stop) return;
-                        next(v);
+let
+    api = {
+        effect: (f) => f(),
+        memo: (f) => f(),
+        is: (v) => false,
+        get: (v) => v
+    },
+    get = (v) => (isF(v) ? v() : api.is(v) ? api.get(v) : v),
+    unpack = (value) => {
+        let current = value;
+        if (isF(current)) {
+            return unpack(current());
+        } else if (api.is(value)) {
+            current = api.get(value);
+            return unpack(current);
+        }
+        return current;
+    },
+    //https://github.com/dy/sube
+    sube = (target, next, error, stop) => target &&
+        ((target.call &&
+            !api.is(target) &&
+            api.effect(() => next(unpack(target)))) ||
+            (api.is(target) &&
+                api.effect(() => next(unpack(target)))) ||
+            target.subscribe?.((v) => unpack(v), error) ||
+            ((target.then?.((v) => !stop && next(unpack(v)), error) ||
+                (async (v) => {
+                    try {
+                        for await (v of target) {
+                            if (stop) return;
+                            next(unpack(v));
+                        }
+                    } catch (err) {
+                        error?.(err);
                     }
-                } catch (e) { }
-            })() &&
-                (() => (stop = 1)))
-        );
-    }
-};
-// MIT License
-// Copyright (c) 2021 Daniel Ethridge
-let Live = (sm = d.createTextNode(""), em = d.createTextNode("")) => ({
-    sm,
-    em,
-    append(...xs) {
-        em.before(...xs);
+                })()) &&
+                ((_) => (stop = 1))));
+
+let
+    d = document,
+    // MIT License
+    // Copyright (c) 2021 Daniel Ethridge
+    Live = (sm = d.createTextNode(""), em = d.createTextNode("")) => ({
+        sm,
+        em,
+        append(...xs) {
+            em.before(...xs);
+        },
+        replace(...xs) {
+            let range = d.createRange();
+            range.setStartAfter(sm);
+            range.setEndBefore(em);
+            range.deleteContents();
+            sm.after(...xs);
+        },
+    }),
+    Fragment = ({ children }) => {
+        let el = d.createDocumentFragment();
+        el.append(...appendChildren(children));
+        return el;
     },
-    replace(...xs) {
-        let range = d.createRange();
-        range.setStartAfter(sm);
-        range.setEndBefore(em);
-        range.deleteContents();
-        sm.after(...xs);
-    },
-});
+    toNode = (x) => {
+        if (x instanceof Node) return x;
+        else if (isFalsey(x)) return d.createComment(x);
+        else return d.createTextNode(x);
+    };
 
-let d = document;
-
-let Fragment = ({ children }) => {
-    let el = d.createDocumentFragment();
-    el.append(...appendChildren(children));
-    return el;
-};
-
-let isF = (x) => typeof x === "function",
+// Helpers
+let
+    isF = (x) => typeof x === "function",
     isS = (x) => typeof x === "string",
     isO = (x) => typeof x === "object",
-    isFalsey = (x) => typeof x === "boolean" || x === undefined || x === null,
+    isFalsey = (x) => typeof x === "boolean"
+        || x === undefined
+        || x === null,
     isSVG = (el) =>
         /^(t(ext$|s)|s[vwy]|g)|^set|tad|ker|p(at|s)|s(to|c$|ca|k)|r(ec|cl)|ew|us|f($|e|s)|cu|n[ei]|l[ty]|[GOP]/.test(
             el
         ),
     isObs = (arg) =>
         arg &&
-        !!(arg[Symbol.asyncIterator] || arg.then || arg.subscribe || api.is(arg)),
+        !!(
+            arg[Symbol.asyncIterator] ||
+            arg?.call ||
+            arg.then ||
+            arg.subscribe ||
+            api.is(arg)
+        ),
     ifEmpty = (nodes, fb) =>
-        nodes.length > 0 ? nodes : [fb ? fb : d.createTextNode("")];
-
-let toNode = (x) => {
-    if (x instanceof Node) return x;
-    else if (isFalsey(x)) return d.createComment(x);
-    else return d.createTextNode(x);
-};
-
-let r = (x, f) => (isObs(x) ? sube(x, (v) => f(v)) && f(x()) : f(x));
+        nodes.length > 0 ? nodes : [fb],
+    react = (x, f, e) =>
+        isObs(x) ? sube(x, (v) => f(v, true), e) : f(x, false);
 
 let appendChildren = (...children) =>
     children.flat(Infinity).flatMap((child) => {
-        if (isF(child) && !isObs(child)) {
-            child = api.memo(child);
-        }
-        // Non-reactive values
         if (!isObs(child)) return [toNode(child)];
         else {
             let liveFragment = Live(),
                 done = false,
                 node = [toNode("")];
             sube(child, (value) => {
-                if (!Array.isArray(value)) value = [value];
                 if (done)
-                    liveFragment.replace(...appendChildren(...get(value)));
-                else node = value;
+                    liveFragment.replace(...appendChildren([value]));
+                else node = [value]
             });
             done = true;
             return [
@@ -113,7 +128,7 @@ let h = (tag, props, ...children) => {
 
 let applyStyles = (element, styles) => {
     for (let property in styles)
-        r(styles[property], (value) => {
+        react(styles[property], (value) => {
             if (value !== undefined) element.style.setProperty(property, value);
             else element.style.removeProperty(property);
         });
@@ -121,26 +136,28 @@ let applyStyles = (element, styles) => {
 
 let applyClasses = (element, classes) => {
     for (let name in classes)
-        r(classes[name], (value) => element.classList.toggle(name, value));
+        react(classes[name], (value) => {
+            element.classList.toggle(name, value)
+        });
 };
 
 let applyAttributes = (element, attributes) => {
     for (let name in attributes) {
-        r(attributes[name], (value) => {
+        react(attributes[name], (value) => {
             if (!value) element.removeAttribute(name);
             else element.setAttribute(name, value === true ? "" : value);
         });
     }
 };
 
+// Utilities and control flow components
 let lazy =
     (file, fb = "") =>
         (props) =>
             file()
                 .then((f) => f.default(props))
                 .catch(() => fb),
-    If = ({ when, children, fallback }) =>
-        api.memo(() => (!!get(when) ? children : fallback)),
+    If = ({ when, children, fallback }) => (() => (!!unpack(when) ? children : fallback)),
     For = ({ each, children, fallback }) =>
         map(each, (v, i) => isF(children) && children(v, i), fallback),
     map = (items, f, fb = d.createTextNode("")) => {
@@ -149,12 +166,12 @@ let lazy =
             live = Live();
         let done = false;
         if (!oldNodes) {
-            oldValues = get(items);
+            oldValues = unpack(items);
             oldNodes = ifEmpty(oldValues.map(f), fb);
         }
 
         api.effect(() => {
-            let newValues = get(items);
+            let newValues = unpack(items);
             if (done) {
                 let oldMap = new Map();
                 for (let i = 0; i < oldValues.length; i++) {
@@ -178,27 +195,25 @@ let lazy =
         return [live.sm, oldNodes, live.em];
     };
 
-
 let createEl = (tag, props) => {
     let el = isSVG(tag)
         ? d.createElementNS("http://www.w3.org/2000/svg", tag)
         : d.createElement(tag);
 
     if (props != null) {
-        // Apply overloaded props, if possible
-        // Inline style object
-        if (isO(props.style) && !isObs(props.style)) {
-            applyStyles(el, props.style);
-            delete props.style;
-        }
-        // Classes object
-        if (isO(props.class) && !isObs(props.class)) {
-            applyClasses(el, props.class);
-            delete props.class;
-        }
 
         for (let name in props) {
-            // ref prop
+            if (name.toLowerCase() === 'classname') {
+                props.class = props[name];
+                delete props[name];
+            }
+            // if (
+            //     name.slice(0, 5) === 'data-' ||
+            //     name.slice(0, 5) === 'aria-'
+            // ) {
+            //     el.setAttribute(name, value);
+            // }
+
             if (name === "ref" && isF(props.ref)) {
                 props.ref(el, props);
                 delete props[name];
@@ -211,6 +226,18 @@ let createEl = (tag, props) => {
                 );
                 delete props[name];
             }
+        }
+
+        // Apply overloaded props, if possible
+        // Inline style object
+        if (isO(props.style) && !isObs(props.style)) {
+            applyStyles(el, props.style);
+            delete props.style;
+        }
+        // Classes object
+        if (isO(props.class) && !isObs(props.class)) {
+            applyClasses(el, props.class);
+            delete props.class;
         }
         // The rest of the props are attributes
         applyAttributes(el, props);
@@ -275,5 +302,5 @@ export {
     get,
     isObs,
     sube,
-    map,
+    map
 };
