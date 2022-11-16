@@ -27,9 +27,9 @@
                 !api.is(target) &&
                 api.effect(() => next(get(target)))) ||
                 (api.is(target) && api.effect(() => next(get(target)))) ||
-                target.subscribe?.((v) => get(v), error) ||
+                target.subscribe?.((v) => next(get(v)), error) ||
                 ((target.then?.((v) => !stop && next(get(v)), error) ||
-                    (async (v) => {
+                    (async v => {
                         try {
                             for await (v of target) {
                                 if (stop) return;
