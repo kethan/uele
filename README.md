@@ -2,7 +2,7 @@
 
 A Reactive frontend library.
 
-[![Version](https://img.shields.io/npm/v/uele.svg?color=success&style=flat-square)](https://www.npmjs.com/package/uele) [![Badge size](https://img.badgesize.io/https://unpkg.com/uele?compression=brotli&label=brotli&style=flat-square)](https://unpkg.com/uele) [![Badge size](https://img.badgesize.io/https://unpkg.com/uele?compression=gzip&label=gzip&style=flat-square)](https://unpkg.com/uele)
+[![Version](https://img.shields.io/npm/v/uele.svg?color=success&style=flat-square)](https://www.npmjs.com/package/uele) [![Badge size](https://img.badgesize.io/https://unpkg.com/uele?compression=gzip&label=gzip&style=flat-square)](https://unpkg.com/uele)
 
 **yarn**: `yarn add uele`
 
@@ -12,7 +12,7 @@ A Reactive frontend library.
 
 **module**: https://unpkg.com/uele?module
 
-- **Tiny** [![Badge size](https://img.badgesize.io/https://unpkg.com/uele?compression=brotli&label=gzip&style=flat-square)](https://unpkg.com/uele)
+- **Tiny** [![Badge size](https://deno.bundlejs.com/badge?q=uele@0.7.0&treeshake=[{h,Fragment}])](https://unpkg.com/uele)
 - **Simple API**
 - **Fast**
 - **JSX**
@@ -27,6 +27,7 @@ A Reactive frontend library.
 - **Control Flow Components** - If, For, Show, Switch, Match, Suspense
 - **Extend with any reactive library using api** - effect, is, get
 - **For and map** - For efficient array diffing
+- **Add any diffing** - Using api.diff
 - **Automatic Cleanup for Subscriptions**
 
 ### h
@@ -49,7 +50,7 @@ const LazyComp = lazy(() => import("./SomeComp"), <div>Failed</div>);
 
 ### map
 
-Efficient diffing for array of items
+Efficient diffing of array of items
 
 ```js
 import { map } from "uele";
@@ -73,7 +74,7 @@ const Items = () => {
 
 ```jsx
 import { h, Fragment, lazy, api, If, For, map } from "uele";
-import { o, effect, memo } from "ulive/fn";
+import { o, effect, memo } from "ulive/fn"; // Or any other reactive library
 
 // ulive settings
 api.effect = effect;
@@ -213,7 +214,7 @@ import { Suspense } from "uele";
 
 ### Cleanup Support
 
-Subscriptions and side-effects in `UEle` are automatically cleaned up when elements are garbage collected using `FinalizationRegistry`. You don't need to manually clean up unless desired, but it can be done through provided `unsub` functions.
+Subscriptions and side-effects in `UEle` are automatically cleaned up when elements are garbage collected using `FinalizationRegistry`. You don't need to manually clean up unless desired, but it can be done through provided `usub` functions.
 
 ### Other Settings
 
@@ -250,6 +251,7 @@ api.is = (v) => ...; // Function to check if a value is reactive
 api.get = (v) => ...; // Function to get the current value
 api.cleanup = ...; // Explicit cleanup function for solid.js, sinuous and similar
 api.any = ...; // Go crazy with anything.
+api.diff = ...; // Any diffing library
 ```
 
 ## Thanks and Inspiration
