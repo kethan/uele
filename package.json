@@ -1,53 +1,51 @@
 {
 	"name": "uele",
 	"description": "uele reactive frontend library",
-	"version": "0.6.3",
-	"source": "src/index.js",
+	"version": "0.7.0",
 	"type": "module",
-	"types": "dist/index.d.ts",
-	"main": "dist/uele.js",
-	"module": "dist/uele.es.js",
-	"unpkg": "dist/uele.min.js",
-	"umd:main": "dist/uele.umd.js",
-	"size-limit": [
-		{
-			"path": "dist/uele.min.js",
-			"limit": "1.7 kB"
-		}
-	],
+	"source": "./src/index.js",
+	"main": "./dist/index.js",
+	"module": "./dist/index.js",
+	"browser": "./dist/index.es.js",
+	"unpkg": "./dist/index.min.js",
+	"umd:main": "./dist/index.umd.js",
 	"exports": {
 		".": {
-			"types": "./dist/index.d.ts",
-			"browser": "./dist/uele.es.js",
-			"umd": "./dist/uele.umd.js",
-			"require": "./dist/uele.js",
-			"import": "./dist/uele.es.js",
-			"default": "./dist/uele.es.js"
-		}
+			"types": "./index.d.ts",
+			"browser": "./dist/index.es.js",
+			"umd": "./dist/index.umd.js",
+			"import": "./dist/index.es.js",
+			"default": "./dist/index.es.js",
+			"require": "./dist/index.js"
+		},
+		"./jsx-runtime": {
+			"types": "./jsx-runtime/index.d.ts",
+			"browser": "./jsx-runtime/dist/index.es.js",
+			"umd": "./jsx-runtime/dist/index.umd.js",
+			"import": "./jsx-runtime/dist/index.es.js",
+			"require": "./jsx-runtime/dist/index.js"
+		},
+		"./jsx-dev-runtime": {
+			"types": "./jsx-dev-runtime/index.d.ts",
+			"browser": "./jsx-dev-runtime/dist/index.es.js",
+			"umd": "./jsx-dev-runtime/dist/index.umd.js",
+			"import": "./jsx-dev-runtime/dist/index.es.js",
+			"require": "./jsx-dev-runtime/dist/index.js"
+		},
+		"./package.json": "./package.json"
 	},
+	"types": "./index.d.ts",
 	"scripts": {
-		"copy:dts": "copyfiles -u 1 \"src/**/*.d.ts\" dist",
-		"size": "size-limit",
-		"rm": "sed -i 's/__proto__: null,//' dist/uele.es.js",
-		"build": "npm run build:cjs && npm run build:es && npm run build:min && npm run build:umd && npm run build:esm && npm run copy:dts && npm run size",
-		"build:umd": "rollup src/index.js -p @rollup/plugin-node-resolve --file dist/uele.umd.js --format umd --name uele",
-		"build:min": "npm run rm && terser dist/uele.es.js -o dist/uele.min.js -c passes=3 --module --mangle-props reserved=[h,Fragment,lazy,createElement,api,If,Show,For,effect,memo,get,is,when,each,fallback,children,isObs,map,r]",
-		"build:es": "rollup src/index.cjs -p @rollup/plugin-node-resolve --file dist/uele.es.js --no-freeze --format esm",
-		"build:cjs": "rollup src/index.js -p @rollup/plugin-node-resolve --file dist/uele.js --format cjs",
-		"build:esm": "rollup src/index.js -p @rollup/plugin-node-resolve --file dist/uele.es.js --no-freeze --format esm"
+		"build": "rollup --config rollup.config.js"
 	},
 	"files": [
 		"dist"
 	],
 	"devDependencies": {
-		"@rollup/plugin-node-resolve": "^14.0.1",
-		"@size-limit/file": "^8.1.0",
-		"copyfiles": "^2.4.1",
-		"rollup": "^2.79.0",
-		"size-limit": "^8.1.0",
-		"terser": "^5.15.0",
-		"typescript": "^4.6.4",
-		"vite": "^3.0.4"
+		"@rollup/plugin-terser": "^0.4.4",
+		"rollup": "^4.19.0",
+		"rollup-plugin-bundle-size": "^1.0.3",
+		"rollup-plugin-copy": "^3.5.0"
 	},
 	"repository": {
 		"type": "git",
@@ -80,6 +78,5 @@
 	"bugs": {
 		"url": "https://github.com/kethan/uele/issues"
 	},
-	"homepage": "https://github.com/kethan/uele#readme",
-	"dependencies": {}
+	"homepage": "https://github.com/kethan/uele#readme"
 }
