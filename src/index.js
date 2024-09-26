@@ -67,7 +67,6 @@ const
             sm.after(...xs);
         },
     }),
-    
     appendChildren = (fallback = "") => (...children) =>
         children.flat(Infinity).flatMap((child) => {
             if (!is(child)) return [toNode(child)];
@@ -77,70 +76,70 @@ const
             sub(child)((value) => {
                 if (done) live.replace(...appendChildren(fallback)([value]));
                 else node = [value];
-            }, _ => live.replace([fallback]));
+            }, _ => live.replace(...appendChildren("")([fallback])))
             done = true;
             return [live.sm, ...appendChildren(fallback)(...node), live.em]
         }),
-
     Fragment = ({ children }) => {
         let el = document.createDocumentFragment();
         el.append(...appendChildren("")(children));
         return el;
     },
-
     h = (tag, props, ...children) => {
         if (isFunction(tag)) {
-            (props || (props = {})).children =
-                children && children.length == 1 ? children[0] : children;
+            (props || (props = {})).children = children && children.length == 1 ? children[0] : children;
             return tag(props);
         } else if (isString(tag)) {
             let element = isSVG(tag) ? document.createElementNS("http://www.w3.org/2000/svg", tag) : document.createElement(tag),
                 usub = [];
-            if (props != null) {
-                for (let name in props) {
-                    if (name === "className") {
-                        props.class = props[name];
-                        delete props[name];
-                    }
-                    if (name.slice(0, 5) === "data-" || name.slice(0, 5) === "aria-") {
-                        element.setAttribute(name, props[name]);
-                    }
-
-                    if (name === "ref" && isFunction(props.ref)) {
-                        props.ref(el, props);
-                        delete props[name];
-                    }
-                    // Event listener functions
-                    if (name.startsWith("on") && name.toLowerCase() in window) {
-                        element.addEventListener(
-                            name.substring(2).toLowerCase(),
-                            props[name]
+            if (props) {
+                for (const name in props) {
+                    const value = props[name];
+                    if (name === "ref" && isFunction(value)) {
+                        value(element, props);
+                    } else if (name === "className") {
+                        element.setAttribute("class", value);
+                    } else if (name.startsWith("on") && name.toLowerCase()) {
+                        element.addEventListener(name.substring(2).toLowerCase(), value);
+                        // Optionally, add cleanup code to remove event listeners
+                        usub.push(() => element.removeEventListener(name.substring(2).toLowerCase(), value));
+                    } else if (name === "style") {
+                        if (isObject(value) && !is(value)) {
+                            for (const prop in value) {
+                                usub.push(
+                                    r(value[prop], (v) =>
+                                        v !== undefined
+                                            ? element.style.setProperty(prop, v)
+                                            : element.style.removeProperty(prop)
+                                    )
+                                );
+                            }
+                        } else {
+                            usub.push(r(value, (v) => element.setAttribute("style", v)));
+                        }
+                    } else if (name === "class") {
+                        if (isObject(value) && !is(value)) {
+                            for (const className in value) {
+                                usub.push(
+                                    r(value[className], (v) => element.classList.toggle(className, v))
+                                );
+                            }
+                        } else {
+                            usub.push(r(value, (v) => element.setAttribute("class", v)));
+                        }
+                    } else {
+                        // Handle all other attributes (including data-, aria-, and others)
+                        usub.push(
+                            r(value, (v) => {
+                                if (v == null || v === false) {
+                                    element.removeAttribute(name);
+                                } else {
+                                    element.setAttribute(name, v === true ? "" : v);
+                                }
+                            })
                         );
-                        // TODO: should we remove event listener
-                        usub.push(() => element.removeEventListener(name.substring(2).toLowerCase(), props[name]));
-                        delete props[name];
                     }
                 }
-                // Apply overloaded props, if possible
-                // Inline style object
-                if (isObject(props.style) && !is(props.style)) {
-                    for (let prop in props.style)
-                        usub.push(r(props.style[prop], (v) =>
-                            v !== undefined ? element.style.setProperty(prop, v) : element.style.removeProperty(prop)
-                        ));
-                    delete props.style;
-                }
-                // Classes object
-                if (isObject(props.class) && !is(props.class)) {
-                    for (let name in props.class)
-                        usub.push(r(props.class[name], (v) => element.classList.toggle(name, v)));
-                    delete props.class;
-                }
-                // The rest of the props are attributes
-                for (let name in props)
-                    usub.push(r(props[name], (v) =>
-                        !v ? element.removeAttribute(name) : element.setAttribute(name, v === true ? "" : v)
-                    ));
             }
             registry.register(element, () => {
                 usub.forEach(unsub => unsub?.());
@@ -167,7 +166,7 @@ let lazy =
     For = ({ each, children, fallback }) =>
         map(each, (v, i) => isFunction(children) && children(v, i), fallback),
 
-    map = (items, callback, fallback = document.createTextNode("")) => {
+    map = (items, callback, fallback = "") => {
         let oldNodes, oldValues;
         oldValues = get(items);
         oldNodes = ifEmpty(oldValues.map(callback), fallback);
