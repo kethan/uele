@@ -3,15 +3,15 @@ import bundleSize from 'rollup-plugin-bundle-size';
 import copy from 'rollup-plugin-copy'
 
 const resolve = (pkg, {
-    input = "src/index",
-    output = "dist/index",
-    copyFiles = [],
-    ext = "js"
+	input = "src/index",
+	output = "dist/index",
+	copyFiles = [],
+	ext = "js"
 } = {}) => ({
 	input: `${input}.${ext}`,
 	plugins: [
 		bundleSize(),
-        copy({
+		copy({
 			targets: [
 				{ src: copyFiles[0], dest: copyFiles[1] }
 			]
@@ -47,6 +47,6 @@ const resolve = (pkg, {
 
 export default [
 	resolve("uele", { copyFiles: ["src/index.d.ts", "dist/"] }),
-    resolve("uele", { copyFiles: ["jsx-runtime/index.d.ts", "jsx-runtime/dist/"], input: "jsx-runtime/index", output: "jsx-runtime/dist/index", ext: "ts" }),
-    resolve("uele", { copyFiles: ["jsx-dev-runtime/index.d.ts", "jsx-dev-runtime/dist/"], input: "jsx-dev-runtime/index", output: "jsx-dev-runtime/dist/index", ext: "ts" })
+	resolve("uele", { copyFiles: ["jsx-runtime/index.d.ts", "jsx-runtime/dist/"], input: "jsx-runtime/index", output: "jsx-runtime/dist/index", ext: "ts" }),
+	resolve("uele", { copyFiles: ["jsx-dev-runtime/index.d.ts", "jsx-dev-runtime/dist/"], input: "jsx-dev-runtime/index", output: "jsx-dev-runtime/dist/index", ext: "ts" })
 ]
