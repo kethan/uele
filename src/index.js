@@ -72,8 +72,13 @@ const
         children.flat(Infinity).flatMap((child) => {
             if (!is(child)) return [toNode(child)];
             let live = Live(),
+                done = false,
                 node = [fallback];
-            sub(child)((value) => { live.replace(...appendChildren(fallback)([value])) }, _ => live.replace(fallback));
+            sub(child)((value) => {
+                if (done) live.replace(...appendChildren(fallback)([value]));
+                else node = [value];
+            }, _ => live.replace([fallback]));
+            done = true;
             return [live.sm, ...appendChildren(fallback)(...node), live.em]
         }),
 
@@ -112,7 +117,7 @@ const
                             props[name]
                         );
                         // TODO: should we remove event listener
-                        // usub.push(() => element.removeEventListener(name.substring(2).toLowerCase(), props[name]));
+                        usub.push(() => element.removeEventListener(name.substring(2).toLowerCase(), props[name]));
                         delete props[name];
                     }
                 }
