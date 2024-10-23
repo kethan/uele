@@ -1,23 +1,23 @@
+
 const
     // FinalizationRegistry to clean up subscriptions when objects are garbage collected
     registry = new FinalizationRegistry(unsub => unsub?.call()),
-
     // API object providing basic functions for handling effects and values
     api = {
         // Handle any reactive subscription
         // any: undefined,
-        // // If any cleanup is requested
+        // If any cleanup is requested
         // cleanup: undefined,
         // Executes the provided function
         effect: f => f(),
         // Returns false for any value (placeholder implementation)
-        is: v => v?.call,
+        is: v => v.call,
         // Retrieves the value (returns it as is)
         get: v => v?.call(),
     },
-
     // Utility function to handle and unwrap values of signals, observable, etc especially functions
-    get = (v) => api.is(v) ? get(api.get(v)) : v?.call ? get(v()) : v,
+    // get = (v) => api.is(v) ? get(api.get(v)) : v.call ? get(v()) : v,
+    get = v => api.is(v) ? get(api.get(v)) : (v.call ? get(v()) : v),
 
     // Checks if the argument is considered an observable
     is = (arg) => arg && !!(
@@ -26,11 +26,10 @@ const
         api.is(arg) ||                   // Custom observable check
         arg.call                         // Function
     ),
-
     // https://github.com/dy/sube
     // Subscribe to an observable or value, and provide a callback for each value
     sub = (target, stop, unsub) => (next, error, cleanup) => target && (
-        unsub = ((!api.any && (api.is(target) || target.call)) && api.effect(() => (next(get(target)), api.cleanup?.(cleanup), cleanup))) ||
+        unsub = ((!api.any && (api.is(target) || target.call)) && api.effect(() => ((next(get(target))), api.cleanup?.(cleanup), cleanup))) ||
         (
             target.then?.(v => (!stop && next(get(v)), cleanup?.()), error) ||
             target[Symbol.asyncIterator] && (async v => {
@@ -45,21 +44,20 @@ const
         registry.register(target, unsub),
         unsub
     ),
-
     // Helpers
     isFunction = (x) => typeof x === "function",
     isString = (x) => typeof x === "string",
     isObject = (x) => typeof x === "object" && x !== null && !Array.isArray(x),
-    isFalsey = (x) => x === false || x === undefined || x === null,
+    isFalsey = (x) => typeof x === "boolean" || x == null,
     // https://github.com/vobyjs/voby
     isSVG = (x) => /^(t(ext$|s)|s[vwy]|g)|^set|tad|ker|p(at|s)|s(to|c$|ca|k)|r(ec|cl)|ew|us|f($|e|s)|cu|n[ei]|l[ty]|[GOP]/.test(x),
     toNode = (x) => x instanceof Node ? x : isFalsey(x) ? document.createComment(x) : document.createTextNode(x),
-    r = (x, callback, error) => is(x) ? sub(x)(v => callback(get(v), true), error) : callback(get(x), false),
-    ifEmpty = (nodes, fallback) => (nodes.length > 0 ? nodes : [fallback]),
+    r = (x, callback, error, clean) => is(x) ? sub(x)(v => callback(get(v), true), error, clean) : callback(get(x), false),
     Live = (sm = document.createTextNode(""), em = document.createTextNode("")) => ({
         sm,
         em,
         replace: (...xs) => {
+            if (!sm.parentNode || !em.parentNode) return;
             let range = document.createRange();
             range.setStartAfter(sm);
             range.setEndBefore(em);
@@ -67,90 +65,108 @@ const
             sm.after(...xs);
         },
     }),
-    appendChildren = (fallback = "") => (...children) =>
-        children.flat(Infinity).flatMap((child) => {
-            if (!is(child)) return [toNode(child)];
-            let live = Live(),
-                done = false,
-                node = [fallback];
-            sub(child)((value) => {
-                if (done) live.replace(...appendChildren(fallback)([value]));
-                else node = [value];
-            }, _ => live.replace(...appendChildren("")([fallback])))
-            done = true;
-            return [live.sm, ...appendChildren(fallback)(...node), live.em]
-        }),
-    Fragment = ({ children }) => {
-        let el = document.createDocumentFragment();
-        el.append(...appendChildren("")(children));
-        return el;
-    },
-    h = (tag, props, ...children) => {
-        if (isFunction(tag)) {
-            (props || (props = {})).children = children && children.length == 1 ? children[0] : children;
-            return tag(props);
-        } else if (isString(tag)) {
-            let element = isSVG(tag) ? document.createElementNS("http://www.w3.org/2000/svg", tag) : document.createElement(tag),
-                usub = [];
-            if (props) {
-                for (const name in props) {
-                    const value = props[name];
-                    if (name === "ref" && isFunction(value)) {
-                        value(element, props);
-                    } else if (name === "className") {
-                        element.setAttribute("class", value);
-                    } else if (name.startsWith("on") && name.toLowerCase()) {
-                        element.addEventListener(name.substring(2).toLowerCase(), value);
-                        // Optionally, add cleanup code to remove event listeners
-                        usub.push(() => element.removeEventListener(name.substring(2).toLowerCase(), value));
-                    } else if (name === "style") {
-                        if (isObject(value) && !is(value)) {
-                            for (const prop in value) {
-                                usub.push(
-                                    r(value[prop], (v) =>
-                                        v !== undefined
-                                            ? element.style.setProperty(prop, v)
-                                            : element.style.removeProperty(prop)
-                                    )
-                                );
-                            }
-                        } else {
-                            usub.push(r(value, (v) => element.setAttribute("style", v)));
-                        }
-                    } else if (name === "class") {
-                        if (isObject(value) && !is(value)) {
-                            for (const className in value) {
-                                usub.push(
-                                    r(value[className], (v) => element.classList.toggle(className, v))
-                                );
-                            }
-                        } else {
-                            usub.push(r(value, (v) => element.setAttribute("class", v)));
-                        }
-                    } else {
-                        // Handle all other attributes (including data-, aria-, and others)
-                        usub.push(
-                            r(value, (v) => {
-                                if (v == null || v === false) {
-                                    element.removeAttribute(name);
-                                } else {
-                                    element.setAttribute(name, v === true ? "" : v);
-                                }
-                            })
-                        );
-                    }
-                }
-            }
-            registry.register(element, () => {
-                usub.forEach(unsub => unsub?.());
-                usub = [];
-            });
-            element.append(...appendChildren("")(children));
-            return element;
-        }
-    };
 
-// Utilities and control flow components
+    useLive = (val, live = Live(), prev = val) => [
+        [live.sm, ...add()(val), live.em],
+        (v) => live.replace(...add()(prev = isFunction(v) ? v(prev) : v))
+    ],
+
+    add = (fallback = "") => (...children) =>
+        children.flat(Infinity).flatMap((child) => {
+            if (!is(child)) return toNode(child);
+            let live = Live(), prev, done = false;
+            sub(child)((value) => {
+                if (done && prev !== value) {
+                    live.replace(...add(fallback)(value))
+                }
+                prev = value
+            });
+            done = true;
+            return [live.sm, ...add(fallback)(prev), live.em];
+        }),
+
+    props = new Map([
+
+        ['style', (el, value, name) => isObject(value) ?
+            Object.entries(value).map(([prop, val]) => r(val, (v) =>
+                v !== undefined
+                    ? el.style.setProperty(prop, v)
+                    : el.style.removeProperty(prop))
+            ) :
+            r(value, v => el.setAttribute(name, v))
+        ],
+
+        ['class', (el, value, name) => isObject(value) ?
+            Object.entries(value).map(([prop, val]) =>
+                r(val, v => el.classList.toggle(prop, v))
+            ) :
+            r(value, v => el.setAttribute(name, v))
+        ],
+
+        ['ref', (el, value, props) => isFunction(value) && value(el, props)],
+
+    ]),
+
+    f = (tag) =>
+        new Proxy(
+            {},
+            {
+                get:
+                    (_, prop) =>
+                        (...kids) =>
+                            tag(prop, ...kids),
+            }
+        ),
+
+    h = (tag, attrs, ...children) => {
+
+        if (tag === h) return children;
+
+        if (isFunction(tag)) return tag({ children, ...attrs });
+
+        if (isString(tag)) {
+            tag = isSVG(tag)
+                ? document.createElementNS("http://www.w3.org/2000/svg", tag)
+                : document.createElement(tag);
+            let unsubs = [], unsub;
+
+            if (attrs) {
+                Object.entries(attrs).map(([name, value]) => {
+                    if (name === "className") name = "class";
+                    // name = name === "className" ? "class" : name;
+
+                    if (name.startsWith("on") && isFunction(value)) {
+                        tag.addEventListener(name.slice(2).toLowerCase(), value);
+                        unsubs.push(() => tag?.removeEventListener(name.substring(2).toLowerCase(), value));
+                    }
+                    else if (props.has(name)) {
+                        unsub = props.get(name)(tag, value, name, attrs);
+                        unsub && unsubs.push(...(Array.isArray(unsub) ? unsub : [unsub]));
+                    }
+                    else {
+                        unsubs.push(r(value, (v) =>
+                            (v == null || v === false) ?
+                                tag.removeAttribute(name) :
+                                tag.setAttribute(name, v === true ? "" : v)
+                        ));
+                    }
+                })
+            }
+
+            registry.register(tag, () => {
+                unsubs.forEach((unsub) => unsub?.());
+                unsubs = [];
+            });
+
+            tag.append(...add()(children));
+            return tag;
+        }
+
+        // else if(Array.isArray(tag)) {
+        //     return h(document.createDocumentFragment(), {}, ...tag)
+        // }
+    }
+
 let lazy =
     (file, fallback = "") =>
         (props) =>
@@ -159,33 +175,60 @@ let lazy =
                 .catch(() => fallback),
 
     If =
-        ({ when, children, fallback }) =>
-            () =>
-                !!get(when) ? children : fallback,
+        ({ when, children, fallback = "" }) =>
+            () => !!get(when) ?
+                isFunction(children[0]) ?
+                    children[0](!!get(when)) :
+                    children :
+                fallback,
+
+    Switch = ({ fallback = "", children }) => () => {
+        for (let child of children) {
+            let result = isFunction(child) ? child() : child;
+            if (result) return result;
+        }
+        return fallback;
+    },
+
+    Match = ({ when, children }) => If({ when, children, fallback: "" }),
+
+    Suspense = ({ fallback = "", children }) => add(fallback)(children),
+
+    Dynamic = ({ component, children, ...props }) =>
+        () =>
+            isFunction(component) ?
+                component(props, children)
+                : add("")(component),
 
     For = ({ each, children, fallback }) =>
-        map(each, (v, i) => isFunction(children) && children(v, i), fallback),
+        map(each, isFunction(children[0]) && children[0], fallback),
 
     map = (items, callback, fallback = "") => {
-        let oldNodes, oldValues;
+        let oldNodes, oldValues, done = false,
+            ifEmpty = (nodes, fallback) => (nodes.length > 0 ? nodes : add("")(fallback));
+
         oldValues = get(items);
         oldNodes = ifEmpty(oldValues.map(callback), fallback);
         sub(items)((newValues) => {
-            // Create a new map of old values to nodes
-            let oldMap = new Map(oldValues.map((v, i) => [v, oldNodes[i]]));
-            let newNodes = ifEmpty(newValues.map(newValue => oldMap.get(newValue) || callback(newValue)), fallback);
-            let parent = oldNodes[0].parentNode;
-            // // Use the diff function to update the DOM with the new node order
-            api.diff ||= swap;
-            api.diff(parent, oldNodes, newNodes, _ => _);
-            // // Update old values and nodes for the next run
-            oldValues = newValues;
-            oldNodes = newNodes;
+            if (done) {
+                // Create a new map of old values to nodes
+                let oldMap = new WeakMap(oldValues.map((v, i) => [v, oldNodes[i]]));
+                let newNodes = ifEmpty(newValues.map(newValue => oldMap.get(newValue) || callback(newValue)), fallback);
+                let parent = oldNodes[0].parentNode;
+                // Use the diff function to update the DOM with the new node order
+                api.diff = api.diff || diff;
+                // console.log('parent', parent, oldNodes, newNodes);
+                api.diff(parent, oldNodes, newNodes, _ => _);
+                // Update old values and nodes for the next run
+                oldValues = newValues;
+                oldNodes = newNodes;
+            }
         });
+        done = true;
         return oldNodes;
     },
     // https://github.com/dy/swapdom
-    swap = (parent, a, b, end = null) => {
+    diff = (parent, a, b, end = null) => {
         let i = 0, cur, next, bi, bidx = new Set(b),
             insert = (a, b, parent) => parent.insertBefore(a, b),
             remove = (a, parent) => parent.removeChild(a)
@@ -205,29 +248,39 @@ let lazy =
             }
         }
         return b
-    },
+    };
+// Portal = ({ mount = document.body, useShadow = false, isSVG = false, children }) => {
 
-    Switch = ({ fallback, children }) => () => {
-        for (let child of children) {
-            let result = child();
-            if (result) return result;
-        }
-        return fallback || null;
-    },
+//     // if(!isSVG) return h('div', {}, )
+//     let container = isSVG ? document.createElementNS("http://www.w3.org/2000/svg", "svg") :
+//         document.createElement("div");
+//     // let container = mount === document.head ? document.createDocumentFragment() :
+//     //     isSVG ? document.createElementNS("http://www.w3.org/2000/svg", "svg") :
+//     //         document.createElement("div");
 
-    Match = ({ when, children }) => () => (get(when) ? (isFunction(children) ? children(when) : children) : null),
+//     console.log(useShadow, container);
+//     if (useShadow && container.attachShadow) {
+//         container = container.attachShadow({ mode: "open" });
+//         console.log(container, mount);
+//     }
 
-    Suspense = ({ fallback = "", children }) => appendChildren(fallback)(children);
+//     mount.append(container);
+//     container.append(...appendChildren("")(children));
+
+//     // return document.createTextNode("");
+// },
 
 export {
-    Fragment,
     h,
-    h as createElement,
+    f,
+    props,
+    add,
     api,
     r,
     get,
     sub,
     is,
+    useLive,
     lazy,
     If,
     If as Show,
@@ -235,5 +288,6 @@ export {
     map,
     Switch,
     Match,
-    Suspense
-};
+    Suspense,
+    Dynamic
+}

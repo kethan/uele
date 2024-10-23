@@ -1,7 +1,7 @@
-import { Fragment, h } from "../src/index";
+import { h } from "../src/index";
 
 export {
-    Fragment,
+    h as Fragment,
     h,
     h as createElement,
     h as jsx,

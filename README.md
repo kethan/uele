@@ -23,36 +23,133 @@ A Reactive frontend library.
 - **Style Maps**
 - **Lazy Components**
 - **Promise**
-- **AscynIterable**
+- **AsyncIterable**
 - **Control Flow Components** - If, For, Show, Switch, Match, Suspense
 - **Extend with any reactive library using api** - effect, is, get
-- **For and map** - For efficient array diffing
-- **Add any diffing** - Using api.diff
+- **Efficient Array Diffing with For and map**
+- **Add Any Diffing** - Using api.diff
 - **Automatic Cleanup for Subscriptions**
+- **Extend html attributes and props**
+
+1. [counter](#counter)
+2. [h](#h)
+3. [lazy](#lazy)
+4. [map](#map)
+5. [Example](#example)
+6. [Utility Functions](#utility-functions)
+   - [get](#get)
+   - [r](#r)
+   - [useLive](#uselive)
+7. [Props](#props)
+8. [Control Flow Components](#control-flow-components)
+   - [If and Show](#if-and-show)
+   - [For](#for)
+   - [Switch and Match](#switch-and-match)
+   - [Suspense](#suspense)
+9. [Cleanup Support](#cleanup-support)
+10. [Other Settings](#other-settings)
+- [For any other reactive library](#for-any-other-reactive-library)
+11. [Thanks and Inspiration](#thanks-and-inspiration)
+12. [License](#license)
+
+### Counter
+
+### Without Build tools
+
+#### 1. h
+
+```js
+import { h, useLive } from "uele";
+
+let [count, setCount] = useLive(0);
+
+document.body.append(
+	h("main", {}, [
+		h("button", { onclick: () => setCount((c) => c - 1) }, "-"),
+		count,
+		h("button", { onclick: () => setCount((c) => c + 1) }, "+"),
+	])
+);
+```
+
+#### 2. html
+
+```js
+import { h, useLive } from "uele";
+import htm from "htm";
+const html = htm.bind(h);
+
+let [count, setCount] = useLive(0);
+
+document.body.append(
+	html`
+		<main>
+			<button onClick=${() => setCount((c) => c - 1)}>-</button>
+			${count}
+			<button onClick=${() => setCount((c) => c + 1)}>+</button>
+		</main>
+	`
+);
+```
+
+#### 3. f
+
+```js
+import { h, useLive, f } from "uele";
+const { button, main } = f(h);
+
+let [count, setCount] = useLive(0);
+
+document.body.append(
+	main({}, [
+		button({ onclick: () => setCount((c) => c - 1) }, "-"),
+		count,
+		button({ onclick: () => setCount((c) => c + 1) }, "+"),
+	])
+);
+```
+
+### With Build tools
+
+#### 4. jsx
+
+```jsx
+import { h, useLive } from "uele";
+
+let [count, setCount] = useLive(0);
+
+document.body.append(
+	<main>
+		<button onClick={() => setCount((c) => c - 1)}>-</button>
+		{count}
+		<button onClick={() => setCount((c) => c + 1)}>+</button>
+	</main>
+);
+```
 
 ### h
 
-```js
+```jsx
 let frag = (
-	<>
-		{asyncIterable} or {promise} or {any html node or component} or {any reactive signal or library}
-	</>
+  <>
+    {asyncIterable} or {promise} or {any html node or component} or {any reactive signal or library}
+  </>
 );
 ```
 
 ### lazy
 
-Load a component lazily with a optional fallback
+Load a component lazily with an optional fallback
 
-```js
+```jsx
 const LazyComp = lazy(() => import("./SomeComp"), <div>Failed</div>);
 ```
 
 ### map
 
-Efficient diffing of array of items
+Efficient diffing of an array of items
 
-```js
+```jsx
 import { map } from "uele";
 
 let items = o([1, 2, 3]);
@@ -73,7 +170,19 @@ const Items = () => {
 ### Example
 
 ```jsx
-import { h, Fragment, lazy, api, If, For, map } from "uele";
+import {
+	h,
+	Fragment,
+	lazy,
+	api,
+	If,
+	For,
+	map,
+	get,
+	r,
+	useLive,
+	props,
+} from "uele";
 import { o, effect, memo } from "ulive/fn"; // Or any other reactive library
 
 // ulive settings
@@ -161,6 +270,130 @@ const App = () => (
 document.body.append(<App />);
 ```
 
+### Utility Functions
+
+#### `get`
+
+A utility function to handle and unwrap values of signals, observables, etc., especially functions.
+
+```js
+import { get } from "uele";
+
+let value = get(someReactiveSignal);
+```
+
+#### `r`
+
+The `r` function handles reactive subscriptions, providing a callback when the value changes.
+
+```js
+import { r } from "uele";
+
+r(someObservable, (value) => {
+	console.log("Value changed to", value);
+});
+```
+
+#### `f`
+The `f` function is a utility that provides a convenient shorthand for creating elements using the h function. It returns a proxy that allows you to call HTML elements as functions directly.
+
+```js
+import { h, useLive, f } from "uele";
+const { button, main } = f(h);
+
+let [count, setCount] = useLive(0);
+
+document.body.append(
+  main({}, [
+    button({ onclick: () => setCount((c) => c - 1) }, "-"),
+    count,
+    button({ onclick: () => setCount((c) => c + 1) }, "+"),
+  ])
+);
+```
+
+#### `useLive`
+
+`useLive` helps manage dynamic parts of the DOM by tracking specific start and end markers.
+
+```js
+import { useLive } from "uele";
+
+let [live, setLive] = useLive("wow");
+
+let c = 0;
+setInterval(() => {
+	setLive(c++);
+}, 1000);
+
+const App = () => <main>{live}</main>;
+```
+
+### Props
+
+The `props` object allows setting custom properties and event handlers on elements.
+
+```js
+import { props } from "uele";
+
+props.set("autofocus", (tag, value, name, attrs) => {
+	setTimeout(() => tag.focus(), 0);
+});
+
+props.set("validate", (node, validateFn) => {
+	node.addEventListener("input", () => {
+		const error = validateFn(node.value);
+		if (error) {
+			console.log("error", error);
+		} else {
+			console.log("no err");
+		}
+	});
+});
+
+props.set("unmount", (node, cleanupFn) => {
+	// Check if the node has a parent node
+	const setupObserver = () => {
+		if (node.parentNode) {
+			// Create a MutationObserver to watch for DOM changes (removals)
+			const observer = new MutationObserver((mutationsList) => {
+				for (let mutation of mutationsList) {
+					mutation.removedNodes.forEach((removedNode) => {
+						if (removedNode === node) {
+							// Node has been removed, trigger the cleanup function
+							cleanupFn();
+							observer.disconnect(); // Stop observing
+						}
+					});
+				}
+			});
+
+			// Start observing the parent node for childList changes (node removals)
+			observer.observe(node.parentNode, { childList: true });
+
+			// Return the cleanup function if the element is manually removed
+			return () => {
+				console.log("c,,");
+
+				cleanupFn(); // Manual cleanup if needed
+				observer.disconnect(); // Stop observing
+			};
+		} else {
+			// If node has no parentNode, retry after DOM insertion
+			requestAnimationFrame(setupObserver); // Try again on the next frame
+		}
+	};
+
+	setupObserver(); // Initialize the observer
+});
+<input autofocus/>
+<button tooltip="click me!">Hover me</button>
+<div ref={(v) => { setTimeout(() => v.remove(), 2000)}}
+	 unmount={() => console.log("unmounted!")}>
+	Remove me
+</div>
+```
+
 ### Control Flow Components
 
 Control flow components accept boolean or reactive values for conditions.
@@ -214,7 +447,7 @@ import { Suspense } from "uele";
 
 ### Cleanup Support
 
-Subscriptions and side-effects in `UEle` are automatically cleaned up when elements are garbage collected using `FinalizationRegistry`. You don't need to manually clean up unless desired, but it can be done through provided `usub` functions.
+Subscriptions and side-effects in `UEle` are automatically cleaned up when elements are garbage collected using `FinalizationRegistry`. You don't need to manually clean up unless desired, but it can be done through provided `unsub` functions.
 
 ### Other Settings
 
@@ -230,7 +463,7 @@ api.get = (v) => v?.value;
 
 // oby or sinuous settings
 api.effect = effect; // or api.effect = subscribe
-api.is = (v) => (v) => isObservable(v); // or api.is = (v) => v?.$o;
+api.is = (v) => isObservable(v); // or api.is = (v) => v?.$o;
 api.get = (v) => v?.();
 
 // solid-js settings
