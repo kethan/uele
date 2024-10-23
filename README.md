@@ -39,6 +39,7 @@ A Reactive frontend library.
 6. [Utility Functions](#utility-functions)
    - [get](#get)
    - [r](#r)
+   - [f](#f)
    - [useLive](#uselive)
 7. [Props](#props)
 8. [Control Flow Components](#control-flow-components)
@@ -48,7 +49,9 @@ A Reactive frontend library.
    - [Suspense](#suspense)
 9. [Cleanup Support](#cleanup-support)
 10. [Other Settings](#other-settings)
+
 - [For any other reactive library](#for-any-other-reactive-library)
+
 11. [Thanks and Inspiration](#thanks-and-inspiration)
 12. [License](#license)
 
@@ -289,26 +292,27 @@ The `r` function handles reactive subscriptions, providing a callback when the v
 ```js
 import { r } from "uele";
 
-r(someObservable, (value) => {
-	console.log("Value changed to", value);
+r(someObservable, (value, is) => {
+	console.log("Value changed to", value, is);
 });
 ```
 
 #### `f`
+
 The `f` function is a utility that provides a convenient shorthand for creating elements using the h function. It returns a proxy that allows you to call HTML elements as functions directly.
 
 ```js
 import { h, useLive, f } from "uele";
 const { button, main } = f(h);
 
-let [count, setCount] = useLive(0);
+const [count, setCount] = useLive(0);
 
 document.body.append(
-  main({}, [
-    button({ onclick: () => setCount((c) => c - 1) }, "-"),
-    count,
-    button({ onclick: () => setCount((c) => c + 1) }, "+"),
-  ])
+	main({}, [
+		button({ onclick: () => setCount((c) => c - 1) }, "-"),
+		count,
+		button({ onclick: () => setCount((c) => c + 1) }, "+"),
+	])
 );
 ```
 
@@ -319,7 +323,7 @@ document.body.append(
 ```js
 import { useLive } from "uele";
 
-let [live, setLive] = useLive("wow");
+let [live, setLive] = useLive("....");
 
 let c = 0;
 setInterval(() => {
@@ -351,6 +355,24 @@ props.set("validate", (node, validateFn) => {
 	});
 });
 
+props.set("tooltip", (node, value) => {
+	node.addEventListener("mouseenter", () => {
+		const tooltip = document.createElement("div");
+		tooltip.className = "tooltip";
+		tooltip.textContent = value;
+		document.body.appendChild(tooltip);
+		const { left, top } = node.getBoundingClientRect();
+		tooltip.style.position = "absolute";
+		tooltip.style.left = `${left}px`;
+		tooltip.style.top = `${top - 20}px`;
+	});
+
+	node.addEventListener("mouseleave", () => {
+		const tooltip = document.querySelector(".tooltip");
+		tooltip && tooltip.remove();
+	});
+});
+
 props.set("unmount", (node, cleanupFn) => {
 	// Check if the node has a parent node
 	const setupObserver = () => {
@@ -370,14 +392,6 @@ props.set("unmount", (node, cleanupFn) => {
 
 			// Start observing the parent node for childList changes (node removals)
 			observer.observe(node.parentNode, { childList: true });
-
-			// Return the cleanup function if the element is manually removed
-			return () => {
-				console.log("c,,");
-
-				cleanupFn(); // Manual cleanup if needed
-				observer.disconnect(); // Stop observing
-			};
 		} else {
 			// If node has no parentNode, retry after DOM insertion
 			requestAnimationFrame(setupObserver); // Try again on the next frame
@@ -387,6 +401,7 @@ props.set("unmount", (node, cleanupFn) => {
 	setupObserver(); // Initialize the observer
 });
 <input autofocus/>
+<input validate={(val) => (val.length < 3 ? "Too short" : "")} />
 <button tooltip="click me!">Hover me</button>
 <div ref={(v) => { setTimeout(() => v.remove(), 2000)}}
 	 unmount={() => console.log("unmounted!")}>
