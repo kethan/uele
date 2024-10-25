@@ -13,11 +13,21 @@ A Reactive frontend library.
 **module**: https://unpkg.com/uele?module
 
 ### Lite Version
- [![Badge size](https://deno.bundlejs.com/badge?q=uele/lite&treeshake=[*]&config={"compression":"brotli"})](https://unpkg.com/uele/lite) [![Badge size](https://deno.bundlejs.com/badge?q=uele/lite&treeshake=[*]&config={"compression":"gzip"})](https://unpkg.com/uele/lite)
+
+[![Badge size](https://deno.bundlejs.com/badge?q=uele/lite&treeshake=[*]&config={"compression":"brotli"})](https://unpkg.com/uele/lite) [![Badge size](https://deno.bundlejs.com/badge?q=uele/lite&treeshake=[*]&config={"compression":"gzip"})](https://unpkg.com/uele/lite)
 
 **cdn**: https://unpkg.com/uele/lite
 
 **module**: https://unpkg.com/uele/lite?module
+
+```js
+import { h, r, is, get, api, props, add, useLive } from "uele/lite";
+
+// @preact/signals, ulive, usignal api config
+api.effect = effect;
+api.is = (v) => v.peek;
+api.get = (v) => v.value;
+```
 
 - **Tiny** [![Badge size](https://deno.bundlejs.com/badge?q=uele/lite&treeshake=[{h}])](https://unpkg.com/uele/lite)
 - **Simple API**
@@ -74,11 +84,11 @@ import { h, useLive } from "uele";
 let [count, setCount] = useLive(0);
 
 document.body.append(
-	h("main", {}, [
-		h("button", { onclick: () => setCount((c) => c - 1) }, "-"),
-		count,
-		h("button", { onclick: () => setCount((c) => c + 1) }, "+"),
-	])
+  h("main", [
+    h("button", { onclick: () => setCount((c) => c - 1) }, "-"),
+    count,
+    h("button", { onclick: () => setCount((c) => c + 1) }, "+"),
+  ])
 );
 ```
 
@@ -92,13 +102,13 @@ const html = htm.bind(h);
 let [count, setCount] = useLive(0);
 
 document.body.append(
-	html`
-		<main>
-			<button onClick=${() => setCount((c) => c - 1)}>-</button>
-			${count}
-			<button onClick=${() => setCount((c) => c + 1)}>+</button>
-		</main>
-	`
+  html`
+    <main>
+      <button onClick=${() => setCount((c) => c - 1)}>-</button>
+      ${count}
+      <button onClick=${() => setCount((c) => c + 1)}>+</button>
+    </main>
+  `
 );
 ```
 
@@ -111,11 +121,11 @@ const { button, main } = f(h);
 let [count, setCount] = useLive(0);
 
 document.body.append(
-	main({}, [
-		button({ onclick: () => setCount((c) => c - 1) }, "-"),
-		count,
-		button({ onclick: () => setCount((c) => c + 1) }, "+"),
-	])
+  main([
+    button({ onclick: () => setCount((c) => c - 1) }, "-"),
+    count,
+    button({ onclick: () => setCount((c) => c + 1) }, "+"),
+  ])
 );
 ```
 
@@ -129,11 +139,11 @@ import { h, useLive } from "uele";
 let [count, setCount] = useLive(0);
 
 document.body.append(
-	<main>
-		<button onClick={() => setCount((c) => c - 1)}>-</button>
-		{count}
-		<button onClick={() => setCount((c) => c + 1)}>+</button>
-	</main>
+  <main>
+    <button onClick={() => setCount((c) => c - 1)}>-</button>
+    {count}
+    <button onClick={() => setCount((c) => c + 1)}>+</button>
+  </main>
 );
 ```
 
@@ -165,15 +175,15 @@ import { map } from "uele";
 let items = o([1, 2, 3]);
 
 const Items = () => {
-	return map(
-		items,
-		(item, i) => (
-			<div>
-				{item} {i}
-			</div>
-		),
-		<div>No items</div>
-	);
+  return map(
+    items,
+    (item, i) => (
+      <div>
+        {item} {i}
+      </div>
+    ),
+    <div>No items</div>
+  );
 };
 ```
 
@@ -181,18 +191,19 @@ const Items = () => {
 
 ```jsx
 import {
-	h,
-	Fragment,
-	lazy,
-	api,
-	If,
-	For,
-	map,
-	get,
-	r,
-	useLive,
-	props,
+  h,
+  Fragment,
+  lazy,
+  api,
+  If,
+  For,
+  map,
+  get,
+  r,
+  useLive,
+  props,
 } from "uele";
+
 import { o, effect, memo } from "ulive/fn"; // Or any other reactive library
 
 // ulive settings
@@ -206,15 +217,15 @@ const LazyComp = lazy(() => import("./lazy"));
 
 // Async Component
 const TodoItem = async ({ id }) => {
-	let api = await fetch(`https://jsonplaceholder.typicode.com/todos/${id}`);
-	let todo = await api.json();
+  let api = await fetch(`https://jsonplaceholder.typicode.com/todos/${id}`);
+  let todo = await api.json();
 
-	return (
-		<li>
-			<span>{todo.title}</span>
-			<input type="checkbox" checked={todo.completed} />
-		</li>
-	);
+  return (
+    <li>
+      <span>{todo.title}</span>
+      <input type="checkbox" checked={todo.completed} />
+    </li>
+  );
 };
 
 const count = o(0);
@@ -222,59 +233,59 @@ const inc = () => count(count() + 1);
 const dec = () => count(count() - 1);
 
 const Counter = () => {
-	let square = memo(() => count() * count());
-	let cube = memo(() => square() * count());
-	effect(() => console.log(count(), square(), cube()));
-	return (
-		<div>
-			<div>
-				Count: {count} {square} {cube}
-			</div>
-			<button onclick={inc}>+</button>
-			<button onclick={dec}>-</button>
-		</div>
-	);
+  let square = memo(() => count() * count());
+  let cube = memo(() => square() * count());
+  effect(() => console.log(count(), square(), cube()));
+  return (
+    <div>
+      <div>
+        Count: {count} {square} {cube}
+      </div>
+      <button onclick={inc}>+</button>
+      <button onclick={dec}>-</button>
+    </div>
+  );
 };
 
 // AsyncIterator
 
 const asyncIterable = {
-	[Symbol.asyncIterator]() {
-		return {
-			i: 0,
-			next() {
-				if (this.i < 200)
-					return new Promise((ok) =>
-						setTimeout(
-							() =>
-								ok({
-									value: <div>{this.i++}</div>,
-									done: false,
-								}),
-							10
-						)
-					);
-				return new Promise((ok) => ok({ done: true }));
-			},
-		};
-	},
+  [Symbol.asyncIterator]() {
+    return {
+      i: 0,
+      next() {
+        if (this.i < 200)
+          return new Promise((ok) =>
+            setTimeout(
+              () =>
+                ok({
+                  value: <div>{this.i++}</div>,
+                  done: false,
+                }),
+              10
+            )
+          );
+        return new Promise((ok) => ok({ done: true }));
+      },
+    };
+  },
 };
 
 let items = o([1, 2, 3]);
 
 const App = () => (
-	<main>
-		<Counter />
-		<LazyComp />
-		<TodoItem />
-		{asyncIterable}
-		{map(items, (item, i) => (
-			<div>
-				{item} {i}
-			</div>
-		))}
-		<svg>...</svg>
-	</main>
+  <main>
+    <Counter />
+    <LazyComp />
+    <TodoItem />
+    {asyncIterable}
+    {map(items, (item, i) => (
+      <div>
+        {item} {i}
+      </div>
+    ))}
+    <svg>...</svg>
+  </main>
 );
 
 document.body.append(<App />);
@@ -300,7 +311,7 @@ The `r` function handles reactive subscriptions, providing a callback when the v
 import { r } from "uele";
 
 r(someObservable, (value, is) => {
-	console.log("Value changed to", value, is);
+  console.log("Value changed to", value, is);
 });
 ```
 
@@ -315,11 +326,11 @@ const { button, main } = f(h);
 const [count, setCount] = useLive(0);
 
 document.body.append(
-	main({}, [
-		button({ onclick: () => setCount((c) => c - 1) }, "-"),
-		count,
-		button({ onclick: () => setCount((c) => c + 1) }, "+"),
-	])
+  main([
+    button({ onclick: () => setCount((c) => c - 1) }, "-"),
+    count,
+    button({ onclick: () => setCount((c) => c + 1) }, "+"),
+  ])
 );
 ```
 
@@ -334,7 +345,7 @@ let [live, setLive] = useLive("....");
 
 let c = 0;
 setInterval(() => {
-	setLive(c++);
+  setLive(c++);
 }, 1000);
 
 const App = () => <main>{live}</main>;
@@ -379,28 +390,28 @@ props.set("tooltip", (node, value) => {
 
 props.set("unmount", (node, cleanupFn) => {
 	// Check if the node has a parent node
-	const setupObserver = () => {
-		if (node.parentNode) {
-			// Create a MutationObserver to watch for DOM changes (removals)
-			const observer = new MutationObserver((mutationsList) => {
-				for (let mutation of mutationsList) {
-					mutation.removedNodes.forEach((removedNode) => {
-						if (removedNode === node) {
-							// Node has been removed, trigger the cleanup function
-							cleanupFn();
-							observer.disconnect(); // Stop observing
-						}
-					});
-				}
-			});
+const setupObserver = () => {
+	if (node.parentNode) {
+		// Create a MutationObserver to watch for DOM changes (removals)
+		const observer = new MutationObserver((mutationsList) => {
+			for (let mutation of mutationsList) {
+				mutation.removedNodes.forEach((removedNode) => {
+					if (removedNode === node) {
+						// Node has been removed, trigger the cleanup function
+						cleanupFn();
+						observer.disconnect(); // Stop observing
+					}
+				});
+			}
+		});
 
-			// Start observing the parent node for childList changes (node removals)
-			observer.observe(node.parentNode, { childList: true });
-		} else {
-			// If node has no parentNode, retry after DOM insertion
-			requestAnimationFrame(setupObserver); // Try again on the next frame
-		}
-	};
+		// Start observing the parent node for childList changes (node removals)
+		observer.observe(node.parentNode, { childList: true });
+	} else {
+		// If node has no parentNode, retry after DOM insertion
+		requestAnimationFrame(setupObserver); // Try again on the next frame
+	}
+};
 
 	setupObserver(); // Initialize the observer
 });
@@ -437,7 +448,7 @@ import { If, Show } from 'uele';
 import { For } from "uele";
 
 <For each={[1, 2, 3]} fallback={<div>No Items</div>}>
-	{(val) => <div>{val}</div>}
+  {(val) => <div>{val}</div>}
 </For>;
 ```
 
@@ -447,12 +458,12 @@ import { For } from "uele";
 import { Switch, Match } from "uele";
 
 <Switch fallback={<div>Default case</div>}>
-	<Match when={condition1}>
-		<div>Case 1</div>
-	</Match>
-	<Match when={condition2}>
-		<div>Case 2</div>
-	</Match>
+  <Match when={condition1}>
+    <div>Case 1</div>
+  </Match>
+  <Match when={condition2}>
+    <div>Case 2</div>
+  </Match>
 </Switch>;
 ```
 
