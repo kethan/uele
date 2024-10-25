@@ -1,7 +1,7 @@
 {
 	"name": "uele",
 	"description": "uele reactive frontend library",
-	"version": "0.9.1",
+	"version": "0.9.2",
 	"type": "module",
 	"source": "./src/index.js",
 	"main": "./dist/index.js",
@@ -39,7 +39,8 @@
 		"build": "rollup --config rollup.config.js"
 	},
 	"files": [
-		"dist"
+		"dist",
+		"lite"
 	],
 	"devDependencies": {
 		"@rollup/plugin-terser": "^0.4.4",

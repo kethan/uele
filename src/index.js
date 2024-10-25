@@ -11,13 +11,13 @@ const
         // Executes the provided function
         effect: f => f(),
         // Returns false for any value (placeholder implementation)
-        is: v => v.call,
+        is: _ => false,
         // Retrieves the value (returns it as is)
-        get: v => v?.call(),
+        get: v => v,
     },
     // Utility function to handle and unwrap values of signals, observable, etc especially functions
     // get = (v) => api.is(v) ? get(api.get(v)) : v.call ? get(v()) : v,
-    get = v => api.is(v) ? get(api.get(v)) : (v.call ? get(v()) : v),
+    get = v => api.is(v) ? get(api.get(v)) : (v?.call ? get(v()) : v),
 
     // Checks if the argument is considered an observable
     is = (arg) => arg && !!(
@@ -52,6 +52,7 @@ const
     // https://github.com/vobyjs/voby
     isSVG = (x) => /^(t(ext$|s)|s[vwy]|g)|^set|tad|ker|p(at|s)|s(to|c$|ca|k)|r(ec|cl)|ew|us|f($|e|s)|cu|n[ei]|l[ty]|[GOP]/.test(x),
     toNode = (x) => x instanceof Node ? x : isFalsey(x) ? document.createComment(x) : document.createTextNode(x),
+    isNode = x => x instanceof Node || isFalsey(x) || !isObject(x) || is(x),
     r = (x, callback, error, clean) => is(x) ? sub(x)(v => callback(get(v), true), error, clean) : callback(get(x), false),
     Live = (sm = document.createTextNode(""), em = document.createTextNode("")) => ({
         sm,
@@ -70,24 +71,30 @@ const
         [live.sm, ...add()(val), live.em],
         (v) => live.replace(...add()(prev = isFunction(v) ? v(prev) : v))
     ],
-
+    // old = new Map,
     add = (fallback = "") => (...children) =>
         children.flat(Infinity).flatMap((child) => {
             if (!is(child)) return toNode(child);
-            let live = Live(), prev, done = false;
+            let live = Live(), prev = fallback, done = false;
             sub(child)((value) => {
                 if (done && prev !== value) {
                     live.replace(...add(fallback)(value))
                 }
                 prev = value
-            });
+            })
+            // if (old.has(child)) old.get(child)?.()
+            // old.set(child, sub(child)((value) => {
+            //     if (done && prev !== value) {
+            //         live.replace(...add(fallback)(value))
+            //     }
+            //     prev = value
+            // }));
             done = true;
             return [live.sm, ...add(fallback)(prev), live.em];
         }),
 
     props = new Map([
-
-        ['style', (el, value, name) => isObject(value) ?
+        ['style', (el, value, name) => isObject(value) && !is(value) ?
             Object.entries(value).map(([prop, val]) => r(val, (v) =>
                 v !== undefined
                     ? el.style.setProperty(prop, v)
@@ -95,36 +102,31 @@ const
             ) :
             r(value, v => el.setAttribute(name, v))
         ],
-
-        ['class', (el, value, name) => isObject(value) ?
+        ['class', (el, value, name) => isObject(value) && !is(value) ?
             Object.entries(value).map(([prop, val]) =>
                 r(val, v => el.classList.toggle(prop, v))
             ) :
             r(value, v => el.setAttribute(name, v))
         ],
-
         ['ref', (el, value, props) => isFunction(value) && value(el, props)],
-
     ]),
 
-    f = (tag) =>
-        new Proxy(
-            {},
-            {
-                get:
-                    (_, prop) =>
-                        (...kids) =>
-                            tag(prop, ...kids),
-            }
-        ),
+    f = (tag) => new Proxy(
+        {},
+        {
+            get:
+                (_, attrs) =>
+                    (...children) =>
+                        tag(attrs, ...children),
+        }
+    ),
 
     h = (tag, attrs, ...children) => {
-
-        if (tag === h) return children;
-
-        if (isFunction(tag)) return tag({ children, ...attrs });
-
-        if (isString(tag)) {
+        if (isNode(attrs) && attrs) return h(tag, {}, [attrs, children])
+        else if (tag === h) return children
+        else if (Array.isArray(tag)) return tag;
+        else if (isFunction(tag)) return tag({ children, ...attrs });
+        else if (isString(tag)) {
             tag = isSVG(tag)
                 ? document.createElementNS("http://www.w3.org/2000/svg", tag)
                 : document.createElement(tag);
@@ -133,8 +135,6 @@ const
             if (attrs) {
                 Object.entries(attrs).map(([name, value]) => {
                     if (name === "className") name = "class";
-                    // name = name === "className" ? "class" : name;
-
                     if (name.startsWith("on") && isFunction(value)) {
                         tag.addEventListener(name.slice(2).toLowerCase(), value);
                         unsubs.push(() => tag?.removeEventListener(name.substring(2).toLowerCase(), value));
@@ -159,12 +159,8 @@ const
             });
 
             tag.append(...add()(children));
-            return tag;
         }
-
-        // else if(Array.isArray(tag)) {
-        //     return h(document.createDocumentFragment(), {}, ...tag)
-        // }
+        return tag;
     }
 
 let lazy =
@@ -182,7 +178,7 @@ let lazy =
                     children :
                 fallback,
 
-    Switch = ({ fallback = "", children }) => () => {
+    Switch = ({ children, fallback = "" }) => () => {
         for (let child of children) {
             let result = isFunction(child) ? child() : child;
             if (result) return result;
@@ -190,9 +186,7 @@ let lazy =
         return fallback;
     },
 
-    Match = ({ when, children }) => If({ when, children, fallback: "" }),
-
-    Suspense = ({ fallback = "", children }) => add(fallback)(children),
+    Suspense = ({ children, fallback = "" }) => add(fallback)(children),
 
     Dynamic = ({ component, children, ...props }) =>
         () =>
@@ -205,21 +199,17 @@ let lazy =
 
     map = (items, callback, fallback = "") => {
         let oldNodes, oldValues, done = false,
-            ifEmpty = (nodes, fallback) => (nodes.length > 0 ? nodes : add("")(fallback));
+            ifEmpty = (nodes, fallback) => nodes.length > 0 ? nodes : fallback;
 
         oldValues = get(items);
         oldNodes = ifEmpty(oldValues.map(callback), fallback);
         sub(items)((newValues) => {
             if (done) {
-                // Create a new map of old values to nodes
-                let oldMap = new WeakMap(oldValues.map((v, i) => [v, oldNodes[i]]));
+                let oldMap = new Map(oldValues.map((v, i) => [v, oldNodes[i]]));
                 let newNodes = ifEmpty(newValues.map(newValue => oldMap.get(newValue) || callback(newValue)), fallback);
                 let parent = oldNodes[0].parentNode;
-                // Use the diff function to update the DOM with the new node order
                 api.diff = api.diff || diff;
-                // console.log('parent', parent, oldNodes, newNodes);
                 api.diff(parent, oldNodes, newNodes, _ => _);
-                // Update old values and nodes for the next run
                 oldValues = newValues;
                 oldNodes = newNodes;
             }
@@ -284,10 +274,10 @@ export {
     lazy,
     If,
     If as Show,
+    If as Match,
     For,
     map,
     Switch,
-    Match,
     Suspense,
     Dynamic
 }

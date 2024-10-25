@@ -2,7 +2,7 @@
 
 A Reactive frontend library.
 
-[![Version](https://img.shields.io/npm/v/uele.svg?color=success&style=flat-square)](https://www.npmjs.com/package/uele) [![Badge size](https://img.badgesize.io/https://unpkg.com/uele?compression=gzip&label=gzip&style=flat-square)](https://unpkg.com/uele)
+[![Version](https://img.shields.io/npm/v/uele.svg?color=success&style=flat-square)](https://www.npmjs.com/package/uele) [![Badge size](https://deno.bundlejs.com/badge?q=uele&treeshake=[*]&config={"compression":"brotli"})](https://unpkg.com/uele) [![Badge size](https://deno.bundlejs.com/badge?q=uele&treeshake=[*]&config={"compression":"gzip"})](https://unpkg.com/uele)
 
 **yarn**: `yarn add uele`
 
@@ -12,7 +12,14 @@ A Reactive frontend library.
 
 **module**: https://unpkg.com/uele?module
 
-- **Tiny** [![Badge size](https://deno.bundlejs.com/badge?q=uele@0.7.0&treeshake=[{h,Fragment}])](https://unpkg.com/uele)
+### Lite Version
+ [![Badge size](https://deno.bundlejs.com/badge?q=uele/lite&treeshake=[*]&config={"compression":"brotli"})](https://unpkg.com/uele/lite) [![Badge size](https://deno.bundlejs.com/badge?q=uele/lite&treeshake=[*]&config={"compression":"gzip"})](https://unpkg.com/uele/lite)
+
+**cdn**: https://unpkg.com/uele/lite
+
+**module**: https://unpkg.com/uele/lite?module
+
+- **Tiny** [![Badge size](https://deno.bundlejs.com/badge?q=uele/lite&treeshake=[{h}])](https://unpkg.com/uele/lite)
 - **Simple API**
 - **Fast**
 - **JSX**
@@ -356,10 +363,8 @@ props.set("validate", (node, validateFn) => {
 });
 
 props.set("tooltip", (node, value) => {
+	const tooltip = <div class="tooltip">{value}</div>;
 	node.addEventListener("mouseenter", () => {
-		const tooltip = document.createElement("div");
-		tooltip.className = "tooltip";
-		tooltip.textContent = value;
 		document.body.appendChild(tooltip);
 		const { left, top } = node.getBoundingClientRect();
 		tooltip.style.position = "absolute";
@@ -368,8 +373,7 @@ props.set("tooltip", (node, value) => {
 	});
 
 	node.addEventListener("mouseleave", () => {
-		const tooltip = document.querySelector(".tooltip");
-		tooltip && tooltip.remove();
+		tooltip.remove();
 	});
 });
 
@@ -402,7 +406,7 @@ props.set("unmount", (node, cleanupFn) => {
 });
 <input autofocus/>
 <input validate={(val) => (val.length < 3 ? "Too short" : "")} />
-<button tooltip="click me!">Hover me</button>
+<button tooltip={{<div>click me!</div>}}>Hover me</button>
 <div ref={(v) => { setTimeout(() => v.remove(), 2000)}}
 	 unmount={() => console.log("unmounted!")}>
 	Remove me

@@ -11,7 +11,7 @@ const resolve = (pkg, {
 	input: `${input}.${ext}`,
 	plugins: [
 		bundleSize(),
-		copy({
+		copyFiles.length && copy({
 			targets: [
 				{ src: copyFiles[0], dest: copyFiles[1] }
 			]
@@ -48,5 +48,6 @@ const resolve = (pkg, {
 export default [
 	resolve("uele", { copyFiles: ["src/index.d.ts", "dist/"] }),
 	resolve("uele", { copyFiles: ["jsx-runtime/index.d.ts", "jsx-runtime/dist/"], input: "jsx-runtime/index", output: "jsx-runtime/dist/index", ext: "ts" }),
-	resolve("uele", { copyFiles: ["jsx-dev-runtime/index.d.ts", "jsx-dev-runtime/dist/"], input: "jsx-dev-runtime/index", output: "jsx-dev-runtime/dist/index", ext: "ts" })
+	resolve("uele", { copyFiles: ["jsx-dev-runtime/index.d.ts", "jsx-dev-runtime/dist/"], input: "jsx-dev-runtime/index", output: "jsx-dev-runtime/dist/index", ext: "ts" }),
+	resolve("uele", { copyFiles: ["lite/index.d.ts", "lite/dist/"], input: "lite/index", output: "lite/dist/index" })
 ]
