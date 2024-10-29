@@ -5,7 +5,7 @@ const
         // Returns false for any value (placeholder implementation)
         is: _ => false,
         // Retrieves the value (returns it as is)
-        get: v => v,
+        get: _ => _
     },
     // Utility function to handle and unwrap values of signals, observable, etc especially functions
     get = v => api.is(v) ? get(api.get(v)) : v?.call ? get(v()) : v,
@@ -18,12 +18,11 @@ const
     isFalsey = x => typeof x === "boolean" || x == null,
     isSVG = x => /^(t(ext$|s)|s[vwy]|g)|^set|tad|ker|p(at|s)|s(to|c$|ca|k)|r(ec|cl)|ew|us|f($|e|s)|cu|n[ei]|l[ty]|[GOP]/.test(x),
     isNode = x => x instanceof Node || isFalsey(x) || !isObject(x) || is(x),
-    toNode = x => (x instanceof Node ? x : isFalsey(x) ? document.createComment(x) : document.createTextNode(x)),
-    Live = (sm = document.createTextNode(""), em = document.createTextNode("")) => ({
+    toNode = x => x instanceof Node ? x : isFalsey(x) ? document.createComment(x) : document.createTextNode(x),
+    Live = (sm = document.createTextNode(""), em = document.createTextNode(""), range = document.createRange()) => ({
         sm, em,
         replace: (...xs) => {
             if (!sm.parentNode || !em.parentNode) return;
-            let range = document.createRange();
             range.setStartAfter(sm);
             range.setEndBefore(em);
             range.deleteContents();
@@ -31,43 +30,24 @@ const
         }
     }),
 
-    useLive = (val, live = Live(), prev = val) => [
-        [live.sm, ...add()(val), live.em],
-        v => live.replace(...add()(prev = isFunction(v) ? v(prev) : v))
-    ],
-
-    // old = new Map,
-
-    add = (fallback = "") => (...children) =>
+    process = (...children) =>
         children.flat(Infinity).flatMap((child) => {
             if (!is(child)) return toNode(child);
-            let live = Live(), prev = fallback, done = false;
+            let live = Live(), prev = "", done = false;
             r(child, (value) => {
-                if (done && prev !== value) live.replace(...add()(value));
+                if (done && prev !== value) live.replace(...process(value));
                 prev = value;
-            })
-            // if (!is(child)) return toNode(child);
-            // let live = Live(), prev = fallback, done = false;
-            // sub(child)((value) => {
-            //     if (done && prev !== value) {
-            //         live.replace(...add(fallback)(value))
-            //     }
-            //     prev = value
-            // })
-            // if (old.has(child)) {
-            //     console.log('unsu');
-
-            //     old.get(child)?.()
-            // }
-            // old.set(child, r(child, (value) => {
-            //     console.log('va', value);
-
-            //     if (done && prev !== value) live.replace(...add(value));
-            //     prev = value;
-            // }));
+            });
             done = true;
-            return [live.sm, ...add()(prev), live.em];
+            return [live.sm, ...process(prev), live.em];
         }),
+
+    useLive = (val, live = Live(), prev = val) => [
+        [live.sm, ...process(val), live.em],
+        v => live.replace(...process(prev = isFunction(v) ? v(prev) : v))
+    ],
+
+    add = (tag) => (...children) => (tag.append(...process(children)), tag),
 
     props = new Map([
         ['style', (el, value, name) => isObject(value) && !is(value) ?
@@ -113,7 +93,8 @@ const
                     }
                 })
             }
-            tag.append(...add()(children))
+
+            return add(tag)(children)
         }
         return tag;
     };

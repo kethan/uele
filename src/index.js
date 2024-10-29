@@ -13,7 +13,7 @@ const
         // Returns false for any value (placeholder implementation)
         is: _ => false,
         // Retrieves the value (returns it as is)
-        get: v => v,
+        get: _ => _,
     },
     // Utility function to handle and unwrap values of signals, observable, etc especially functions
     // get = (v) => api.is(v) ? get(api.get(v)) : v.call ? get(v()) : v,
@@ -28,7 +28,7 @@ const
     ),
     // https://github.com/dy/sube
     // Subscribe to an observable or value, and provide a callback for each value
-    sub = (target, stop, unsub) => (next, error, cleanup) => target && (
+    sub = (target, next, error, cleanup, stop, unsub) => target && (
         unsub = ((!api.any && (api.is(target) || target.call)) && api.effect(() => ((next(get(target))), api.cleanup?.(cleanup), cleanup))) ||
         (
             target.then?.(v => (!stop && next(get(v)), cleanup?.()), error) ||
@@ -53,45 +53,36 @@ const
     isSVG = (x) => /^(t(ext$|s)|s[vwy]|g)|^set|tad|ker|p(at|s)|s(to|c$|ca|k)|r(ec|cl)|ew|us|f($|e|s)|cu|n[ei]|l[ty]|[GOP]/.test(x),
     toNode = (x) => x instanceof Node ? x : isFalsey(x) ? document.createComment(x) : document.createTextNode(x),
     isNode = x => x instanceof Node || isFalsey(x) || !isObject(x) || is(x),
-    r = (x, callback, error, clean) => is(x) ? sub(x)(v => callback(get(v), true), error, clean) : callback(get(x), false),
-    Live = (sm = document.createTextNode(""), em = document.createTextNode("")) => ({
-        sm,
-        em,
+    r = (x, callback, error, clean) => is(x) ? sub(x, v => callback(get(v), true), error, clean) : callback(get(x), false),
+    Live = (sm = document.createTextNode(""), em = document.createTextNode(""), range = document.createRange()) => ({
+        sm, em,
         replace: (...xs) => {
             if (!sm.parentNode || !em.parentNode) return;
-            let range = document.createRange();
             range.setStartAfter(sm);
             range.setEndBefore(em);
             range.deleteContents();
             sm.after(...xs);
-        },
+        }
     }),
 
     useLive = (val, live = Live(), prev = val) => [
-        [live.sm, ...add()(val), live.em],
-        (v) => live.replace(...add()(prev = isFunction(v) ? v(prev) : v))
+        [live.sm, ...process(val), live.em],
+        (v) => live.replace(...process(prev = isFunction(v) ? v(prev) : v))
     ],
-    // old = new Map,
-    add = (fallback = "") => (...children) =>
+
+    process = (...children) =>
         children.flat(Infinity).flatMap((child) => {
             if (!is(child)) return toNode(child);
-            let live = Live(), prev = fallback, done = false;
-            sub(child)((value) => {
-                if (done && prev !== value) {
-                    live.replace(...add(fallback)(value))
-                }
-                prev = value
-            })
-            // if (old.has(child)) old.get(child)?.()
-            // old.set(child, sub(child)((value) => {
-            //     if (done && prev !== value) {
-            //         live.replace(...add(fallback)(value))
-            //     }
-            //     prev = value
-            // }));
+            let live = Live(), prev = "", done = false;
+            sub(child, (value) => {
+                if (done && prev !== value) live.replace(...process(value));
+                prev = value;
+            });
             done = true;
-            return [live.sm, ...add(fallback)(prev), live.em];
+            return [live.sm, ...process(prev), live.em];
         }),
+
+    add = (tag) => (...children) => (tag.append(...process(children)), tag),
 
     props = new Map([
         ['style', (el, value, name) => isObject(value) && !is(value) ?
@@ -158,17 +149,16 @@ const
                 unsubs = [];
             });
 
-            tag.append(...add()(children));
+            return add(tag)(children);
         }
         return tag;
-    }
-
-let lazy =
-    (file, fallback = "") =>
-        (props) =>
-            file()
-                .then((f) => f.default(props))
-                .catch(() => fallback),
+    },
+    lazy =
+        (file, fallback = "") =>
+            (props) =>
+                file()
+                    .then((f) => f.default(props))
+                    .catch(() => fallback),
 
     If =
         ({ when, children, fallback = "" }) =>
@@ -186,34 +176,36 @@ let lazy =
         return fallback;
     },
 
-    Suspense = ({ children, fallback = "" }) => add(fallback)(children),
+    // Suspense = ({ children, fallback = "" }) => add(fallback)(children),
 
     Dynamic = ({ component, children, ...props }) =>
         () =>
             isFunction(component) ?
                 component(props, children)
-                : add("")(component),
+                : component,
 
     For = ({ each, children, fallback }) =>
         map(each, isFunction(children[0]) && children[0], fallback),
 
     map = (items, callback, fallback = "") => {
-        let oldNodes, oldValues, done = false,
-            ifEmpty = (nodes, fallback) => nodes.length > 0 ? nodes : fallback;
-
+        let oldNodes,
+            oldValues,
+            done = false,
+            ifEmpty = (nodes, fallback) => nodes.length > 0 ? nodes.flat(Infinity) : process(fallback);
         oldValues = get(items);
-        oldNodes = ifEmpty(oldValues.map(callback), fallback);
-        sub(items)((newValues) => {
+        oldNodes = ifEmpty(oldValues.map((v, i, a) => process(callback(v, i, a))), fallback);
+        registry.register(oldNodes, sub(items, (newValues) => {
             if (done) {
-                let oldMap = new Map(oldValues.map((v, i) => [v, oldNodes[i]]));
-                let newNodes = ifEmpty(newValues.map(newValue => oldMap.get(newValue) || callback(newValue)), fallback);
-                let parent = oldNodes[0].parentNode;
+                let oldMap = new Map(oldValues.map((v, i, a) => [v, oldNodes[i], a])),
+                    newNodes = ifEmpty(newValues.map((v, i, a) => oldMap.get(v) || process(callback(v, i, a))), fallback),
+                    parent = oldNodes[0].parentNode;
+
                 api.diff = api.diff || diff;
                 api.diff(parent, oldNodes, newNodes, _ => _);
                 oldValues = newValues;
-                oldNodes = newNodes;
+                oldNodes = newNodes
             }
-        });
+        }));
         done = true;
         return oldNodes;
     },
@@ -278,6 +270,6 @@ export {
     For,
     map,
     Switch,
-    Suspense,
+    // Suspense,
     Dynamic
 }

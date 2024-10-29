@@ -120,12 +120,11 @@ export declare function Match<T = {}>({
 // Utility functions
 export declare function get<T>(v: T): T;
 export declare function sub(
-    target: any
-): (
+    target: any,
     next: (value: any) => void,
     error?: (err: any) => void,
     cleanup?: () => void
-) => () => void;
+): () => void;
 
 export declare function is(arg: any): boolean;
 export declare function r(
