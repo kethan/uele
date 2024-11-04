@@ -68,34 +68,36 @@ const
     ]),
 
     h = (tag, attrs, ...children) => {
-        if (attrs && isNode(attrs)) return h(tag, {}, [attrs, children])
-        else if (tag === h) return children;
-        else if (Array.isArray(tag)) return tag;
-        else if (isFunction(tag)) return tag({ children, ...attrs });
-        else if (isString(tag)) {
-            tag = isSVG(tag)
-                ? document.createElementNS("http://www.w3.org/2000/svg", tag)
-                : document.createElement(tag);
+        if (isString(tag)) {
+            tag = isSVG(tag) ?
+                document.createElementNS("http://www.w3.org/2000/svg", tag) :
+                document.createElement(tag);
 
             if (attrs) {
                 Object.entries(attrs).map(([name, value]) => {
                     if (name === "className") name = "class";
                     if (name.startsWith("on") && isFunction(value)) {
                         tag.addEventListener(name.slice(2).toLowerCase(), value);
-                    } else if (props.has(name)) {
+                    }
+                    else if (props.has(name)) {
                         props.get(name)(tag, value, name, attrs);
-                    } else {
-                        r(value, (v) => {
+                    }
+                    else {
+                        r(value, (v) =>
                             (v == null || v === false) ?
                                 tag.removeAttribute(name) :
                                 tag.setAttribute(name, v === true ? "" : v)
-                        })
+                        )
                     }
                 })
             }
-
-            return add(tag)(children)
+            tag.append(...process(children))
+            return tag
         }
+        else if (isFunction(tag)) return tag({ children, ...attrs });
+        else if (tag === h) return children;
+        else if (Array.isArray(tag)) return tag;
+        else if (isNode(attrs) && attrs) return h(tag, {}, [attrs, children]);
         return tag;
     };
 

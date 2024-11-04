@@ -113,44 +113,36 @@ const
     ),
 
     h = (tag, attrs, ...children) => {
-        if (isNode(attrs) && attrs) return h(tag, {}, [attrs, children])
-        else if (tag === h) return children
-        else if (Array.isArray(tag)) return tag;
-        else if (isFunction(tag)) return tag({ children, ...attrs });
-        else if (isString(tag)) {
-            tag = isSVG(tag)
-                ? document.createElementNS("http://www.w3.org/2000/svg", tag)
-                : document.createElement(tag);
-            let unsubs = [], unsub;
+        if (isString(tag)) {
+            tag = isSVG(tag) ?
+                document.createElementNS("http://www.w3.org/2000/svg", tag) :
+                document.createElement(tag);
 
             if (attrs) {
                 Object.entries(attrs).map(([name, value]) => {
                     if (name === "className") name = "class";
                     if (name.startsWith("on") && isFunction(value)) {
                         tag.addEventListener(name.slice(2).toLowerCase(), value);
-                        unsubs.push(() => tag?.removeEventListener(name.substring(2).toLowerCase(), value));
                     }
                     else if (props.has(name)) {
-                        unsub = props.get(name)(tag, value, name, attrs);
-                        unsub && unsubs.push(...(Array.isArray(unsub) ? unsub : [unsub]));
+                        props.get(name)(tag, value, name, attrs);
                     }
                     else {
-                        unsubs.push(r(value, (v) =>
+                        r(value, (v) =>
                             (v == null || v === false) ?
                                 tag.removeAttribute(name) :
                                 tag.setAttribute(name, v === true ? "" : v)
-                        ));
+                        )
                     }
                 })
             }
-
-            registry.register(tag, () => {
-                unsubs.forEach((unsub) => unsub?.());
-                unsubs = [];
-            });
-
-            return add(tag)(children);
+            tag.append(...process(children))
+            return tag
         }
+        else if (isFunction(tag)) return tag({ children, ...attrs });
+        else if (tag === h) return children;
+        else if (Array.isArray(tag)) return tag;
+        else if (isNode(attrs) && attrs) return h(tag, {}, [attrs, children]);
         return tag;
     },
     lazy =
@@ -176,8 +168,6 @@ const
         return fallback;
     },
 
-    // Suspense = ({ children, fallback = "" }) => add(fallback)(children),
-
     Dynamic = ({ component, children, ...props }) =>
         () =>
             isFunction(component) ?
@@ -194,18 +184,17 @@ const
             ifEmpty = (nodes, fallback) => nodes.length > 0 ? nodes.flat(Infinity) : process(fallback);
         oldValues = get(items);
         oldNodes = ifEmpty(oldValues.map((v, i, a) => process(callback(v, i, a))), fallback);
-        registry.register(oldNodes, sub(items, (newValues) => {
+        api.diff = api.diff || diff;
+        sub(items, (newValues) => {
             if (done) {
                 let oldMap = new Map(oldValues.map((v, i, a) => [v, oldNodes[i], a])),
                     newNodes = ifEmpty(newValues.map((v, i, a) => oldMap.get(v) || process(callback(v, i, a))), fallback),
                     parent = oldNodes[0].parentNode;
-
-                api.diff = api.diff || diff;
-                api.diff(parent, oldNodes, newNodes, _ => _);
+                api.diff(parent, oldNodes, newNodes, api.udom);
                 oldValues = newValues;
                 oldNodes = newNodes
             }
-        }));
+        });
         done = true;
         return oldNodes;
     },

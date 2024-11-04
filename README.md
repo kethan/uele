@@ -515,6 +515,7 @@ api.get = (v) => ...; // Function to get the current value
 api.cleanup = ...; // Explicit cleanup function for solid.js, sinuous and similar
 api.any = ...; // Go crazy with anything.
 api.diff = ...; // Any diffing library
+api.udom = ...; //udomdiff get method
 ```
 
 ## Thanks and Inspiration
