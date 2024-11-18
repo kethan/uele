@@ -1,4 +1,4 @@
-# UEle
+# UEle - Universal Element
 
 A Reactive frontend library.
 
@@ -21,7 +21,7 @@ A Reactive frontend library.
 **module**: https://unpkg.com/uele/lite?module
 
 ```js
-import { h, r, is, get, api, props, add, useLive } from "uele/lite";
+import { h, r, is, get, api, add, props, useLive } from "uele/lite";
 
 // @preact/signals, ulive, usignal api config
 api.effect = effect;
@@ -41,7 +41,7 @@ api.get = (v) => v.value;
 - **Lazy Components**
 - **Promise**
 - **AsyncIterable**
-- **Control Flow Components** - If, For, Show, Switch, Match, Suspense
+- **Control Flow Components** - If, For, Show, Switch, Match
 - **Extend with any reactive library using api** - effect, is, get
 - **Efficient Array Diffing with For and map**
 - **Add Any Diffing** - Using api.diff
@@ -192,7 +192,6 @@ const Items = () => {
 ```jsx
 import {
   h,
-  Fragment,
   lazy,
   api,
   If,
@@ -467,17 +466,9 @@ import { Switch, Match } from "uele";
 </Switch>;
 ```
 
-#### `Suspense`
-
-```jsx
-import { Suspense } from "uele";
-
-<Suspense fallback={<div>Loading...</div>}>{asyncComponent}</Suspense>;
-```
-
 ### Cleanup Support
 
-Subscriptions and side-effects in `UEle` are automatically cleaned up when elements are garbage collected using `FinalizationRegistry`. You don't need to manually clean up unless desired, but it can be done through provided `unsub` functions.
+Subscriptions and side-effects in `UEle` are automatically cleaned up when elements are garbage collected using `FinalizationRegistry`. You don't need to manually clean up.
 
 ### Other Settings
 

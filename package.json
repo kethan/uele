@@ -1,7 +1,7 @@
 {
 	"name": "uele",
 	"description": "uele reactive frontend library",
-	"version": "0.9.5",
+	"version": "0.9.6",
 	"type": "module",
 	"source": "./src/index.js",
 	"main": "./dist/index.js",
@@ -36,6 +36,7 @@
 	},
 	"types": "./index.d.ts",
 	"scripts": {
+		"test": "vitest",
 		"build": "rollup --config rollup.config.js"
 	},
 	"files": [
@@ -44,9 +45,12 @@
 	],
 	"devDependencies": {
 		"@rollup/plugin-terser": "^0.4.4",
+		"jsdom": "^25.0.1",
 		"rollup": "^4.19.0",
 		"rollup-plugin-bundle-size": "^1.0.3",
-		"rollup-plugin-copy": "^3.5.0"
+		"rollup-plugin-copy": "^3.5.0",
+		"ulive": "^1.0.7",
+		"vitest": "^2.1.5"
 	},
 	"repository": {
 		"type": "git",
@@ -79,5 +83,8 @@
 	"bugs": {
 		"url": "https://github.com/kethan/uele/issues"
 	},
-	"homepage": "https://github.com/kethan/uele#readme"
+	"homepage": "https://github.com/kethan/uele#readme",
+	"dependencies": {
+		"usub": "^0.8.1"
+	}
 }

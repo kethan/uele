@@ -1,225 +1,170 @@
+import { api, get, is, sub } from 'usub/lite';
 
-const
-    // FinalizationRegistry to clean up subscriptions when objects are garbage collected
-    registry = new FinalizationRegistry(unsub => unsub?.call()),
-    // API object providing basic functions for handling effects and values
-    api = {
-        // Handle any reactive subscription
-        // any: undefined,
-        // If any cleanup is requested
-        // cleanup: undefined,
-        // Executes the provided function
-        effect: f => f(),
-        // Returns false for any value (placeholder implementation)
-        is: _ => false,
-        // Retrieves the value (returns it as is)
-        get: _ => _,
-    },
-    // Utility function to handle and unwrap values of signals, observable, etc especially functions
-    // get = (v) => api.is(v) ? get(api.get(v)) : v.call ? get(v()) : v,
-    get = v => api.is(v) ? get(api.get(v)) : (v?.call ? get(v()) : v),
+const r = (x, next, error, cleanup) => is(x) ? sub(x, v => next(v, true), error, cleanup) : next(get(x), false)
+const isFunction = x => typeof x === "function"
+const isObject = x => typeof x === "object" && !Array.isArray(x)
+const isFalsey = x => typeof x === "boolean" || x == null
+const isSVG = x => /^(t(ext$|s)|s[vwy]|g)|^set|tad|ker|p(at|s)|s(to|c$|ca|k)|r(ec|cl)|ew|us|f($|e|s)|cu|n[ei]|l[ty]|[GOP]/.test(x) // https://regex101.com/r/Ck4kFp/1
+const isMATH = x => /^(m(?!a|en|et))|nn|cs|nc|ma(t|c)/.test(x) // https://regex101.com/r/piylRl/1
+const isNode = x => x instanceof Node || isFalsey(x) || !isObject(x) || is(x)
+const toNode = x => x instanceof Node ? x : isFalsey(x) ? document.createComment(x) : document.createTextNode(x)
 
-    // Checks if the argument is considered an observable
-    is = (arg) => arg && !!(
-        arg[Symbol.asyncIterator] ||     // Async iterator
-        arg.then ||                      // Promise
-        api.is(arg) ||                   // Custom observable check
-        arg.call                         // Function
-    ),
-    // https://github.com/dy/sube
-    // Subscribe to an observable or value, and provide a callback for each value
-    sub = (target, next, error, cleanup, stop, unsub) => target && (
-        unsub = ((!api.any && (api.is(target) || target.call)) && api.effect(() => ((next(get(target))), api.cleanup?.(cleanup), cleanup))) ||
-        (
-            target.then?.(v => (!stop && next(get(v)), cleanup?.()), error) ||
-            target[Symbol.asyncIterator] && (async v => {
-                try {
-                    for await (v of target) { if (stop) return; next(get(v)) }
-                    cleanup?.()
-                } catch (err) { error?.(err) }
-            })()
-        ) && (_ => stop = 1) ||
-        (api.any?.(target)?.(next, error, cleanup)),
-        // register autocleanup
-        registry.register(target, unsub),
-        unsub
-    ),
-    // Helpers
-    isFunction = (x) => typeof x === "function",
-    isString = (x) => typeof x === "string",
-    isObject = (x) => typeof x === "object" && x !== null && !Array.isArray(x),
-    isFalsey = (x) => typeof x === "boolean" || x == null,
-    // https://github.com/vobyjs/voby
-    isSVG = (x) => /^(t(ext$|s)|s[vwy]|g)|^set|tad|ker|p(at|s)|s(to|c$|ca|k)|r(ec|cl)|ew|us|f($|e|s)|cu|n[ei]|l[ty]|[GOP]/.test(x),
-    toNode = (x) => x instanceof Node ? x : isFalsey(x) ? document.createComment(x) : document.createTextNode(x),
-    isNode = x => x instanceof Node || isFalsey(x) || !isObject(x) || is(x),
-    r = (x, callback, error, clean) => is(x) ? sub(x, v => callback(get(v), true), error, clean) : callback(get(x), false),
-    Live = (sm = document.createTextNode(""), em = document.createTextNode(""), range = document.createRange()) => ({
-        sm, em,
-        replace: (...xs) => {
-            if (!sm.parentNode || !em.parentNode) return;
-            range.setStartAfter(sm);
-            range.setEndBefore(em);
-            range.deleteContents();
-            sm.after(...xs);
-        }
-    }),
-
-    useLive = (val, live = Live(), prev = val) => [
-        [live.sm, ...process(val), live.em],
-        (v) => live.replace(...process(prev = isFunction(v) ? v(prev) : v))
-    ],
-
-    process = (...children) =>
-        children.flat(Infinity).flatMap((child) => {
-            if (!is(child)) return toNode(child);
-            let live = Live(), prev = "", done = false;
-            sub(child, (value) => {
-                if (done && prev !== value) live.replace(...process(value));
-                prev = value;
-            });
-            done = true;
-            return [live.sm, ...process(prev), live.em];
-        }),
-
-    add = (tag) => (...children) => (tag.append(...process(children)), tag),
-
-    props = new Map([
-        ['style', (el, value, name) => isObject(value) && !is(value) ?
-            Object.entries(value).map(([prop, val]) => r(val, (v) =>
-                v !== undefined
-                    ? el.style.setProperty(prop, v)
-                    : el.style.removeProperty(prop))
-            ) :
-            r(value, v => el.setAttribute(name, v))
-        ],
-        ['class', (el, value, name) => isObject(value) && !is(value) ?
-            Object.entries(value).map(([prop, val]) =>
-                r(val, v => el.classList.toggle(prop, v))
-            ) :
-            r(value, v => el.setAttribute(name, v))
-        ],
-        ['ref', (el, value, props) => isFunction(value) && value(el, props)],
-    ]),
-
-    f = (tag) => new Proxy(
-        {},
-        {
-            get:
-                (_, attrs) =>
-                    (...children) =>
-                        tag(attrs, ...children),
-        }
-    ),
-
-    h = (tag, attrs, ...children) => {
-        if (isString(tag)) {
-            tag = isSVG(tag) ?
-                document.createElementNS("http://www.w3.org/2000/svg", tag) :
-                document.createElement(tag);
-
-            if (attrs) {
-                Object.entries(attrs).map(([name, value]) => {
-                    if (name === "className") name = "class";
-                    if (name.startsWith("on") && isFunction(value)) {
-                        tag.addEventListener(name.slice(2).toLowerCase(), value);
-                    }
-                    else if (props.has(name)) {
-                        props.get(name)(tag, value, name, attrs);
-                    }
-                    else {
-                        r(value, (v) =>
-                            (v == null || v === false) ?
-                                tag.removeAttribute(name) :
-                                tag.setAttribute(name, v === true ? "" : v)
-                        )
-                    }
-                })
+const Live = (sm = document.createTextNode(""), em = document.createTextNode(""), range = document.createRange(), oldNodes = []) => ({
+    sm, em, oldNodes,
+    set: (o) => oldNodes = o,
+    replace: (...newNodes) => {
+        if (sm.parentNode && em.parentNode) {
+            if (api.diff) {
+                api.diff(sm.parentNode, oldNodes, newNodes, api.udom || em, api.udom && em)
+                oldNodes = newNodes;
+            } else {
+                range.setStartAfter(sm);
+                range.setEndBefore(em);
+                range.deleteContents();
+                sm.after(...newNodes);
             }
-            tag.append(...process(children))
-            return tag
         }
-        else if (isFunction(tag)) return tag({ children, ...attrs });
-        else if (tag === h) return children;
-        else if (Array.isArray(tag)) return tag;
-        else if (isNode(attrs) && attrs) return h(tag, {}, [attrs, children]);
-        return tag;
-    },
-    lazy =
-        (file, fallback = "") =>
-            (props) =>
-                file()
-                    .then((f) => f.default(props))
-                    .catch(() => fallback),
+    }
+});
 
-    If =
-        ({ when, children, fallback = "" }) =>
-            () => !!get(when) ?
-                isFunction(children[0]) ?
-                    children[0](!!get(when)) :
-                    children :
-                fallback,
-
-    Switch = ({ children, fallback = "" }) => () => {
-        for (let child of children) {
-            let result = isFunction(child) ? child() : child;
-            if (result) return result;
-        }
-        return fallback;
-    },
-
-    Dynamic = ({ component, children, ...props }) =>
-        () =>
-            isFunction(component) ?
-                component(props, children)
-                : component,
-
-    For = ({ each, children, fallback }) =>
-        map(each, isFunction(children[0]) && children[0], fallback),
-
-    map = (items, callback, fallback = "") => {
-        let oldNodes,
-            oldValues,
-            done = false,
-            ifEmpty = (nodes, fallback) => nodes.length > 0 ? nodes.flat(Infinity) : process(fallback);
-        oldValues = get(items);
-        oldNodes = ifEmpty(oldValues.map((v, i, a) => process(callback(v, i, a))), fallback);
-        api.diff = api.diff || diff;
-        sub(items, (newValues) => {
-            if (done) {
-                let oldMap = new Map(oldValues.map((v, i, a) => [v, oldNodes[i], a])),
-                    newNodes = ifEmpty(newValues.map((v, i, a) => oldMap.get(v) || process(callback(v, i, a))), fallback),
-                    parent = oldNodes[0].parentNode;
-                api.diff(parent, oldNodes, newNodes, api.udom);
-                oldValues = newValues;
-                oldNodes = newNodes
-            }
+const add = (...children) =>
+    children.flat(Infinity).flatMap((child) => {
+        if (!is(child)) return toNode(child);
+        let live = Live(), prev = "", done = false;
+        sub(child, (value) => {
+            if (done && prev !== value) live.replace(...add(value));
+            prev = value;
         });
         done = true;
-        return oldNodes;
-    },
-    // https://github.com/dy/swapdom
-    diff = (parent, a, b, end = null) => {
-        let i = 0, cur, next, bi, bidx = new Set(b),
-            insert = (a, b, parent) => parent.insertBefore(a, b),
-            remove = (a, parent) => parent.removeChild(a)
+        return [live.sm, ...live.set(add(prev)), live.em];
+    })
 
-        while (bi = a[i++]) !bidx.has(bi) ? remove(bi, parent) : cur = cur || bi
-        cur = cur || end, i = 0
+const useLive = (val, live = Live(), prev = val) => [
+    [live.sm, ...live.set(add(val)), live.em],
+    v => live.replace(...add(prev = isFunction(v) ? v(prev) : v))
+];
 
-        while (bi = b[i++]) {
-            next = cur ? cur.nextSibling : end
-            // skip
-            if (cur === bi) cur = next
-            else {
-                // swap 1:1 (saves costly swaps)
-                if (b[i] === next) cur = next
-                // insert
-                insert(bi, cur, parent)
-            }
+const props = new Map([]);
+
+
+const f = (tag) => new Proxy(
+    {},
+    {
+        get:
+            (_, attrs) =>
+                (...children) =>
+                    tag(attrs, ...children),
+    }
+)
+
+const h = (tag, attrs, ...children) => {
+    if (tag === h) return children;
+    if (typeof tag === "string") {
+        if (attrs && isNode(attrs)) return h(tag, {}, [attrs, children])
+
+        tag = (api.s = isSVG(tag)) ?
+            document.createElementNS("http://www.w3.org/2000/svg", tag) :
+            (api.s = isMATH(tag)) ?
+                document.createElementNS("http://www.w3.org/1998/Math/MathML", tag) :
+                document.createElement(tag);
+
+        tag.append(...add(children))
+        if (attrs) {
+            Object.entries(attrs).map(([name, value]) => {
+                if (name === "className") name = "class";
+                if (name.startsWith("on")) tag[name.toLowerCase()] = value
+                else if (name === 'style' && isObject(value) && !is(value))
+                    Object.entries(value).forEach(([prop, val]) =>
+                        r(val, v =>
+                            (prop in tag.style)
+                                ? tag.style[prop] = v == null ? '' : v
+                                : v !== undefined
+                                    ? tag.style.setProperty(prop, v)
+                                    : tag.style.removeProperty(prop)
+                        )
+                    )
+                else if (name === 'class' && isObject(value) && !is(value))
+                    Object.entries(value).forEach(([prop, val]) =>
+                        r(val, v => tag.classList.toggle(prop, !!v))
+                    );
+                else if (name === 'ref' && isFunction(value)) value(tag, attrs)
+                else if (props.has(name)) props.get(name)(tag, value, name, attrs);
+                else if (name in tag && !api.s) r(value, v => tag[name] = v);
+                else r(value, v =>
+                    v == null || v === false
+                        ? tag.removeAttribute(name)
+                        : tag.setAttribute(name, v === true ? '' : v)
+                );
+
+            })
         }
-        return b
-    };
+        return tag;
+    }
+    if (isFunction(tag)) return tag({ ...attrs, children });
+};
+
+const lazy =
+    (file, fallback = "") =>
+        (props) =>
+            file()
+                .then((f) => f.default(props))
+                .catch(() => fallback)
+
+const If =
+    ({ when, children, fallback = "" }) =>
+        () => !!get(when) ?
+            isFunction(children[0]) ?
+                children[0](!!get(when)) :
+                children :
+            fallback
+
+const Switch = ({ children, fallback = "" }) => () => {
+    for (let child of children) {
+        let result = isFunction(child) ? child() : child;
+        if (result) return result;
+    }
+    return fallback;
+}
+
+const Dynamic = ({ component, children, ...props }) =>
+    () =>
+        isFunction(component) ?
+            component(props, children)
+            : component
+
+const For = ({ each, children, fallback }) => map(each, children[0], fallback)
+
+const map = (items, callback, fallback = "") => {
+    let oldNodes,
+        values = get(items),
+        oldMap = new Map()
+    oldNodes = values?.length ? values.map((v, i, a) => (oldMap.set(v, (a = callback(v, i))), a)) : [fallback]
+    let [live, setLive] = useLive(oldNodes.length ? oldNodes : fallback);
+    r(items, (values) => setLive(!values.length ? fallback : values.map((v, i, a) => oldMap.get(v) || (oldMap.set(v, (a = callback(v, i))), a))))
+    return live;
+}
+// https://github.com/dy/swapdom
+const diff = (parent, a, b, end = null) => {
+    let i = 0, cur, next, bi, bidx = new Set(b),
+        insert = (a, b, parent) => parent.insertBefore(a, b),
+        remove = (a, parent) => parent.removeChild(a)
+
+    while (bi = a[i++]) !bidx.has(bi) ? remove(bi, parent) : cur = cur || bi
+    cur = cur || end, i = 0
+
+    while (bi = b[i++]) {
+        next = cur ? cur.nextSibling : end
+        // skip
+        if (cur === bi) cur = next
+        else {
+            // swap 1:1 (saves costly swaps)
+            if (b[i] === next) cur = next
+            // insert
+            insert(bi, cur, parent)
+        }
+    }
+    return b
+};
 // Portal = ({ mount = document.body, useShadow = false, isSVG = false, children }) => {
 
 //     // if(!isSVG) return h('div', {}, )
@@ -244,21 +189,20 @@ const
 export {
     h,
     f,
-    props,
+    r,
+    is,
+    If,
     add,
     api,
-    r,
     get,
     sub,
-    is,
-    useLive,
-    lazy,
-    If,
-    If as Show,
-    If as Match,
     For,
     map,
+    lazy,
+    props,
+    If as Show,
+    If as Match,
     Switch,
-    // Suspense,
+    useLive,
     Dynamic
 }

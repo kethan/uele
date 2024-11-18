@@ -1,113 +1,119 @@
-const
-    api = {
-        // Executes the provided function
-        effect: void 0,
-        // Returns false for any value (placeholder implementation)
-        is: _ => false,
-        // Retrieves the value (returns it as is)
-        get: _ => _
-    },
-    // Utility function to handle and unwrap values of signals, observable, etc especially functions
-    get = v => api.is(v) ? get(api.get(v)) : v?.call ? get(v()) : v,
-    is = x => api.is(x) || isFunction(x),
-    r = (x, callback) => is(x) ? api.effect(() => callback(get(x), true)) : callback(get(x), false),
-    // Helpers
-    isFunction = x => typeof x === "function",
-    isString = x => typeof x === "string",
-    isObject = x => typeof x === "object" && x !== null && !Array.isArray(x),
-    isFalsey = x => typeof x === "boolean" || x == null,
-    isSVG = x => /^(t(ext$|s)|s[vwy]|g)|^set|tad|ker|p(at|s)|s(to|c$|ca|k)|r(ec|cl)|ew|us|f($|e|s)|cu|n[ei]|l[ty]|[GOP]/.test(x),
-    isNode = x => x instanceof Node || isFalsey(x) || !isObject(x) || is(x),
-    toNode = x => x instanceof Node ? x : isFalsey(x) ? document.createComment(x) : document.createTextNode(x),
-    Live = (sm = document.createTextNode(""), em = document.createTextNode(""), range = document.createRange()) => ({
-        sm, em,
-        replace: (...xs) => {
-            if (!sm.parentNode || !em.parentNode) return;
-            range.setStartAfter(sm);
-            range.setEndBefore(em);
-            range.deleteContents();
-            sm.after(...xs);
+import { api, get, is, sub } from 'usub/tiny';
+
+const r = (x, next, error, cleanup) => is(x) ? sub(x, v => next(v, true), error, cleanup) : next(get(x), false)
+const isFunction = x => typeof x === "function"
+const isObject = x => typeof x === "object" && !Array.isArray(x)
+const isFalsey = x => typeof x === "boolean" || x == null
+const isSVG = x => /^(t(ext$|s)|s[vwy]|g)|^set|tad|ker|p(at|s)|s(to|c$|ca|k)|r(ec|cl)|ew|us|f($|e|s)|cu|n[ei]|l[ty]|[GOP]/.test(x) // https://regex101.com/r/Ck4kFp/1
+const isMATH = x => /^(m(?!a|en|et))|nn|cs|nc|ma(t|c)/.test(x) // https://regex101.com/r/piylRl/1
+const isNode = x => x instanceof Node || isFalsey(x) || !isObject(x) || is(x)
+const toNode = x => x instanceof Node ? x : isFalsey(x) ? document.createComment(x) : document.createTextNode(x)
+
+const Live = (sm = document.createTextNode(""), em = document.createTextNode(""), range = document.createRange(), oldNodes = []) => ({
+    sm, em, oldNodes,
+    set: (o) => oldNodes = o,
+    replace: (...newNodes) => {
+        if (sm.parentNode && em.parentNode) {
+            if (api.diff) {
+                api.diff(sm.parentNode, oldNodes, newNodes, api.udom || em, api.udom && em)
+                oldNodes = newNodes;
+            } else {
+                range.setStartAfter(sm);
+                range.setEndBefore(em);
+                range.deleteContents();
+                sm.after(...newNodes);
+            }
         }
-    }),
+    }
+});
 
-    process = (...children) =>
-        children.flat(Infinity).flatMap((child) => {
-            if (!is(child)) return toNode(child);
-            let live = Live(), prev = "", done = false;
-            r(child, (value) => {
-                if (done && prev !== value) live.replace(...process(value));
-                prev = value;
-            });
-            done = true;
-            return [live.sm, ...process(prev), live.em];
-        }),
+const add = (...children) =>
+    children.flat(Infinity).flatMap((child) => {
+        if (!is(child)) return toNode(child);
+        let live = Live(), prev = "", done = false;
+        sub(child, (value) => {
+            if (done && prev !== value) live.replace(...add(value));
+            prev = value;
+        });
+        done = true;
+        return [live.sm, ...live.set(add(prev)), live.em];
+    })
 
-    useLive = (val, live = Live(), prev = val) => [
-        [live.sm, ...process(val), live.em],
-        v => live.replace(...process(prev = isFunction(v) ? v(prev) : v))
-    ],
+const useLive = (val, live = Live(), prev = val) => [
+    [live.sm, ...live.set(add(val)), live.em],
+    v => live.replace(...add(prev = isFunction(v) ? v(prev) : v))
+];
 
-    add = (tag) => (...children) => (tag.append(...process(children)), tag),
+const props = new Map([]);
 
-    props = new Map([
-        ['style', (el, value, name) => isObject(value) && !is(value) ?
-            Object.entries(value).map(([prop, val]) =>
-                r(val, (v) => v !== undefined ?
-                    el.style.setProperty(prop, v) :
-                    el.style.removeProperty(prop))) :
-            r(value, v => el.setAttribute(name, v))
-        ],
+const h = (tag, attrs, ...children) => {
+    if (tag === h) return children;
+    if (typeof tag === "string") {
+        if (attrs && isNode(attrs)) return h(tag, {}, [attrs, children])
 
-        ['class', (el, value, name) => isObject(value) && !is(value) ?
-            Object.entries(value).map(([prop, val]) =>
-                r(val, v => el.classList.toggle(prop, v))) :
-            r(value, v => el.setAttribute(name, v))
-        ],
-
-        ['ref', (el, value, props) => isFunction(value) && value(el, props)],
-    ]),
-
-    h = (tag, attrs, ...children) => {
-        if (isString(tag)) {
-            tag = isSVG(tag) ?
-                document.createElementNS("http://www.w3.org/2000/svg", tag) :
+        tag = (api.s = isSVG(tag)) ?
+            document.createElementNS("http://www.w3.org/2000/svg", tag) :
+            (api.s = isMATH(tag)) ?
+                document.createElementNS("http://www.w3.org/1998/Math/MathML", tag) :
                 document.createElement(tag);
 
-            if (attrs) {
-                Object.entries(attrs).map(([name, value]) => {
-                    if (name === "className") name = "class";
-                    if (name.startsWith("on") && isFunction(value)) {
-                        tag.addEventListener(name.slice(2).toLowerCase(), value);
-                    }
-                    else if (props.has(name)) {
-                        props.get(name)(tag, value, name, attrs);
-                    }
-                    else {
-                        r(value, (v) =>
-                            (v == null || v === false) ?
-                                tag.removeAttribute(name) :
-                                tag.setAttribute(name, v === true ? "" : v)
+        tag.append(...add(children))
+        if (attrs) {
+            Object.entries(attrs).map(([name, value]) => {
+                if (name === "className") name = "class";
+                if (name.startsWith("on")) tag[name.toLowerCase()] = value
+                else if (name === 'style' && isObject(value) && !is(value))
+                    Object.entries(value).forEach(([prop, val]) =>
+                        r(val, v =>
+                            (prop in tag.style)
+                                ? tag.style[prop] = v == null ? '' : v
+                                : v !== undefined
+                                    ? tag.style.setProperty(prop, v)
+                                    : tag.style.removeProperty(prop)
                         )
-                    }
-                })
-            }
-            tag.append(...process(children))
-            return tag
+                    )
+                else if (name === 'class' && isObject(value) && !is(value))
+                    Object.entries(value).forEach(([prop, val]) =>
+                        r(val, v => tag.classList.toggle(prop, !!v))
+                    );
+                else if (name === 'ref' && isFunction(value)) value(tag, attrs)
+                else if (props.has(name)) props.get(name)(tag, value, name, attrs);
+                else if (name in tag) r(value, v => tag[name] = v);
+                else r(value, v =>
+                    v == null || v === false
+                        ? tag.removeAttribute(name)
+                        : tag.setAttribute(name, v === true ? '' : v)
+                );
+
+            })
         }
-        else if (isFunction(tag)) return tag({ children, ...attrs });
-        else if (tag === h) return children;
-        else if (Array.isArray(tag)) return tag;
-        else if (isNode(attrs) && attrs) return h(tag, {}, [attrs, children]);
         return tag;
-    };
+    }
+    if (isFunction(tag)) return tag({ ...attrs, children });
+};
+
+// const For = ({ each, children, fallback }) => map(each, children[0], fallback)
+
+// const map = (items, callback, fallback = "") => {
+//     let oldNodes,
+//         values = get(items),
+//         oldMap = new Map()
+//     oldNodes = values?.length ? values.map((v, i, a) => (oldMap.set(v, (a = callback(v, i))), a)) : [fallback]
+//     let [live, setLive] = useLive(oldNodes.length ? oldNodes : fallback);
+//     r(items, (values) => setLive(!values.length ? fallback : values.map((v, i, a) => oldMap.get(v) || (oldMap.set(v, (a = callback(v, i))), a))))
+//     return live;
+// }
 
 export {
     h,
     r,
     is,
+    sub,
     get,
     api,
-    props,
     add,
+    // map,
+    // For,
+    props,
     useLive
 };
