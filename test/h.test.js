@@ -175,9 +175,103 @@ test('add function processes simple children', () => {
   expect(element.textContent).toBe('Hello World');
 });
 
+test('handles undefined and null as children', () => {
+  const result = h('div', null, undefined, 'valid child');
+  expect(result.outerHTML).toBe('<div><!--undefined-->valid child</div>');
+});
+
+test('handles empty string as child', () => {
+  const result = h('div', '', 'valid child');
+  expect(result.outerHTML).toBe('<div>valid child</div>');
+});
+
+test('handles a large number of children', () => {
+  const children = Array(1000).fill(null).map(() => h('span', 'Item'));
+  const result = h('div', children);  
+  expect(result.childNodes.length).toBe(1000);
+});
+
+test('handles function as child', () => {
+  const fn = () => 'dynamic text';
+  const result = h('div', fn);
+  expect(result.outerHTML).toBe('<div>dynamic text</div>');
+});
+
+test('handles promises as children', async () => {
+  const promise = new Promise(resolve => resolve('Promise Text'));
+  const result = h('div', promise);
+  await promise; // Ensure promise resolves before testing
+  expect(result.outerHTML).toBe('<div>Promise Text</div>');
+});
+
+test('dynamically updates content of elements', () => {
+  let dynamicContent = 'Initial Text';
+  const result = h('div', dynamicContent);
+  dynamicContent = 'Updated Text';
+  const updatedResult = h('div', dynamicContent);
+  expect(updatedResult.outerHTML).toBe('<div>Updated Text</div>');
+});
+
+test('handles nested components with props', () => {
+  const Cat = ({ name }) => h('div', { id: name }, name);
+  const result = h('div', [
+    h(Cat, { name: 'Whiskers' }),
+    h(Cat, { name: 'Fluffy' })
+  ]);
+  expect(result.outerHTML).toBe('<div><div id="Whiskers">Whiskers</div><div id="Fluffy">Fluffy</div></div>');
+});
+
+test('handles nested fragments', () => {
+  const frag1 = h('div', 'First');
+  const frag2 = h('div', 'Second');
+  const frag3 = h('div', 'Third');
+  const result = h('div', [frag1, frag2, frag3]);
+  expect(result.outerHTML).toBe('<div><div>First</div><div>Second</div><div>Third</div></div>');
+});
+
+test('handles text with special characters', () => {
+  const result = h('div', '<div>', 'Text & More', '<span>');
+  expect(result.outerHTML).toBe('<div>&lt;div&gt;Text &amp; More&lt;span&gt;</div>');
+});
+
+test('handles self-closing tags', () => {
+  const img = h('img', { src: 'image.jpg', alt: 'An image' });
+  expect(img.outerHTML).toBe('<img src="image.jpg" alt="An image">');
+  
+  const br = h('br');
+  expect(br.outerHTML).toBe('<br>');
+});
+
+test('handles multiple root elements gracefully', () => {
+  const result = h('div', h('h1', 'Title'), h('p', 'Paragraph'));
+  // Expect a single parent element wrapping the others
+  expect(result.outerHTML).toBe('<div><h1>Title</h1><p>Paragraph</p></div>');
+});
+
+test('handles invalid tag names gracefully', () => {
+  expect(() => h('invalid-tag')).not.toThrow();
+  expect(h('invalid-tag').outerHTML).toBe('<invalid-tag></invalid-tag>');
+});
+
+test('handles functions passed without arguments', () => {
+  const result = h('div', () => 'No arguments passed');
+  expect(result.outerHTML).toBe('<div>No arguments passed</div>');
+});
+
+test('handles asynchronous content rendering', async () => {
+  const asyncContent = () => new Promise(resolve => setTimeout(() => resolve('Async Text'), 100));
+  const result = h('div', asyncContent());
+  await asyncContent(); // Ensure promise resolves before testing
+  expect(result.outerHTML).toBe('<div>Async Text</div>');
+});
+
+test('handles deeply nested structures', () => {
+  const nested = h('div', h('div', h('div', 'Deep content')));
+  expect(nested.outerHTML).toBe('<div><div><div>Deep content</div></div></div>');
+});
+
 test('add function processes nested arrays', () => {
   const element = h('div', null, ['Hello', [' ', 'World']]);
-
   expect(element.textContent).toBe('Hello World');
 });
 

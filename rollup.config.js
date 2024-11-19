@@ -1,6 +1,8 @@
 import terser from '@rollup/plugin-terser';
 import bundleSize from 'rollup-plugin-bundle-size';
 import copy from 'rollup-plugin-copy'
+import node from '@rollup/plugin-node-resolve';
+import commonjs from '@rollup/plugin-commonjs';
 
 const resolve = (pkg, {
 	input = "src/index",
@@ -10,6 +12,8 @@ const resolve = (pkg, {
 } = {}) => ({
 	input: `${input}.${ext}`,
 	plugins: [
+		node(),
+		commonjs(),
 		bundleSize(),
 		copyFiles.length && copy({
 			targets: [

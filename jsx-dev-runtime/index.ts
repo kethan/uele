@@ -1,4 +1,4 @@
-import { h } from "../src/index";
+import { h } from "../lite/index";
 
 export {
     h,

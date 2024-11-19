@@ -1,4 +1,4 @@
-import { api, get, is, sub } from 'usub/lite';
+import { api, get, is, sub } from 'usub';
 
 const r = (x, next, error, cleanup) => is(x) ? sub(x, v => next(v, true), error, cleanup) : next(get(x), false)
 const isFunction = x => typeof x === "function"
@@ -68,7 +68,8 @@ const h = (tag, attrs, ...children) => {
                 document.createElementNS("http://www.w3.org/1998/Math/MathML", tag) :
                 document.createElement(tag);
 
-        tag.append(...add(children))
+        tag.append(...add(children));
+
         if (attrs) {
             Object.entries(attrs).map(([name, value]) => {
                 if (name === "className") name = "class";
@@ -132,17 +133,17 @@ const Dynamic = ({ component, children, ...props }) =>
             component(props, children)
             : component
 
-const For = ({ each, children, fallback }) => map(each, children[0], fallback)
+const For = ({ each, children, fallback, key = v => v }) => map(each, children[0], fallback, key);
 
-const map = (items, callback, fallback = "") => {
+const map = (items, callback, fallback = "", key = v => v) => {
     let oldNodes,
         values = get(items),
         oldMap = new Map()
-    oldNodes = values?.length ? values.map((v, i, a) => (oldMap.set(v, (a = callback(v, i))), a)) : [fallback]
+    oldNodes = values?.length ? values.map((v, i, a) => (oldMap.set(key(v, i), (a = callback(v, i))), a)) : [fallback]
     let [live, setLive] = useLive(oldNodes.length ? oldNodes : fallback);
-    r(items, (values) => setLive(!values.length ? fallback : values.map((v, i, a) => oldMap.get(v) || (oldMap.set(v, (a = callback(v, i))), a))))
+    r(items, (values) => setLive(!values.length ? fallback : values.map((v, i, a) => oldMap.get(key(v, i)) || (oldMap.set(key(v, i), (a = callback(v, i))), a))))
     return live;
-}
+};
 // https://github.com/dy/swapdom
 const diff = (parent, a, b, end = null) => {
     let i = 0, cur, next, bi, bidx = new Set(b),

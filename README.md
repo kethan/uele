@@ -14,7 +14,7 @@ A Reactive frontend library.
 
 ### Lite Version
 
-[![Badge size](https://deno.bundlejs.com/badge?q=uele/lite&treeshake=[*]&config={"compression":"brotli"})](https://unpkg.com/uele/lite) [![Badge size](https://deno.bundlejs.com/badge?q=uele/lite&treeshake=[*]&config={"compression":"gzip"})](https://unpkg.com/uele/lite)
+[![Badge size](https://deno.bundlejs.com/badge?q=uele/lite&treeshake=[{h}]&config={"compression":"brotli"})](https://unpkg.com/uele/lite) [![Badge size](https://deno.bundlejs.com/badge?q=uele/lite&treeshake=[{h}]&config={"compression":"gzip"})](https://unpkg.com/uele/lite)
 
 **cdn**: https://unpkg.com/uele/lite
 
@@ -29,13 +29,13 @@ api.is = (v) => v.peek;
 api.get = (v) => v.value;
 ```
 
-- **Tiny** [![Badge size](https://deno.bundlejs.com/badge?q=uele/lite&treeshake=[{h}])](https://unpkg.com/uele/lite)
+- **Tiny** [![Badge size](https://deno.bundlejs.com/badge?q=uele/lite&treeshake=[{h}]&config={"compression":"brotli"})](https://unpkg.com/uele/lite)
 - **Simple API**
 - **Fast**
 - **JSX**
 - **Fragment**
 - **Components**
-- **SVG**
+- **SVG and MATH ML**
 - **Refs**
 - **Style Maps**
 - **Lazy Components**
@@ -63,14 +63,13 @@ api.get = (v) => v.value;
    - [If and Show](#if-and-show)
    - [For](#for)
    - [Switch and Match](#switch-and-match)
-   - [Suspense](#suspense)
 9. [Cleanup Support](#cleanup-support)
 10. [Other Settings](#other-settings)
 
-- [For any other reactive library](#for-any-other-reactive-library)
+11. [For any other reactive library](#for-any-other-reactive-library)
 
-11. [Thanks and Inspiration](#thanks-and-inspiration)
-12. [License](#license)
+12. [Thanks and Inspiration](#thanks-and-inspiration)
+13. [License](#license)
 
 ### Counter
 
