@@ -10,20 +10,19 @@ const isMATH = x => !x.includes("-") && /^(m(?!a|en|et))|nn|cs|nc|ma(l|t|c)/.tes
 const isNode = x => x instanceof Node || isFalsey(x) || !isObject(x) || is(x)
 const toNode = x => x instanceof Node ? x : isFalsey(x) ? document.createComment(x) : document.createTextNode(String(x))
 
-const Live = (sm = document.createTextNode(""), em = document.createTextNode(""), range = document.createRange(), oldNodes = []) => ({
-    sm, em, oldNodes,
+const Live = (sm = document.createTextNode(""), em = document.createTextNode(""), oldNodes = []) => ({
+    sm, em,
     set: (o) => oldNodes = o,
     replace: (...newNodes) => {
         if (sm.parentNode && em.parentNode) {
-            if (api.diff) {
-                api.diff(sm.parentNode, oldNodes, newNodes, api.udom || em, api.udom && em)
-                oldNodes = newNodes;
-            } else {
-                range.setStartAfter(sm);
-                range.setEndBefore(em);
-                range.deleteContents();
+            // a differ owns the region when configured, otherwise wipe the span between
+            // the markers (a nested region holds nodes oldNodes does not know about)
+            if (api.diff) api.diff(sm.parentNode, oldNodes, newNodes, api.udom || em, api.udom && em)
+            else {
+                for (let node = sm.nextSibling; node && node !== em; node = sm.nextSibling) node.remove();
                 sm.after(...newNodes);
             }
+            oldNodes = newNodes; // the next update (or a differ set later) gets the live set
         }
     }
 });

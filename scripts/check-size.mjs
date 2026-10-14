@@ -12,9 +12,9 @@ const file = (p) => fileURLToPath(new URL(p, root));
 
 // [file, raw budget, gzip budget] - keep in sync with the sizes documented in README.md
 const budgets = [
-	['dist/index.min.js', 3700, 1900],
-	['dist/index.es.js', 8800, 3000],
-	['lite/dist/index.min.js', 2600, 1400],
+	['dist/index.min.js', 3600, 1800],
+	['dist/index.es.js', 8900, 3050],
+	['lite/dist/index.min.js', 2500, 1300],
 	['jsx-runtime/dist/index.es.js', 900, 500],
 	['jsx-dev-runtime/dist/index.es.js', 900, 500]
 ];

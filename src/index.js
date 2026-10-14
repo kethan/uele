@@ -10,20 +10,19 @@ const isMATH = x => !x.includes("-") && /^(m(?!a|en|et))|nn|cs|nc|ma(l|t|c)/.tes
 const isNode = x => x instanceof Node || isFalsey(x) || !isObject(x) || is(x)
 const toNode = x => x instanceof Node ? x : isFalsey(x) ? document.createComment(x) : document.createTextNode(String(x))
 
-const Live = (sm = document.createTextNode(""), em = document.createTextNode(""), range = document.createRange(), oldNodes = []) => ({
-    sm, em, oldNodes,
+const Live = (sm = document.createTextNode(""), em = document.createTextNode(""), oldNodes = []) => ({
+    sm, em,
     set: (o) => oldNodes = o,
     replace: (...newNodes) => {
         if (sm.parentNode && em.parentNode) {
-            if (api.diff) {
-                api.diff(sm.parentNode, oldNodes, newNodes, api.udom || em, api.udom && em)
-                oldNodes = newNodes;
-            } else {
-                range.setStartAfter(sm);
-                range.setEndBefore(em);
-                range.deleteContents();
+            // no differ: wipe the span between the markers - a nested region can hold
+            // nodes that oldNodes does not know about
+            if (api.diff) api.diff(sm.parentNode, oldNodes, newNodes, api.udom || em, api.udom && em)
+            else {
+                for (let node = sm.nextSibling; node && node !== em; node = sm.nextSibling) node.remove();
                 sm.after(...newNodes);
             }
+            oldNodes = newNodes; // the next update (or a differ set later) gets the live set
         }
     }
 });
@@ -143,7 +142,8 @@ const map = (items, callback, fallback = "", key = v => v) => {
     let oldMap = new Map();
     const build = (values) => {
         const prev = oldMap; oldMap = new Map();
-        const nodes = [...values].map((v, i) => {
+        // non-iterables (a pending promise, a number) render the fallback instead
+        const nodes = (values?.[Symbol.iterator] && [...values] || []).map((v, i) => {
             const k = key(v, i), node = prev.get(k) ?? callback(v, i);
             prev.delete(k), oldMap.set(k, node); // consume - duplicate keys must not reuse a node
             return node;
@@ -151,7 +151,8 @@ const map = (items, callback, fallback = "", key = v => v) => {
         return nodes.length ? nodes : [fallback];
     };
     const [live, setLive] = useLive(build(get(items) || []));
-    r(items, (values) => setLive(build(values || [])));
+    // source errors keep the previous content - subscribe with r() to handle them
+    r(items, (values) => setLive(build(values || [])), noop);
     return live;
 };
 
