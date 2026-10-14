@@ -4,55 +4,90 @@
 	"version": "0.9.7",
 	"type": "module",
 	"source": "./src/index.js",
-	"main": "./dist/index.js",
-	"module": "./dist/index.js",
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.es.js",
 	"browser": "./dist/index.es.js",
 	"unpkg": "./dist/index.min.js",
 	"umd:main": "./dist/index.umd.js",
 	"exports": {
 		".": {
-			"types": "./index.d.ts",
+			"types": "./dist/index.d.ts",
 			"browser": "./dist/index.es.js",
 			"umd": "./dist/index.umd.js",
 			"import": "./dist/index.es.js",
-			"default": "./dist/index.es.js",
-			"require": "./dist/index.js"
+			"require": "./dist/index.cjs",
+			"default": "./dist/index.es.js"
 		},
 		"./jsx-runtime": {
-			"types": "./jsx-runtime/index.d.ts",
+			"types": "./jsx-runtime/dist/index.d.ts",
 			"browser": "./jsx-runtime/dist/index.es.js",
 			"umd": "./jsx-runtime/dist/index.umd.js",
 			"import": "./jsx-runtime/dist/index.es.js",
-			"require": "./jsx-runtime/dist/index.js"
+			"require": "./jsx-runtime/dist/index.cjs",
+			"default": "./jsx-runtime/dist/index.es.js"
 		},
 		"./jsx-dev-runtime": {
-			"types": "./jsx-dev-runtime/index.d.ts",
+			"types": "./jsx-dev-runtime/dist/index.d.ts",
 			"browser": "./jsx-dev-runtime/dist/index.es.js",
 			"umd": "./jsx-dev-runtime/dist/index.umd.js",
 			"import": "./jsx-dev-runtime/dist/index.es.js",
-			"require": "./jsx-dev-runtime/dist/index.js"
+			"require": "./jsx-dev-runtime/dist/index.cjs",
+			"default": "./jsx-dev-runtime/dist/index.es.js"
 		},
-		"./package.json": "./package.json"
+		"./package.json": "./package.json",
+		"./lite": {
+			"types": "./lite/dist/index.d.ts",
+			"browser": "./lite/dist/index.es.js",
+			"umd": "./lite/dist/index.umd.js",
+			"import": "./lite/dist/index.es.js",
+			"require": "./lite/dist/index.cjs",
+			"default": "./lite/dist/index.es.js"
+		}
 	},
-	"types": "./index.d.ts",
+	"types": "./dist/index.d.ts",
 	"scripts": {
-		"test": "vitest",
-		"build": "rollup --config rollup.config.js"
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"test:coverage": "vitest run --coverage",
+		"test:package": "npm run build && node --test test/package/package.test.mjs",
+		"test:all": "npm run test:coverage && npm run test:package && vitest run --config vitest.bundles.config.js && npm run test:memory && node --test test/browser/browser.test.mjs && node scripts/check-size.mjs",
+		"build": "rollup --config rollup.config.js",
+		"test:browser": "npm run build && node --test test/browser/browser.test.mjs",
+		"test:size": "npm run build && node scripts/check-size.mjs",
+		"test:bundles": "npm run build && vitest run --config vitest.bundles.config.js",
+		"test:interop": "vitest run test/interop",
+		"test:memory": "node --expose-gc --test test/memory/gc.test.mjs"
 	},
 	"files": [
 		"dist",
-		"lite"
+		"lite/dist",
+		"jsx-runtime/dist",
+		"jsx-dev-runtime/dist"
 	],
 	"devDependencies": {
+		"@preact/signals-core": "^1.14.4",
 		"@rollup/plugin-commonjs": "^28.0.1",
 		"@rollup/plugin-node-resolve": "^15.3.0",
-		"@rollup/plugin-terser": "^0.4.4",
+		"@rollup/plugin-terser": "^1.0.0",
+		"@sparticuz/chromium": "^153.0.0",
+		"@thi.ng/diff": "^5.1.129",
+		"@vitest/coverage-v8": "^5.0.4",
+		"@vue/reactivity": "^3.5.44",
+		"alien-signals": "^3.2.1",
+		"domdiff": "^2.2.2",
+		"fast-array-diff": "^1.1.0",
 		"jsdom": "^25.0.1",
+		"list-diff2": "^0.1.4",
+		"playwright-core": "^1.64.1",
 		"rollup": "^4.19.0",
 		"rollup-plugin-bundle-size": "^1.0.3",
-		"rollup-plugin-copy": "^3.5.0",
+		"solid-js": "^1.9.17",
+		"swapdom": "^1.2.1",
+		"typescript": "^5.9.3",
+		"udomdiff": "^1.1.2",
 		"ulive": "^1.0.7",
-		"vitest": "^2.1.5"
+		"usignal": "0.10.0",
+		"vitest": "^5.0.4"
 	},
 	"repository": {
 		"type": "git",

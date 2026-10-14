@@ -6,10 +6,9 @@ import { add, api } from '../src/index.js'; // Adjust the path as per your proje
 import { expect, test } from 'vitest';
 import { signal, effect } from 'ulive'; // Adjust based on your signal library
 
-// Set up API as per your code
-api.effect = effect;
-api.is = (v) => v?.peek;
-api.get = (v) => v.value;
+import * as runtime from '../src/index.js';
+import { setupRuntime } from './helpers/runtime.js';
+setupRuntime(runtime);
 
 const node = (...nodes) => {
   const result = document.createElement('div');

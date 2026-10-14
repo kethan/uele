@@ -1,158 +1,69 @@
-export declare type Props = {
-    [K in string]: any;
-};
-
-export type Child =
-    | null
-    | undefined
-    | boolean
-    | bigint
-    | number
-    | string
-    | symbol
-    | Node
-    | Promise<Element>
-    | AsyncIterable<Element>
-    | Array<Child>
-    | (() => Child);
-
-export type Element<T = Child> = () => T;
-
-export declare type Factory<P> = (props?: P, ...children: Child[]) => Node;
-export declare type Fragment = ({ children }: { children: Child }) => Child;
-
-type ComponentFunction<P = {}> = (props: P) => Child;
-type ComponentNode = Node;
-export type Component<P = {}> = ComponentFunction<P> | ComponentNode;
-
-// h function with multiple overloads
-export declare function h<K extends keyof HTMLElementTagNameMap>(
-    tag: K,
-    props?: Props,
-    ...children: Child[]
-): HTMLElementTagNameMap[K];
-export declare function h(
-    tag: string,
-    props?: Props,
-    ...children: Child[]
-): HTMLElement;
-export declare function h(
-    tag: Fragment,
-    props?: Props,
-    ...children: Child[]
-): DocumentFragment;
-export declare function h<F extends Factory<P>, P>(
-    tag: F,
-    props?: P,
-    ...children: Child[]
-): ReturnType<F>;
-
-// Lazy component loading
-export declare function lazy<P = {}>(
-    file: Promise<{ default: ComponentFunction<P> }>,
-    fallback?: Child
-): (props: P & { children: Child[] }) => Child;
-
-// Control flow components
-export declare function If<T = {}>({
-    when,
-    fallback,
-    children
-}: {
-    when: T,
-    fallback?: Child,
-    children: Child[]
-}): Child;
-
-export declare function Show<T = {}>({
-    when,
-    fallback,
-    children
-}: {
-    when: T,
-    fallback?: Child,
-    children: Child[]
-}): Child;
-
-export declare function For<T = {}>({
-    each,
-    fallback,
-    children
-}: {
-    each: T[],
-    fallback?: Child,
-    children: Child[]
-}): Child;
-
-// Mapping function for efficient diffing
-export declare function map<T = {}>(
-    items: T[],
-    fn: (item: T, index: number, items: T[]) => Child,
-    fallback?: Child
-): Child;
-
-// Suspense component definition
-export declare function Suspense({
-    fallback,
-    children
-}: {
-    fallback?: Child,
-    children: Child
-}): Child;
-
-// Switch and Match components for conditional rendering
-export declare function Switch({
-    fallback,
-    children
-}: {
-    fallback?: Child,
-    children: Array<() => Child>
-}): Child;
-
-export declare function Match<T = {}>({
-    when,
-    children
-}: {
-    when: T,
-    children: Child[]
-}): Child;
-
-// Utility functions
-export declare function get<T>(v: T): T;
-export declare function sub(
-    target: any,
-    next: (value: any) => void,
-    error?: (err: any) => void,
-    cleanup?: () => void
-): () => void;
-
-export declare function is(arg: any): boolean;
-export declare function r(
-    x: any,
-    callback: (value: any, reactive: boolean) => void,
-    error?: (err: any) => void
-): () => void;
-
-// f function
-export declare function f(tag: typeof h): {
-    [K in string]: (...children: Child[]) => HTMLElement;
-};
-
-
-// API interface to define reactive behaviors
-interface Api {
-    effect?: (f: () => void) => void;
-    cleanup?: (cleanupFn: () => void) => void;
-    any?: (
-        target: any
-    ) => (
-        next: (value: any) => void,
-        error?: (err: any) => void,
-        cleanup?: () => void
-    ) => () => void;
-    is?: (v: any) => boolean;
-    get?: <T>(v: T) => T;
+/** Attribute bags intentionally permit custom properties registered via `props`. */
+export type Props = Record<string, any>;
+export type Cleanup = () => void;
+export interface Observable<T> {
+    subscribe(next: (value: T) => void, error?: (error: unknown) => void, cleanup?: Cleanup):
+        Cleanup | { unsubscribe(): void } | void;
 }
+export type Readable<T> = T | (() => Readable<T>) | { readonly value: T };
+export type Source<T> = Readable<T> | PromiseLike<T> | AsyncIterable<T> | Observable<T>;
+export type Child = null | undefined | boolean | bigint | number | string | Node |
+    Child[] | (() => Child) | PromiseLike<Child> | AsyncIterable<Child> |
+    Observable<Child> | { readonly value: Child };
+export type Element<T = Child> = () => T;
+export type Component<P = {}> = (props: P & { children: Child[] }) => Child;
+export type Factory<P = Props> = Component<P>;
+export type Fragment = typeof h;
 
-// Export the api object for reactive behavior
-export declare let api: Api;
+export function h(tag: typeof h, attrs?: Props | null, ...children: Child[]): Child[];
+export function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs?: Props | Child, ...children: Child[]): HTMLElementTagNameMap[K];
+export function h<K extends keyof SVGElementTagNameMap>(tag: K, attrs?: Props | Child, ...children: Child[]): SVGElementTagNameMap[K];
+export function h<K extends keyof MathMLElementTagNameMap>(tag: K, attrs?: Props | Child, ...children: Child[]): MathMLElementTagNameMap[K];
+export function h(tag: string, attrs?: Props | Child, ...children: Child[]): HTMLElement;
+export function h<P, R extends Child>(tag: (props: P & { children: Child[] }) => R, attrs: P, ...children: Child[]): R;
+export function h<R extends Child>(tag: (props: { children: Child[] }) => R, attrs?: null, ...children: Child[]): R;
+
+export function add(...children: Child[]): Node[];
+export function dispose(...nodes: (Node | Node[])[]): void;
+export function useLive<T>(value: T & Child): [Node[], (next: T | ((previous: T) => T)) => void];
+export const props: Map<string, (node: HTMLElement | SVGElement | MathMLElement, value: any, name: string, attrs: Props) => void>;
+export function f(tag: typeof h): { [tag: string]: (attrs?: Props | Child, ...children: Child[]) => HTMLElement };
+
+export function lazy<P = {}>(loader: () => PromiseLike<{ default: (props: P) => Child }>, fallback?: Child): (props: P) => Promise<Child>;
+export function If({ when, children, fallback }: {
+    when: unknown;
+    children: (Child | ((when: boolean) => Child))[];
+    fallback?: Child;
+}): () => Child;
+export { If as Show, If as Match };
+export function Switch({ children, fallback }: { children: Child[]; fallback?: Child }): () => Child;
+export function Dynamic<P extends Props>({ component, children, ...props }: P & {
+    component: Child | ((props: Omit<P, 'component' | 'children'>, children: Child[]) => Child);
+    children?: Child[];
+}): () => Child;
+
+/** Keys must be unique. Render results and creation-time indices are cached while their keys remain present. */
+export function map<T>(items: Readable<T[] | null | undefined>, callback: (item: T, index: number) => Child, fallback?: Child, key?: (item: T, index: number) => unknown): Node[];
+export function For<T>({ each, children, fallback, key }: {
+    each: Readable<T[] | null | undefined>;
+    children: [(item: T, index: number) => Child];
+    fallback?: Child;
+    key?: (item: T, index: number) => unknown;
+}): Node[];
+
+export function get<T>(value: Readable<T>): T;
+/** `is` delegates to usub, which preserves nullish/falsy inputs rather than always returning boolean. */
+export function is(value: any): boolean | null | undefined | 0 | '';
+export function sub<T>(source: Source<T>, next: (value: T) => void, error?: (error: unknown) => void, cleanup?: Cleanup): Cleanup | undefined;
+export function r<T, R>(source: Source<T>, next: (value: T, reactive: boolean) => R, error?: (error: unknown) => void, cleanup?: Cleanup): R | Cleanup | undefined;
+
+export interface Api {
+    effect?: (effect: () => unknown) => Cleanup | void;
+    is: (value: any) => unknown;
+    get: (value: any) => any;
+    cleanup?: (cleanup?: Cleanup) => void;
+    any?: (source: any) => ((next: (value: any) => void, error?: (error: unknown) => void, cleanup?: Cleanup) => Cleanup | void) | undefined;
+    diff?: (parent: Node, oldNodes: Node[], newNodes: Node[], endOrGet: Node | ((node: Node) => Node), end?: Node) => unknown;
+    udom?: (node: Node) => Node;
+}
+export const api: Api;

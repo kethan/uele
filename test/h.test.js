@@ -5,10 +5,9 @@ import { expect, test, vi } from 'vitest';
 import { signal, effect, computed } from 'ulive'; // Adjust based on your signal library
 import { h, r, api, add, props, For, map, useLive } from '../src/index.js';
 
-// Set up API as per your code
-api.effect = effect;
-api.is = (v) => v?.peek;
-api.get = (v) => v.value;
+import * as runtime from '../src/index.js';
+import { setupRuntime } from './helpers/runtime.js';
+setupRuntime(runtime);
 
 test('simple', () => {
   expect(h('h1').outerHTML).toBe('<h1></h1>');
@@ -531,7 +530,7 @@ test('map function renders list from reactive data and updates on change', async
 });
 
 
-test('custom prop applies behavior to element', () => {
+test('custom prop applies behavior to element', async () => {
 
   // Example custom prop
   props.set('uppercase', (el, value) => {
@@ -555,10 +554,9 @@ test('custom prop applies behavior to element', () => {
   isUppercase.value = false;
 
   // Wait for the reactive update
-  setTimeout(() => {
-    expect(div.style.textTransform).toBe('');
-    document.body.removeChild(div);
-  }, 0);
+  await Promise.resolve();
+  expect(div.style.textTransform).toBe('');
+  document.body.removeChild(div);
 });
 
 test('map function handles nested reactive data structures', async () => {

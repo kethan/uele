@@ -45,7 +45,7 @@ api.get = (v) => v.value;
 - **Extend with any reactive library using api** - effect, is, get
 - **Efficient Array Diffing with For and map**
 - **Add Any Diffing** - Using api.diff
-- **Automatic Cleanup for Subscriptions**
+- **Explicit Cleanup and Keyed-Row Subscription Disposal**
 - **Extend html attributes and props**
 
 1. [counter](#counter)
@@ -467,7 +467,26 @@ import { Switch, Match } from "uele";
 
 ### Cleanup Support
 
-Subscriptions and side-effects in `UEle` are automatically cleaned up when elements are garbage collected using `FinalizationRegistry`. You don't need to manually clean up.
+Use `dispose(root)` before permanently removing a manually mounted subtree:
+
+```js
+import { dispose } from 'uele';
+dispose(root);
+root.remove();
+```
+
+`For`/`map` dispose subscriptions in evicted rows and discard removed keys. Bindings
+created inside a reactive rendering function are owned by that render and disposed
+before replacement; independently prebuilt DOM remains reusable. Custom
+prop handlers can return a cleanup function. Removing DOM directly, hiding an `If`,
+or replacing a `useLive` region does not automatically destroy independently created reusable nodes;
+explicitly dispose nodes you permanently discard. Cleanup does not remove DOM or
+undo arbitrary event listeners. Do not rely on garbage-collection timing.
+
+List keys must be unique. Surviving keys retain their node instances and
+creation-time indices; use reactive fields to update their content. A key removed
+and later re-added renders a fresh row. Fragment rows and nested lists are supported.
+Mount live regions before calling their setters.
 
 ### Other Settings
 
@@ -516,3 +535,43 @@ api.udom = ...; //udomdiff get method
 ## License
 
 MIT
+
+
+## Development and production checks
+
+Use Node 22.17+ (22.x) or Node 24+. Run `npm ci`, then `npm run test:all` for runtime
+coverage, the same runtime tests against built ESM/CommonJS modules, actual npm-package
+consumption, strict TypeScript checks, forced-GC probes, real Chromium scenarios and
+minified/gzip size budgets. `npm test` is non-watch;
+`npm run test:watch` starts watch mode.
+
+Automatic JSX uses the full runtime's `api` configuration. Configure TypeScript
+with `jsx: "react-jsx"` (or `react-jsxdev`) and `jsxImportSource: "uele"`.
+For direct script usage, load the full `uele` bundle before the JSX adapter, whose
+global is `ueleJSX`. Lite is available through `uele/lite` and has its own adapter.
+
+See [the repository audit and test matrix](docs/REPOSITORY_AUDIT.md) for measured
+coverage, byte budgets, lifecycle contracts, compatibility changes and remaining
+production-validation boundaries. 100% code coverage is not exhaustive proof of
+correctness.
+
+
+### Interoperability and memory checks
+
+`npm run test:interop` exercises six signal libraries and six diff engines across
+full/lite runtimes. `npm run test:memory` runs mandatory forced-GC tests;
+`npm run test:browser` also checks real Chromium DOM/listener and heap growth.
+All are included in `npm run test:all`.
+
+See [the interoperability and memory report](docs/INTEROPERABILITY_AND_MEMORY.md)
+for exact library versions, executable adapters, usignal-specific lifecycle caveats,
+retention fixes, measurement methodology and the updated byte budgets.
+
+### Bundle size checks
+
+All shipped JavaScript formats are minified. `npm run test:bundles` runs the existing
+runtime suite against the ESM and CommonJS builds; `npm run test:size` checks every
+shipped JavaScript file. Both are included in `npm run test:all`.
+
+See [the byte-optimization report](docs/BYTE_OPTIMIZATION.md) for before/after sizes,
+compression trade-offs and the checks preserving subscription and DOM cleanup.
