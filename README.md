@@ -521,7 +521,10 @@ so a subscription is released once the *source* (signal/observable) is garbage c
 
 There is one important caveat: an active subscription keeps its source alive, and a source usually keeps its
 subscribers alive. A mounted `h("div", null, someStore)` therefore stays subscribed - and keeps its detached
-nodes reachable - until the store itself goes away. `FinalizationRegistry` cannot break that cycle on its own.
+nodes reachable - until the store itself goes away. `FinalizationRegistry` cannot break that cycle on its own:
+the callback has to close over the source (that is how it reads it), the unsubscriber usub parks in the registry
+reaches the callback, and a target that can be reached from the value registered for it is never released
+(`test/memory.test.js` pins both halves of that rule with `--expose-gc`).
 For long lived stores, dispose explicitly when the subtree is unmounted:
 
 ```jsx
@@ -603,7 +606,7 @@ which keeps `<my-icon>`/`<m-button>` in the HTML namespace. For the few ambiguou
 ### Testing, types and size
 
 ```sh
-npm test           # vitest, 282 tests over src, lite and both jsx runtimes
+npm test           # vitest, 897 tests over src, lite and both jsx runtimes
 npm run test:coverage  # 100% statements/branches/functions/lines are enforced
 npm run test:types     # type-checks the public api and jsx usage
 npm run test:pack      # packs, installs in a clean project, checks exports/files/types
@@ -621,6 +624,14 @@ The runtime has no dependencies except [`usub`](https://github.com/kethan/usub) 
 
 `lite` uses `usub/tiny`, so it supports functions/signals, promises and async iterables, but not `subscribe`
 based observables, and it ships no control flow components (`If`, `For`, `Switch`, `Dynamic`, `lazy`, `map`).
+
+The suite is deliberately conformance heavy: the whole runtime is driven against **ten signal libraries**
+(`ulive`, `@preact/signals-core`, `@vue/reactivity`, `usignal`, `alien-signals`, `s-js`, `mobx`, `rxjs`,
+`nanostores`, `@tanstack/store`) through the `api` adapter, and `map`/`For`/`useLive`/`add` are exercised against
+**eight diff engines** (`swapdom`, `udomdiff`, `domdiff`, `morphdom`, `nanomorph`, `fast-array-diff`, a rebuild
+engine and the built-in marker walk). `test/dom.cleanup.test.js` pins what is detached after every kind of
+update, and `test/memory.test.js` measures reachability with a `FinalizationRegistry` oracle under
+`--expose-gc`.
 
 ### Errors
 
