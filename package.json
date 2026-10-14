@@ -5,24 +5,35 @@
 	"type": "module",
 	"source": "./src/index.js",
 	"main": "./dist/index.js",
-	"module": "./dist/index.js",
+	"module": "./dist/index.es.js",
 	"browser": "./dist/index.es.js",
 	"unpkg": "./dist/index.min.js",
 	"umd:main": "./dist/index.umd.js",
+	"types": "./dist/index.d.ts",
+	"sideEffects": false,
 	"exports": {
 		".": {
-			"types": "./index.d.ts",
+			"types": "./dist/index.d.ts",
 			"browser": "./dist/index.es.js",
 			"umd": "./dist/index.umd.js",
 			"import": "./dist/index.es.js",
 			"default": "./dist/index.es.js",
 			"require": "./dist/index.js"
 		},
+		"./lite": {
+			"types": "./lite/index.d.ts",
+			"browser": "./lite/dist/index.es.js",
+			"umd": "./lite/dist/index.umd.js",
+			"import": "./lite/dist/index.es.js",
+			"default": "./lite/dist/index.es.js",
+			"require": "./lite/dist/index.js"
+		},
 		"./jsx-runtime": {
 			"types": "./jsx-runtime/index.d.ts",
 			"browser": "./jsx-runtime/dist/index.es.js",
 			"umd": "./jsx-runtime/dist/index.umd.js",
 			"import": "./jsx-runtime/dist/index.es.js",
+			"default": "./jsx-runtime/dist/index.es.js",
 			"require": "./jsx-runtime/dist/index.js"
 		},
 		"./jsx-dev-runtime": {
@@ -30,27 +41,36 @@
 			"browser": "./jsx-dev-runtime/dist/index.es.js",
 			"umd": "./jsx-dev-runtime/dist/index.umd.js",
 			"import": "./jsx-dev-runtime/dist/index.es.js",
+			"default": "./jsx-dev-runtime/dist/index.es.js",
 			"require": "./jsx-dev-runtime/dist/index.js"
 		},
 		"./package.json": "./package.json"
 	},
-	"types": "./index.d.ts",
 	"scripts": {
-		"test": "vitest",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"test:coverage": "vitest run --coverage",
+		"test:types": "tsc -p test/types/tsconfig.json",
+		"test:pack": "node scripts/pack-smoke.mjs",
+		"size": "node scripts/check-size.mjs",
 		"build": "rollup --config rollup.config.js"
 	},
 	"files": [
 		"dist",
-		"lite"
+		"lite",
+		"jsx-runtime",
+		"jsx-dev-runtime"
 	],
 	"devDependencies": {
 		"@rollup/plugin-commonjs": "^28.0.1",
 		"@rollup/plugin-node-resolve": "^15.3.0",
 		"@rollup/plugin-terser": "^0.4.4",
+		"@vitest/coverage-v8": "^2.1.5",
 		"jsdom": "^25.0.1",
 		"rollup": "^4.19.0",
 		"rollup-plugin-bundle-size": "^1.0.3",
 		"rollup-plugin-copy": "^3.5.0",
+		"typescript": "^5.6.3",
 		"ulive": "^1.0.7",
 		"vitest": "^2.1.5"
 	},
@@ -88,5 +108,8 @@
 	"homepage": "https://github.com/kethan/uele#readme",
 	"dependencies": {
 		"usub": "^0.8.1"
+	},
+	"engines": {
+		"node": ">=18"
 	}
 }

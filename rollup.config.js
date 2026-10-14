@@ -8,9 +8,12 @@ const resolve = (pkg, {
 	input = "src/index",
 	output = "dist/index",
 	copyFiles = [],
-	ext = "js"
+	ext = "js",
+	external = [],
+	globals = {}
 } = {}) => ({
 	input: `${input}.${ext}`,
+	external,
 	plugins: [
 		node(),
 		commonjs(),
@@ -36,6 +39,7 @@ const resolve = (pkg, {
 			name: pkg,
 			strict: false,
 			compact: true,
+			globals,
 			plugins: [terser()]
 		},
 		{
@@ -44,14 +48,25 @@ const resolve = (pkg, {
 			name: pkg,
 			strict: false,
 			compact: true,
+			globals,
 			plugins: [terser()]
 		}
 	]
 });
 
+// jsx runtimes re-use the published entry - one copy of `h`, `api` and `props` per app
+const jsx = (name) => resolve("uele", {
+	copyFiles: [`${name}/index.d.ts`, `${name}/dist/`],
+	input: `${name}/index`,
+	output: `${name}/dist/index`,
+	ext: "ts",
+	external: ["uele"],
+	globals: { uele: "uele" }
+});
+
 export default [
 	resolve("uele", { copyFiles: ["src/index.d.ts", "dist/"] }),
-	resolve("uele", { copyFiles: ["jsx-runtime/index.d.ts", "jsx-runtime/dist/"], input: "jsx-runtime/index", output: "jsx-runtime/dist/index", ext: "ts" }),
-	resolve("uele", { copyFiles: ["jsx-dev-runtime/index.d.ts", "jsx-dev-runtime/dist/"], input: "jsx-dev-runtime/index", output: "jsx-dev-runtime/dist/index", ext: "ts" }),
+	jsx("jsx-runtime"),
+	jsx("jsx-dev-runtime"),
 	resolve("uele", { copyFiles: ["lite/index.d.ts", "lite/dist/"], input: "lite/index", output: "lite/dist/index" })
-]
+];

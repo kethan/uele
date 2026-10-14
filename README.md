@@ -41,6 +41,7 @@ api.get = (v) => v.value;
 - **Lazy Components**
 - **Promise**
 - **AsyncIterable**
+- **Observable** (`subscribe`/`Symbol.observable`)
 - **Control Flow Components** - If, For, Show, Switch, Match
 - **Extend with any reactive library using api** - effect, is, get
 - **Efficient Array Diffing with For and map**
@@ -132,8 +133,21 @@ document.body.append(
 
 #### 4. jsx
 
+The package ships an [automatic JSX runtime](https://reactjs.org/blog/2020/09/22/introducing-the-new-jsx-transform.html),
+so no `h` import is needed and components are resolved from the same module instance as `import ... from "uele"`.
+
+```jsonc
+// tsconfig.json
+{ "compilerOptions": { "jsx": "react-jsx", "jsxImportSource": "uele" } }
+```
+
+```js
+// or esbuild/vite
+esbuild: { jsx: "automatic", jsxImportSource: "uele" }
+```
+
 ```jsx
-import { h, useLive } from "uele";
+import { useLive } from "uele";
 
 let [count, setCount] = useLive(0);
 
@@ -145,6 +159,9 @@ document.body.append(
   </main>
 );
 ```
+
+`uele/jsx-runtime` and `uele/jsx-dev-runtime` only re-export the shared `h` (`Fragment === h`) - importing both
+the runtime and the library never duplicates the implementation.
 
 ### h
 
@@ -166,7 +183,7 @@ const LazyComp = lazy(() => import("./SomeComp"), <div>Failed</div>);
 
 ### map
 
-Efficient diffing of an array of items
+Keyed list rendering with node reuse.
 
 ```jsx
 import { map } from "uele";
@@ -181,10 +198,25 @@ const Items = () => {
         {item} {i}
       </div>
     ),
-    <div>No items</div>
+    <div>No items</div>,
+    (item, i) => item.id // optional key, defaults to the item itself
   );
 };
 ```
+
+**Node reuse**: a node is reused while its key is present, and the callback is *not* re-run for reused keys.
+Items are keyed by identity (`key = (v, i) => v`) unless a `key` function is given, so a pure reorder only moves
+existing nodes - the rendered content (including `i`) stays as it was for that node. Give a key (or make the
+content reactive) when the callback output depends on the index. `For` uses the same engine:
+
+```jsx
+<For each={items} key={(item) => item.id} fallback={<div>No items</div>}>
+  {(item, i) => <div>{item} {i}</div>}
+</For>
+```
+
+Lists accept any iterable (`Array`, `Set`, generator, `NodeList`). Nodes whose keys disappear are released
+immediately, so filtering a large list does not leak nodes.
 
 ### Example
 
@@ -315,7 +347,7 @@ r(someObservable, (value, is) => {
 
 #### `f`
 
-The `f` function is a utility that provides a convenient shorthand for creating elements using the h function. It returns a proxy that allows you to call HTML elements as functions directly.
+The `f` function is a utility that provides a convenient shorthand for creating elements using the h function. It returns a proxy that allows you to call HTML elements as functions directly. The property name is used as the tag name, so `f(h)["my-widget"]({ id: "x" })` creates a custom element.
 
 ```js
 import { h, useLive, f } from "uele";
@@ -348,6 +380,21 @@ setInterval(() => {
 
 const App = () => <main>{live}</main>;
 ```
+
+### Attributes, properties and events
+
+- `null`/`undefined`/`false` remove an attribute, `true` sets it to `""`, numbers are stringified.
+- Attributes that exist as element properties (`value`, `checked`, `id`, `textContent`, ...) are set as
+  properties and accept reactive values; `null`/`undefined` empty them instead of writing `"null"`.
+- `className` maps to `class`. A `class` object toggles classes (`{ active: signal }`), a string/reactive string
+  sets the attribute, and an array is joined by the DOM (`["a","b"]` -> `"a,b"`).
+- `style` accepts a string or an object; object keys may be camelCase, kebab-case or custom properties
+  (`"--my-var"`), values may be reactive and `null`/`undefined` clears them. Numbers must carry a unit.
+- `on*` handlers are assigned as properties when the element has that handler (`onclick`), otherwise they are
+  bound with `addEventListener`, so custom events work: `h("div", { onmyevt: fn })`.
+  Assigning a falsy value unregisters a native handler.
+- `ref` receives `(element, props)` for elements.
+- Attributes are applied after the children are built.
 
 ### Props
 
@@ -467,7 +514,37 @@ import { Switch, Match } from "uele";
 
 ### Cleanup Support
 
-Subscriptions and side-effects in `UEle` are automatically cleaned up when elements are garbage collected using `FinalizationRegistry`. You don't need to manually clean up.
+`sub`/`r` return an unsubscribe function and `usub` registers subscriptions with a `FinalizationRegistry`,
+so a subscription is released once the *source* (signal/observable) is garbage collected.
+
+There is one important caveat: an active subscription keeps its source alive, and a source usually keeps its
+subscribers alive. A mounted `h("div", null, someStore)` therefore stays subscribed - and keeps its detached
+nodes reachable - until the store itself goes away. `FinalizationRegistry` cannot break that cycle on its own.
+For long lived stores, dispose explicitly when the subtree is unmounted:
+
+```jsx
+import { h, props, api } from "uele";
+
+props.set("unmount", (node, cleanup) => {
+  const observe = () => {
+    if (!node.parentNode) return requestAnimationFrame(observe);
+    const observer = new MutationObserver((records) => {
+      for (const record of records)
+        for (const removed of record.removedNodes)
+          if (removed === node) (cleanup(), observer.disconnect());
+    });
+    observer.observe(node.parentNode, { childList: true });
+  };
+  observe();
+});
+
+// per binding: keep the unsubscribe returned by r()/sub()
+const off = r(store, render);
+h("div", { unmount: off }, render);
+```
+
+Alternatively subscribe by hand (`r(store, render)` + a `disconnect` on route change) and let `add()` render
+plain functions - a function child is re-evaluated on every change of the signals it reads.
 
 ### Other Settings
 
@@ -504,9 +581,50 @@ api.is = (v) => ...; // Function to check if a value is reactive
 api.get = (v) => ...; // Function to get the current value
 api.cleanup = ...; // Explicit cleanup function for solid.js, sinuous and similar
 api.any = ...; // Go crazy with anything.
-api.diff = ...; // Any diffing library
-api.udom = ...; //udomdiff get method
+api.diff = ...; // Any diffing library - signature below
+api.udom = ...; // udomdiff `get` helper, switches api.diff to the udomdiff signature
 ```
+
+`api.diff` receives `(parent, oldNodes, newNodes, end)` and must place `newNodes` before the `end` marker
+(this is the [swapdom](https://github.com/dy/swapdom) signature). Set `api.udom` to use the
+[udomdiff](https://github.com/WebReflection/udomdiff) signature instead:
+`api.diff(parent, oldNodes, newNodes, api.udom, end)`.
+
+#### SVG and MathML
+
+Tag names are matched against a tag list (`isSVG`) to pick the namespace, because the parent element is not
+known while children are being created. Custom elements must contain a dash
+([as in the spec](https://html.spec.whatwg.org/multipage/custom-elements.html#valid-custom-element-name)),
+which keeps `<my-icon>`/`<m-button>` in the HTML namespace. For the few ambiguous tags (`title`, `style`,
+`script`) pass a namespaced node yourself: `document.createElementNS("http://www.w3.org/2000/svg", "title")`.
+
+### Testing, types and size
+
+```sh
+npm test           # vitest, 282 tests over src, lite and both jsx runtimes
+npm run test:coverage  # 100% statements/branches/functions/lines are enforced
+npm run test:types     # type-checks the public api and jsx usage
+npm run test:pack      # packs, installs in a clean project, checks exports/files/types
+npm run size           # fails when a bundle exceeds its byte budget
+```
+
+The runtime has no dependencies except [`usub`](https://github.com/kethan/usub) and stays inside these budgets
+(raw / gzip):
+
+| bundle | budget | notes |
+| --- | --- | --- |
+| `dist/index.min.js` | ~3.5 kB / ~1.7 kB | full library, iife |
+| `lite/dist/index.min.js` | ~2.4 kB / ~1.3 kB | `h`, `add`, `useLive`, `props`, `r` |
+| `jsx-runtime/dist/index.es.js` | ~0.4 kB / ~0.3 kB | re-exports the shared `h` |
+
+`lite` uses `usub/tiny`, so it supports functions/signals, promises and async iterables, but not `subscribe`
+based observables, and it ships no control flow components (`If`, `For`, `Switch`, `Dynamic`, `lazy`, `map`).
+
+### Errors
+
+Children that are promises, observables or async iterables never throw into the render: a rejected promise or a
+stream error is ignored and the previous content (or the placeholder) stays. Subscribe manually with
+`r(source, next, error)` when you need to handle errors - it also gives you an unsubscribe function.
 
 ## Thanks and Inspiration
 
