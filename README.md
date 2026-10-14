@@ -216,7 +216,9 @@ content reactive) when the callback output depends on the index. `For` uses the 
 ```
 
 Lists accept any iterable (`Array`, `Set`, generator, `NodeList`). Nodes whose keys disappear are released
-immediately, so filtering a large list does not leak nodes.
+immediately, so filtering a large list does not leak nodes. A node is reused at most once per render, so
+duplicate keys are safe: with the default key `[1, 1, 2]` renders three elements (the second `1` builds a fresh
+node).
 
 ### Example
 
