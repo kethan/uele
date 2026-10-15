@@ -1,0 +1,454 @@
+From 8f09f67e52a063f09fff6282f4ef79f5d65b1089 Mon Sep 17 00:00:00 2001
+From: Kethan Surana <ckethan1@gmail.com>
+Date: Thu, 15 Oct 2026 05:23:27 +0000
+Subject: [PATCH] test: take the suite off cdn.skypack.dev
+
+cdn.skypack.dev now serves broken module shapes for some packages
+('signal is not a function' for @preact/signals-core and usignal), and solid-js
+resolved under node pulls its server build where createEffect is a no-op. The
+libraries move to devDependencies and the solid test pins the client build
+(solid-js/dist/solid.js). The suite no longer needs the https loader.
+
+39 assertions, all green, fully offline.
+---
+ package-lock.json | 195 +++++++++++++++++++++++++++++++++++++++++++++-
+ package.json      |  12 ++-
+ test/index.js     |  16 ++--
+ 3 files changed, 212 insertions(+), 11 deletions(-)
+
+diff --git a/package-lock.json b/package-lock.json
+index 964a667..cb50934 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -9,10 +9,18 @@
+ 			"version": "0.8.2",
+ 			"license": "ISC",
+ 			"devDependencies": {
++				"@preact/signals-core": "^1.14.4",
+ 				"@rollup/plugin-terser": "^0.4.4",
++				"@webreflection/signal": "^2.1.2",
++				"observ": "^0.2.0",
++				"observable": "^2.1.4",
+ 				"rollup": "^4.20.0",
+ 				"rollup-plugin-bundle-size": "^1.0.3",
+-				"tst": "^7.3.0"
++				"rxjs": "^7.8.2",
++				"solid-js": "^1.9.17",
++				"tst": "^7.3.0",
++				"ulive": "^1.0.7",
++				"usignal": "^0.10.0"
+ 			}
+ 		},
+ 		"node_modules/@jridgewell/gen-mapping": {
+@@ -73,6 +81,17 @@
+ 				"@jridgewell/sourcemap-codec": "^1.4.14"
+ 			}
+ 		},
++		"node_modules/@preact/signals-core": {
++			"version": "1.14.4",
++			"resolved": "https://registry.npmjs.org/@preact/signals-core/-/signals-core-1.14.4.tgz",
++			"integrity": "sha512-HNB6HYeYKhQbJ1aKl+YRjrS4+QWHLKX6qKoUsfS/m0vqzsVaEBiZiaKbG/e+NKk2ch5ALQr/ihWaMHxiCuuWHA==",
++			"dev": true,
++			"license": "MIT",
++			"funding": {
++				"type": "opencollective",
++				"url": "https://opencollective.com/preact"
++			}
++		},
+ 		"node_modules/@rollup/plugin-terser": {
+ 			"version": "0.4.4",
+ 			"resolved": "https://registry.npmjs.org/@rollup/plugin-terser/-/plugin-terser-0.4.4.tgz",
+@@ -309,6 +328,13 @@
+ 			"integrity": "sha512-/kYRxGDLWzHOB7q+wtSUQlFrtcdUccpfy+X+9iMBpHK8QLLhx2wIPYuS5DYtR9Wa/YlZAbIovy7qVdB1Aq6Lyw==",
+ 			"dev": true
+ 		},
++		"node_modules/@webreflection/signal": {
++			"version": "2.1.2",
++			"resolved": "https://registry.npmjs.org/@webreflection/signal/-/signal-2.1.2.tgz",
++			"integrity": "sha512-0dW0fstQQkIt588JwhDiPS4xgeeQcQnBHn6MVInrBzmFlnLtzoSJL9G7JqdAlZVVi19tfb8R1QisZIT31cgiug==",
++			"dev": true,
++			"license": "ISC"
++		},
+ 		"node_modules/acorn": {
+ 			"version": "8.12.1",
+ 			"resolved": "https://registry.npmjs.org/acorn/-/acorn-8.12.1.tgz",
+@@ -367,6 +393,13 @@
+ 			"integrity": "sha512-GpVkmM8vF2vQUkj2LvZmD35JxeJOLCwJ9cUkugyk2nuhbv3+mJvpLYYt+0+USMxE+oj+ey/lJEnhZw75x/OMcQ==",
+ 			"dev": true
+ 		},
++		"node_modules/csstype": {
++			"version": "3.2.3",
++			"resolved": "https://registry.npmjs.org/csstype/-/csstype-3.2.3.tgz",
++			"integrity": "sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==",
++			"dev": true,
++			"license": "MIT"
++		},
+ 		"node_modules/duplexer": {
+ 			"version": "0.1.2",
+ 			"resolved": "https://registry.npmjs.org/duplexer/-/duplexer-0.1.2.tgz",
+@@ -466,6 +499,19 @@
+ 				"node": ">=0.10.0"
+ 			}
+ 		},
++		"node_modules/observ": {
++			"version": "0.2.0",
++			"resolved": "https://registry.npmjs.org/observ/-/observ-0.2.0.tgz",
++			"integrity": "sha512-7SKbYTiFXMvqbeinO/GwTGtXSvbRq5AHKszmq5cx3fV7bKEjNCK7AdkhGzsuQAoT+IPf3mlxDmPrVW8wgshpcQ==",
++			"dev": true
++		},
++		"node_modules/observable": {
++			"version": "2.1.4",
++			"resolved": "https://registry.npmjs.org/observable/-/observable-2.1.4.tgz",
++			"integrity": "sha512-YP03BvfvWSu3IZgcByNp5d9mNJAMjJG8TI2z9rrAR0jQvVH6csE+3VPkAemR0n3hOlI5vJ7gWgg0YPGUFZaQBg==",
++			"dev": true,
++			"license": "MIT"
++		},
+ 		"node_modules/pretty-bytes": {
+ 			"version": "3.0.1",
+ 			"resolved": "https://registry.npmjs.org/pretty-bytes/-/pretty-bytes-3.0.1.tgz",
+@@ -532,6 +578,16 @@
+ 				"maxmin": "^2.1.0"
+ 			}
+ 		},
++		"node_modules/rxjs": {
++			"version": "7.8.2",
++			"resolved": "https://registry.npmjs.org/rxjs/-/rxjs-7.8.2.tgz",
++			"integrity": "sha512-dhKf903U/PQZY6boNNtAGdWbG85WAbjT/1xYoZIC7FAY0yWapOBQVsVrDl58W86//e1VpMNBtRV4MaXfdMySFA==",
++			"dev": true,
++			"license": "Apache-2.0",
++			"dependencies": {
++				"tslib": "^2.1.0"
++			}
++		},
+ 		"node_modules/safe-buffer": {
+ 			"version": "5.2.1",
+ 			"resolved": "https://registry.npmjs.org/safe-buffer/-/safe-buffer-5.2.1.tgz",
+@@ -561,12 +617,47 @@
+ 				"randombytes": "^2.1.0"
+ 			}
+ 		},
++		"node_modules/seroval": {
++			"version": "1.6.9",
++			"resolved": "https://registry.npmjs.org/seroval/-/seroval-1.6.9.tgz",
++			"integrity": "sha512-UeEzHwAK+yl0YLbsvROV1t5yMYEwZZ0CfKYxDvUgS2fO9Vxdf8djqVIB+OuVpuawRNPqw68LE1Du/GMsW2ZPqA==",
++			"dev": true,
++			"license": "MIT",
++			"engines": {
++				"node": ">=10"
++			}
++		},
++		"node_modules/seroval-plugins": {
++			"version": "1.6.9",
++			"resolved": "https://registry.npmjs.org/seroval-plugins/-/seroval-plugins-1.6.9.tgz",
++			"integrity": "sha512-kiDK/Tb8IWZ61WEU8pA2PDmAuw37gKph9Y77OZlD56mg0Y2g0Bg7gZ1HeHhs5d40w+nRoUq/wj08V26ilbez9g==",
++			"dev": true,
++			"license": "MIT",
++			"engines": {
++				"node": ">=10"
++			},
++			"peerDependencies": {
++				"seroval": "^1.0"
++			}
++		},
+ 		"node_modules/smob": {
+ 			"version": "1.5.0",
+ 			"resolved": "https://registry.npmjs.org/smob/-/smob-1.5.0.tgz",
+ 			"integrity": "sha512-g6T+p7QO8npa+/hNx9ohv1E5pVCmWrVCUzUXJyLdMmftX6ER0oiWY/w9knEonLpnOp6b6FenKnMfR8gqwWdwig==",
+ 			"dev": true
+ 		},
++		"node_modules/solid-js": {
++			"version": "1.9.17",
++			"resolved": "https://registry.npmjs.org/solid-js/-/solid-js-1.9.17.tgz",
++			"integrity": "sha512-4GAmLOWPfNV8H9Jfn2LSFTpNEG6jiOKPiwd5lnLGQtehHaX6l3TOLzJqQ7mqwB/3k1Yy3zyumFVopmc/tm34ow==",
++			"dev": true,
++			"license": "MIT",
++			"dependencies": {
++				"csstype": "^3.1.0",
++				"seroval": "~1.6.8",
++				"seroval-plugins": "~1.6.8"
++			}
++		},
+ 		"node_modules/source-map": {
+ 			"version": "0.6.1",
+ 			"resolved": "https://registry.npmjs.org/source-map/-/source-map-0.6.1.tgz",
+@@ -625,11 +716,32 @@
+ 				"node": ">=10"
+ 			}
+ 		},
++		"node_modules/tslib": {
++			"version": "2.8.1",
++			"resolved": "https://registry.npmjs.org/tslib/-/tslib-2.8.1.tgz",
++			"integrity": "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==",
++			"dev": true,
++			"license": "0BSD"
++		},
+ 		"node_modules/tst": {
+ 			"version": "7.3.0",
+ 			"resolved": "https://registry.npmjs.org/tst/-/tst-7.3.0.tgz",
+ 			"integrity": "sha512-c0HQtijwZRlYImcd+mbdJiy4zNpq/YF/TbdUIU+sS8A2Psr29VlPVmD/U2AaNqjheIXDWC2lV7G0GCHRQciLkw==",
+ 			"dev": true
++		},
++		"node_modules/ulive": {
++			"version": "1.0.7",
++			"resolved": "https://registry.npmjs.org/ulive/-/ulive-1.0.7.tgz",
++			"integrity": "sha512-JSVkK+61drrO+pqv+xHkHyYYl+egaeVQ9arAjhowPy1OF9tOokDtpt0yHMe503n3kD7SkbyTaKA7AQ38RC/UJA==",
++			"dev": true,
++			"license": "ISC"
++		},
++		"node_modules/usignal": {
++			"version": "0.10.0",
++			"resolved": "https://registry.npmjs.org/usignal/-/usignal-0.10.0.tgz",
++			"integrity": "sha512-6yf3+3POTVYHXin2ukCRS0Xx8hIplPD0yPZhBkvSxUXrZjl9KKzWpRLoEX4+m9vmmgn06w6mJTPG22O2EFdjBQ==",
++			"dev": true,
++			"license": "ISC"
+ 		}
+ 	},
+ 	"dependencies": {
+@@ -682,6 +794,12 @@
+ 				"@jridgewell/sourcemap-codec": "^1.4.14"
+ 			}
+ 		},
++		"@preact/signals-core": {
++			"version": "1.14.4",
++			"resolved": "https://registry.npmjs.org/@preact/signals-core/-/signals-core-1.14.4.tgz",
++			"integrity": "sha512-HNB6HYeYKhQbJ1aKl+YRjrS4+QWHLKX6qKoUsfS/m0vqzsVaEBiZiaKbG/e+NKk2ch5ALQr/ihWaMHxiCuuWHA==",
++			"dev": true
++		},
+ 		"@rollup/plugin-terser": {
+ 			"version": "0.4.4",
+ 			"resolved": "https://registry.npmjs.org/@rollup/plugin-terser/-/plugin-terser-0.4.4.tgz",
+@@ -811,6 +929,12 @@
+ 			"integrity": "sha512-/kYRxGDLWzHOB7q+wtSUQlFrtcdUccpfy+X+9iMBpHK8QLLhx2wIPYuS5DYtR9Wa/YlZAbIovy7qVdB1Aq6Lyw==",
+ 			"dev": true
+ 		},
++		"@webreflection/signal": {
++			"version": "2.1.2",
++			"resolved": "https://registry.npmjs.org/@webreflection/signal/-/signal-2.1.2.tgz",
++			"integrity": "sha512-0dW0fstQQkIt588JwhDiPS4xgeeQcQnBHn6MVInrBzmFlnLtzoSJL9G7JqdAlZVVi19tfb8R1QisZIT31cgiug==",
++			"dev": true
++		},
+ 		"acorn": {
+ 			"version": "8.12.1",
+ 			"resolved": "https://registry.npmjs.org/acorn/-/acorn-8.12.1.tgz",
+@@ -854,6 +978,12 @@
+ 			"integrity": "sha512-GpVkmM8vF2vQUkj2LvZmD35JxeJOLCwJ9cUkugyk2nuhbv3+mJvpLYYt+0+USMxE+oj+ey/lJEnhZw75x/OMcQ==",
+ 			"dev": true
+ 		},
++		"csstype": {
++			"version": "3.2.3",
++			"resolved": "https://registry.npmjs.org/csstype/-/csstype-3.2.3.tgz",
++			"integrity": "sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==",
++			"dev": true
++		},
+ 		"duplexer": {
+ 			"version": "0.1.2",
+ 			"resolved": "https://registry.npmjs.org/duplexer/-/duplexer-0.1.2.tgz",
+@@ -925,6 +1055,18 @@
+ 			"integrity": "sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg==",
+ 			"dev": true
+ 		},
++		"observ": {
++			"version": "0.2.0",
++			"resolved": "https://registry.npmjs.org/observ/-/observ-0.2.0.tgz",
++			"integrity": "sha512-7SKbYTiFXMvqbeinO/GwTGtXSvbRq5AHKszmq5cx3fV7bKEjNCK7AdkhGzsuQAoT+IPf3mlxDmPrVW8wgshpcQ==",
++			"dev": true
++		},
++		"observable": {
++			"version": "2.1.4",
++			"resolved": "https://registry.npmjs.org/observable/-/observable-2.1.4.tgz",
++			"integrity": "sha512-YP03BvfvWSu3IZgcByNp5d9mNJAMjJG8TI2z9rrAR0jQvVH6csE+3VPkAemR0n3hOlI5vJ7gWgg0YPGUFZaQBg==",
++			"dev": true
++		},
+ 		"pretty-bytes": {
+ 			"version": "3.0.1",
+ 			"resolved": "https://registry.npmjs.org/pretty-bytes/-/pretty-bytes-3.0.1.tgz",
+@@ -979,6 +1121,15 @@
+ 				"maxmin": "^2.1.0"
+ 			}
+ 		},
++		"rxjs": {
++			"version": "7.8.2",
++			"resolved": "https://registry.npmjs.org/rxjs/-/rxjs-7.8.2.tgz",
++			"integrity": "sha512-dhKf903U/PQZY6boNNtAGdWbG85WAbjT/1xYoZIC7FAY0yWapOBQVsVrDl58W86//e1VpMNBtRV4MaXfdMySFA==",
++			"dev": true,
++			"requires": {
++				"tslib": "^2.1.0"
++			}
++		},
+ 		"safe-buffer": {
+ 			"version": "5.2.1",
+ 			"resolved": "https://registry.npmjs.org/safe-buffer/-/safe-buffer-5.2.1.tgz",
+@@ -994,12 +1145,36 @@
+ 				"randombytes": "^2.1.0"
+ 			}
+ 		},
++		"seroval": {
++			"version": "1.6.9",
++			"resolved": "https://registry.npmjs.org/seroval/-/seroval-1.6.9.tgz",
++			"integrity": "sha512-UeEzHwAK+yl0YLbsvROV1t5yMYEwZZ0CfKYxDvUgS2fO9Vxdf8djqVIB+OuVpuawRNPqw68LE1Du/GMsW2ZPqA==",
++			"dev": true
++		},
++		"seroval-plugins": {
++			"version": "1.6.9",
++			"resolved": "https://registry.npmjs.org/seroval-plugins/-/seroval-plugins-1.6.9.tgz",
++			"integrity": "sha512-kiDK/Tb8IWZ61WEU8pA2PDmAuw37gKph9Y77OZlD56mg0Y2g0Bg7gZ1HeHhs5d40w+nRoUq/wj08V26ilbez9g==",
++			"dev": true,
++			"requires": {}
++		},
+ 		"smob": {
+ 			"version": "1.5.0",
+ 			"resolved": "https://registry.npmjs.org/smob/-/smob-1.5.0.tgz",
+ 			"integrity": "sha512-g6T+p7QO8npa+/hNx9ohv1E5pVCmWrVCUzUXJyLdMmftX6ER0oiWY/w9knEonLpnOp6b6FenKnMfR8gqwWdwig==",
+ 			"dev": true
+ 		},
++		"solid-js": {
++			"version": "1.9.17",
++			"resolved": "https://registry.npmjs.org/solid-js/-/solid-js-1.9.17.tgz",
++			"integrity": "sha512-4GAmLOWPfNV8H9Jfn2LSFTpNEG6jiOKPiwd5lnLGQtehHaX6l3TOLzJqQ7mqwB/3k1Yy3zyumFVopmc/tm34ow==",
++			"dev": true,
++			"requires": {
++				"csstype": "^3.1.0",
++				"seroval": "~1.6.8",
++				"seroval-plugins": "~1.6.8"
++			}
++		},
+ 		"source-map": {
+ 			"version": "0.6.1",
+ 			"resolved": "https://registry.npmjs.org/source-map/-/source-map-0.6.1.tgz",
+@@ -1043,11 +1218,29 @@
+ 				"source-map-support": "~0.5.20"
+ 			}
+ 		},
++		"tslib": {
++			"version": "2.8.1",
++			"resolved": "https://registry.npmjs.org/tslib/-/tslib-2.8.1.tgz",
++			"integrity": "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==",
++			"dev": true
++		},
+ 		"tst": {
+ 			"version": "7.3.0",
+ 			"resolved": "https://registry.npmjs.org/tst/-/tst-7.3.0.tgz",
+ 			"integrity": "sha512-c0HQtijwZRlYImcd+mbdJiy4zNpq/YF/TbdUIU+sS8A2Psr29VlPVmD/U2AaNqjheIXDWC2lV7G0GCHRQciLkw==",
+ 			"dev": true
++		},
++		"ulive": {
++			"version": "1.0.7",
++			"resolved": "https://registry.npmjs.org/ulive/-/ulive-1.0.7.tgz",
++			"integrity": "sha512-JSVkK+61drrO+pqv+xHkHyYYl+egaeVQ9arAjhowPy1OF9tOokDtpt0yHMe503n3kD7SkbyTaKA7AQ38RC/UJA==",
++			"dev": true
++		},
++		"usignal": {
++			"version": "0.10.0",
++			"resolved": "https://registry.npmjs.org/usignal/-/usignal-0.10.0.tgz",
++			"integrity": "sha512-6yf3+3POTVYHXin2ukCRS0Xx8hIplPD0yPZhBkvSxUXrZjl9KKzWpRLoEX4+m9vmmgn06w6mJTPG22O2EFdjBQ==",
++			"dev": true
+ 		}
+ 	}
+ }
+diff --git a/package.json b/package.json
+index 6fd6874..5bd5f50 100644
+--- a/package.json
++++ b/package.json
+@@ -43,13 +43,21 @@
+ 	],
+ 	"scripts": {
+ 		"build": "rollup --config rollup.config.js",
+-		"test": "node --allow-natives-syntax --loader ./test/https-loader.js --expose-gc ./test/index.js"
++		"test": "node --allow-natives-syntax --expose-gc ./test/index.js"
+ 	},
+ 	"devDependencies": {
++		"@preact/signals-core": "^1.14.4",
+ 		"@rollup/plugin-terser": "^0.4.4",
++		"@webreflection/signal": "^2.1.2",
++		"observ": "^0.2.0",
++		"observable": "^2.1.4",
+ 		"rollup": "^4.20.0",
+ 		"rollup-plugin-bundle-size": "^1.0.3",
+-		"tst": "^7.3.0"
++		"rxjs": "^7.8.2",
++		"solid-js": "^1.9.17",
++		"tst": "^7.3.0",
++		"ulive": "^1.0.7",
++		"usignal": "^0.10.0"
+ 	},
+ 	"keywords": [
+ 		"rxjs",
+diff --git a/test/index.js b/test/index.js
+index bffef23..f19a8d1 100644
+--- a/test/index.js
++++ b/test/index.js
+@@ -47,7 +47,7 @@ t('Promise: error', async () => {
+ 
+ t('rxjs', async () => {
+   const arr = []
+-  const { Subject } = await import('https://cdn.skypack.dev/rxjs')
++  const { Subject } = await import('rxjs')
+   const subject = new Subject();
+ 
+   const unsub = sub(subject, v => arr.push(v), err => arr.push(err), () => arr.push('end'))
+@@ -66,7 +66,7 @@ t('rxjs', async () => {
+ 
+ t('observ', async () => {
+   const arr = []
+-  const { default: Observable } = await import('https://cdn.skypack.dev/observ')
++  const { default: Observable } = await import('observ')
+ 
+   var v = Observable(1)
+   sub(v, v => arr.push(v))
+@@ -77,7 +77,7 @@ t('observ', async () => {
+ 
+ t('observable', async () => {
+   const arr = []
+-  const { default: Observable } = await import('https://cdn.skypack.dev/observable')
++  const { default: Observable } = await import('observable')
+ 
+   var v = Observable(1)
+   sub(v, v => arr.push(v))
+@@ -140,7 +140,7 @@ t('collecting callback doesnt invoke unsubscribe', async () => {
+ 
+ t('does not keep observer refs for signal', async () => {
+ 
+-  const { signal } = await import('https://cdn.skypack.dev/@preact/signals-core')
++  const { signal } = await import('@preact/signals-core')
+ 
+   let arr = []
+   let s1 = signal(0)
+@@ -165,7 +165,7 @@ t('does not keep observer refs for signal', async () => {
+ })
+ 
+ t('solid.js', async () => {
+-  const { createSignal, createEffect, onCleanup, createRoot } = await import('https://cdn.skypack.dev/solid-js');
++  const { createSignal, createEffect, onCleanup, createRoot } = await import('solid-js/dist/solid.js');
+   let arr = [];
+ 
+   api.effect = (f) => {
+@@ -203,7 +203,7 @@ t('solid.js', async () => {
+ });
+ 
+ t('usignal', async () => {
+-  const { effect, signal, Signal } = await import('https://cdn.skypack.dev/usignal');
++  const { effect, signal, Signal } = await import('usignal');
+   let arr = [];
+ 
+   api.effect = effect;
+@@ -236,7 +236,7 @@ t('usignal', async () => {
+ });
+ 
+ t('@webreflection/signal', async () => {
+-  const { effect, signal, Signal } = await import('https://cdn.skypack.dev/@webreflection/signal');
++  const { effect, signal, Signal } = await import('@webreflection/signal');
+   let arr = [];
+ 
+   api.effect = effect;
+@@ -265,7 +265,7 @@ t('@webreflection/signal', async () => {
+ });
+ 
+ t('ulive', async () => {
+-  const { effect, signal } = await import('https://cdn.skypack.dev/ulive');
++  const { effect, signal } = await import('ulive');
+   let arr = [];
+ 
+   api.effect = effect;
+-- 
+2.39.5
+

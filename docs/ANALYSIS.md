@@ -120,9 +120,11 @@ same file.) Pre-fix baseline: min 3 469/1 745, es 8 203/2 798. The conformance-p
 ## 7. Suggested next steps (not in this change)
 
 1. Consider an opt-in `props.unmount`/cleanup registry for long lived stores (README recipe today).
-2. Done except the publish: usub fix committed upstream as `f63caaf` (0.8.2, `docs/usub-0.8.2-upstream.patch`),
-   memory suite flipped to strict zero. Remaining: push to `kethan/usub` + `npm publish` from an authorized
-   session, then drop `scripts/patch-usub.mjs` and bump the dependency to `^0.8.2`.
+2. Done except the publish: usub fix committed upstream as `f63caaf` (0.8.2, `docs/usub-0.8.2-upstream.patch`)
+   and its test suite taken off `cdn.skypack.dev` as `8f09f67` (`docs/usub-0.8.2-tests.patch` - skypack now
+   serves broken module shapes and node resolves solid-js to its no-op server build; 39/39 green offline).
+   Memory suite flipped to strict zero. Remaining: push both commits to `kethan/usub` + `npm publish`, then
+   drop `scripts/patch-usub.mjs` and bump the dependency to `^0.8.2`.
 3. Optional: a `sub`-level debug flag that names retained subscriptions in dev builds.
 
 ---
