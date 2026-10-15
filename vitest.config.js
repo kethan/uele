@@ -17,7 +17,6 @@ export default defineConfig({
 		jsxImportSource: 'uele'
 	},
 	test: {
-		globalSetup: './test/global-setup.js', // applies the usub 0.8.2 fix to node_modules (no-op on 0.8.2+)
 		environment: 'jsdom',
 		poolOptions: {
 			forks: { execArgv: ['--expose-gc'] }

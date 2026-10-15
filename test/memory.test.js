@@ -345,12 +345,12 @@ describe('subscription lifetimes', () => {
 		expect(run.second).toBeLessThanOrEqual(SLACK);
 	});
 
-	test('a disposed subscription releases its whole chain (usub 0.8.2 fix applied)', async () => {
+	test('a disposed subscription releases its whole chain (usub 0.9.0)', async () => {
 		// usub used to park the effect disposer in its FinalizationRegistry (see the oracle
 		// test above for why that entry could never clear): one chain - source plus whatever
 		// the callback reached - retained per subscription, forever, even after stop(). The
-		// fix (scripts/patch-usub.mjs applies it to the local install; upstream patch in
-		// docs/usub-0.8.2-upstream.patch) only parks subscriptions usub does not own, so
+		// fix - shipped in usub 0.9.0, which uele depends on - only parks subscriptions
+		// usub does not own, so
 		// everything below must be collected. Zero is exact: any residue is either the old
 		// registry cycle back or a new leak of ours.
 		const cycle = () => {

@@ -62,14 +62,12 @@ The per-region `Range` was replaced by the marker walk in the same step: same ef
 region (browsers update those on every mutation), keeps working when the app moves a region's nodes, ~60 B
 smaller.
 
-Upstream defect in `usub` (fixed upstream, awaiting npm publish): `usub.sub` parked every subscription in a
+Upstream defect in `usub` - **resolved, shipped as usub 0.9.0**: `usub.sub` parked every subscription in a
 `FinalizationRegistry` with a held value that closes over the source, so the cell could never clear - one
-retained chain per subscription, even after `stop()`. The one-line fix is committed to `kethan/usub` as
-`f63caaf` (0.8.2) and carried in `docs/usub-0.8.2-upstream.patch`; uele applies it to its test install via
-`scripts/patch-usub.mjs` (vitest globalSetup) and `test/memory.test.js` now asserts exact zero retention. The
-Arena GitHub token is scoped to `kethan/uele` only, so pushing `f63caaf` to `kethan/usub` (and `npm publish`)
-needs an authorized session - `git am docs/usub-0.8.2-upstream.patch` in a usub checkout reproduces the commit
-exactly.
+retained chain per subscription, even after `stop()`. The fix (keep the effect runner's disposer; only park
+what usub does not own) went upstream as `f63caaf` + `8f09f67` and is published in usub 0.9.0; uele depends on
+it and `test/memory.test.js` asserts exact zero retention. The interim `scripts/patch-usub.mjs` shim and the
+carried patches were removed once the release landed.
 
 ## 4. Test suite
 
@@ -106,7 +104,7 @@ same file.) Pre-fix baseline: min 3 469/1 745, es 8 203/2 798. The conformance-p
 | item | state |
 | --- | --- |
 | Defects #14/#15 fixed | ✅ `3cfe748` |
-| usub retention fixed (upstream + applied in tests) | ✅ `f63caaf` / `scripts/patch-usub.mjs`; strict zero asserted |
+| usub retention fixed | ✅ shipped in usub 0.9.0 (dep bumped); strict zero asserted |
 | Byte budgets enforced in CI | ✅ `check-size.mjs` |
 | All four entry points published + typed | ✅ |
 | Documented behaviour & limitations | ✅ README |
@@ -120,11 +118,8 @@ same file.) Pre-fix baseline: min 3 469/1 745, es 8 203/2 798. The conformance-p
 ## 7. Suggested next steps (not in this change)
 
 1. Consider an opt-in `props.unmount`/cleanup registry for long lived stores (README recipe today).
-2. Done except the publish: usub fix committed upstream as `f63caaf` (0.8.2, `docs/usub-0.8.2-upstream.patch`)
-   and its test suite taken off `cdn.skypack.dev` as `8f09f67` (`docs/usub-0.8.2-tests.patch` - skypack now
-   serves broken module shapes and node resolves solid-js to its no-op server build; 39/39 green offline).
-   Memory suite flipped to strict zero. Remaining: push both commits to `kethan/usub` + `npm publish`, then
-   drop `scripts/patch-usub.mjs` and bump the dependency to `^0.8.2`.
+2. Done: usub fix (`f63caaf`) + offline test suite (`8f09f67`) shipped as **usub 0.9.0**; uele's memory suite
+   asserts strict zero against it and the interim patch shim is removed.
 3. Optional: a `sub`-level debug flag that names retained subscriptions in dev builds.
 
 ---
@@ -225,9 +220,9 @@ Measured (20 iterations per batch, second batch after a forced collection), with
 | keyed rows removed with a differ | 0 of 60 |
 | an observable whose subscription does not reach its source | 0 |
 | an unsubscribed rxjs `Subject` | 0 |
-| a signal subscription through `usub`, disposed or dropped | **0** (20 of 20 on unpatched 0.8.1) |
+| a signal subscription through `usub`, disposed or dropped | **0** (20 of 20 on usub 0.8.x) |
 
-On usub 0.8.1 the signal row read "20 of 20, exactly one per subscription, surviving `stop()`": `usub` registered
+On usub 0.8.x the signal row read "20 of 20, exactly one per subscription, surviving `stop()`": `usub` registered
 every subscription with `registry.register(target, unsub)`, `unsub` reached the callback (which has to close
 over the source to read it), and a registered target that can be reached from the value registered for it is
 never released - the cell never clears, so neither the source nor anything the callback reaches is ever
@@ -239,7 +234,7 @@ The fix is one line - keep the disposer the effect runner returned and only fall
 there is none - and was verified three ways: patching `node_modules/usub` locally (all green, retentions to
 zero), a before/after harness against the usub sources (40 of 40 refs retained before, 0 of 40 after, safety
 net for subscribe-path sources intact), and regression tests added to usub's own suite for `src`, `lite` and
-`tiny` (committed as `f63caaf`, carried in `docs/usub-0.8.2-upstream.patch`):
+`tiny` (shipped in usub 0.9.0):
 
 ```js
 unsub = unsubr(...) ||
@@ -252,8 +247,8 @@ fx || registry.register(target, unsub),   // effect owned: nothing to park in th
 
 Every effect-owned retention above drops to zero (the memory suite's signal rows included) while the whole
 suite stays green. It cannot be done from inside uele's runtime: uele hands its callback to `usub.sub()` and
-never owns the unsubscriber - but uele's test install applies the fix automatically (`scripts/patch-usub.mjs`
-via vitest globalSetup) and `test/memory.test.js` asserts exact zero now. The two in-ulee workarounds that were
+never owns the unsubscriber - the fix belongs in usub, and it shipped there (0.9.0). `test/memory.test.js`
+asserts exact zero against it. The two in-ulee workarounds that were
 measured are both worse - routing signals through `api.any` keeps the cycle (the registry entry still holds the
 target), and a `WeakRef`-anchored disposer retains *more*, because V8 keeps the referent of a live `WeakRef`
 alive. The README's Cleanup Support section keeps the `MutationObserver` + `props.unmount` recipe as good
@@ -270,7 +265,7 @@ suites were executed in a scratch copy of `f57fb10` - every number below was obs
 | --- | --- | --- |
 | shape | 4+ commits, runtime +30 lines, ~8.6k lines of tests/docs | 1 squashed commit, 42 files, +5 172/−1 931 |
 | architecture | unchanged single-file runtime, `usub.sub` kept | runtime split (`scope.js`/`subscribe.js`/`protocols.js`), **local `subscriber` replaces `usub.sub`** |
-| the memory defect | measured & pinned; **fixed upstream** (usub 0.8.2 `f63caaf`, applied in tests, memory suite asserts zero) | eliminated in-tree: node-owned subscriptions, no `FinalizationRegistry` |
+| the memory defect | measured & pinned; **fixed upstream and released** (usub 0.9.0, memory suite asserts zero) | eliminated in-tree: node-owned subscriptions, no `FinalizationRegistry` |
 | cleanup contract | documented API preserved (auto-dispose, `unmount` recipe) | **`dispose(root)` required** for manual roots (their negative control asserts omission retains); observable errors terminal; usub's source-GC safety net dropped |
 | signal libraries | 10 (adds s-js, mobx, rxjs, nanostores, @tanstack/store) | 6 (adds solid-js; `usignal` pinned 0.10 sync) |
 | diff engines | 8 (adds morphdom, nanomorph, rebuild, built-in walk) | 6 (adds `@thi.ng/diff`, `list-diff2`; 50 700 exhaustive transitions) |
