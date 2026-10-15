@@ -1,130 +1,131 @@
 {
-	"name": "uele",
-	"description": "uele reactive frontend library",
-	"version": "0.9.7",
-	"type": "module",
-	"source": "./src/index.js",
-	"main": "./dist/index.js",
-	"module": "./dist/index.es.js",
-	"browser": "./dist/index.es.js",
-	"unpkg": "./dist/index.min.js",
-	"umd:main": "./dist/index.umd.js",
-	"types": "./dist/index.d.ts",
-	"sideEffects": false,
-	"exports": {
-		".": {
-			"types": "./dist/index.d.ts",
-			"browser": "./dist/index.es.js",
-			"umd": "./dist/index.umd.js",
-			"import": "./dist/index.es.js",
-			"default": "./dist/index.es.js",
-			"require": "./dist/index.js"
-		},
-		"./lite": {
-			"types": "./lite/index.d.ts",
-			"browser": "./lite/dist/index.es.js",
-			"umd": "./lite/dist/index.umd.js",
-			"import": "./lite/dist/index.es.js",
-			"default": "./lite/dist/index.es.js",
-			"require": "./lite/dist/index.js"
-		},
-		"./jsx-runtime": {
-			"types": "./jsx-runtime/index.d.ts",
-			"browser": "./jsx-runtime/dist/index.es.js",
-			"umd": "./jsx-runtime/dist/index.umd.js",
-			"import": "./jsx-runtime/dist/index.es.js",
-			"default": "./jsx-runtime/dist/index.es.js",
-			"require": "./jsx-runtime/dist/index.js"
-		},
-		"./jsx-dev-runtime": {
-			"types": "./jsx-dev-runtime/index.d.ts",
-			"browser": "./jsx-dev-runtime/dist/index.es.js",
-			"umd": "./jsx-dev-runtime/dist/index.umd.js",
-			"import": "./jsx-dev-runtime/dist/index.es.js",
-			"default": "./jsx-dev-runtime/dist/index.es.js",
-			"require": "./jsx-dev-runtime/dist/index.js"
-		},
-		"./package.json": "./package.json"
-	},
-	"scripts": {
-		"test": "vitest run",
-		"test:watch": "vitest",
-		"test:coverage": "vitest run --coverage",
-		"test:types": "tsc -p test/types/tsconfig.json",
-		"test:pack": "node scripts/pack-smoke.mjs",
-		"size": "node scripts/check-size.mjs",
-		"build": "rollup --config rollup.config.js"
-	},
-	"files": [
-		"dist",
-		"lite",
-		"jsx-runtime",
-		"jsx-dev-runtime"
-	],
-	"devDependencies": {
-		"@preact/signals-core": "^1.14.4",
-		"@rollup/plugin-commonjs": "^28.0.1",
-		"@rollup/plugin-node-resolve": "^15.3.0",
-		"@rollup/plugin-terser": "^0.4.4",
-		"@tanstack/store": "^0.11.2",
-		"@vitest/coverage-v8": "^2.1.5",
-		"@vue/reactivity": "^3.5.44",
-		"alien-signals": "^3.2.1",
-		"domdiff": "^2.2.2",
-		"fast-array-diff": "^1.1.0",
-		"jsdom": "^25.0.1",
-		"mobx": "^7.0.6",
-		"morphdom": "^2.7.8",
-		"nanomorph": "^5.4.3",
-		"nanostores": "^1.5.5",
-		"rollup": "^4.19.0",
-		"rollup-plugin-bundle-size": "^1.0.3",
-		"rollup-plugin-copy": "^3.5.0",
-		"rxjs": "^7.8.2",
-		"s-js": "^0.4.9",
-		"swapdom": "^1.2.1",
-		"typescript": "^5.6.3",
-		"udomdiff": "^1.1.2",
-		"ulive": "^1.0.7",
-		"usignal": "^0.10.0",
-		"vitest": "^2.1.5"
-	},
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/kethan/uele.git"
-	},
-	"keywords": [
-		"observable",
-		"createeffect",
-		"useeffect",
-		"state",
-		"computed",
-		"ref",
-		"atom",
-		"computeds",
-		"memo",
-		"derivation",
-		"behavior",
-		"effect",
-		"signal",
-		"watch",
-		"live",
-		"reactive",
-		"solid",
-		"usginal",
-		"react",
-		"preact"
-	],
-	"author": "Kethan Surana",
-	"license": "ISC",
-	"bugs": {
-		"url": "https://github.com/kethan/uele/issues"
-	},
-	"homepage": "https://github.com/kethan/uele#readme",
-	"dependencies": {
-		"usub": "^0.8.1"
-	},
-	"engines": {
-		"node": ">=18"
-	}
+  "name": "uele",
+  "description": "uele reactive frontend library",
+  "version": "0.9.7",
+  "type": "module",
+  "source": "./src/index.js",
+  "main": "./dist/index.js",
+  "module": "./dist/index.es.js",
+  "browser": "./dist/index.es.js",
+  "unpkg": "./dist/index.min.js",
+  "umd:main": "./dist/index.umd.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "browser": "./dist/index.es.js",
+      "umd": "./dist/index.umd.js",
+      "import": "./dist/index.es.js",
+      "default": "./dist/index.es.js",
+      "require": "./dist/index.js"
+    },
+    "./lite": {
+      "types": "./lite/index.d.ts",
+      "browser": "./lite/dist/index.es.js",
+      "umd": "./lite/dist/index.umd.js",
+      "import": "./lite/dist/index.es.js",
+      "default": "./lite/dist/index.es.js",
+      "require": "./lite/dist/index.js"
+    },
+    "./jsx-runtime": {
+      "types": "./jsx-runtime/index.d.ts",
+      "browser": "./jsx-runtime/dist/index.es.js",
+      "umd": "./jsx-runtime/dist/index.umd.js",
+      "import": "./jsx-runtime/dist/index.es.js",
+      "default": "./jsx-runtime/dist/index.es.js",
+      "require": "./jsx-runtime/dist/index.js"
+    },
+    "./jsx-dev-runtime": {
+      "types": "./jsx-dev-runtime/index.d.ts",
+      "browser": "./jsx-dev-runtime/dist/index.es.js",
+      "umd": "./jsx-dev-runtime/dist/index.umd.js",
+      "import": "./jsx-dev-runtime/dist/index.es.js",
+      "default": "./jsx-dev-runtime/dist/index.es.js",
+      "require": "./jsx-dev-runtime/dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:types": "tsc -p test/types/tsconfig.json",
+    "test:pack": "node scripts/pack-smoke.mjs",
+    "size": "node scripts/check-size.mjs",
+    "build": "rollup --config rollup.config.js",
+    "patch": "node scripts/patch-usub.mjs"
+  },
+  "files": [
+    "dist",
+    "lite",
+    "jsx-runtime",
+    "jsx-dev-runtime"
+  ],
+  "devDependencies": {
+    "@preact/signals-core": "^1.14.4",
+    "@rollup/plugin-commonjs": "^28.0.1",
+    "@rollup/plugin-node-resolve": "^15.3.0",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@tanstack/store": "^0.11.2",
+    "@vitest/coverage-v8": "^2.1.5",
+    "@vue/reactivity": "^3.5.44",
+    "alien-signals": "^3.2.1",
+    "domdiff": "^2.2.2",
+    "fast-array-diff": "^1.1.0",
+    "jsdom": "^25.0.1",
+    "mobx": "^7.0.6",
+    "morphdom": "^2.7.8",
+    "nanomorph": "^5.4.3",
+    "nanostores": "^1.5.5",
+    "rollup": "^4.19.0",
+    "rollup-plugin-bundle-size": "^1.0.3",
+    "rollup-plugin-copy": "^3.5.0",
+    "rxjs": "^7.8.2",
+    "s-js": "^0.4.9",
+    "swapdom": "^1.2.1",
+    "typescript": "^5.6.3",
+    "udomdiff": "^1.1.2",
+    "ulive": "^1.0.7",
+    "usignal": "^0.10.0",
+    "vitest": "^2.1.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kethan/uele.git"
+  },
+  "keywords": [
+    "observable",
+    "createeffect",
+    "useeffect",
+    "state",
+    "computed",
+    "ref",
+    "atom",
+    "computeds",
+    "memo",
+    "derivation",
+    "behavior",
+    "effect",
+    "signal",
+    "watch",
+    "live",
+    "reactive",
+    "solid",
+    "usginal",
+    "react",
+    "preact"
+  ],
+  "author": "Kethan Surana",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/kethan/uele/issues"
+  },
+  "homepage": "https://github.com/kethan/uele#readme",
+  "dependencies": {
+    "usub": "^0.8.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
 }

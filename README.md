@@ -522,15 +522,16 @@ so a subscription is released once the *source* (signal/observable) is garbage c
 There is one important caveat: an active subscription keeps its source alive, and a source usually keeps its
 subscribers alive. A mounted `h("div", null, someStore)` therefore stays subscribed - and keeps its detached
 nodes reachable - until the store itself goes away. `FinalizationRegistry` cannot break that cycle on its own:
-the callback has to close over the source (that is how it reads it), the unsubscriber usub parks in the registry
-reaches the callback, and a target that can be reached from the value registered for it is never released
+the callback has to close over the source (that is how it reads it), a parked unsubscriber reaches the
+callback, and a target that can be reached from the value registered for it is never released
 (`test/memory.test.js` pins both halves of that rule with `--expose-gc`).
-Calling the returned unsubscribe stops updates immediately, but on the effect path it does **not** free that
-retained chain - the registry entry keeps the disposer, which still reaches the source (`test/memory.test.js`
-asserts `sub(signal, cb)` with and without `stop()` keep one entry per subscription, and fails if a release ever
-grows past that bound).
-For long lived stores, dispose explicitly when the subtree is unmounted (this stops the updates and lets the
-signal drop the subscriber; full release needs the patch below):
+This is fixed in **usub 0.8.2**: the effect runner's disposer is no longer parked in the registry, so disposing
+a subscription releases the source and the callback immediately (the finalizer safety net remains for
+subscribe/promise/async-iterator sources). `test/memory.test.js` asserts the exact release - zero retained,
+disposed or not - and fails if any chain survives.
+Until 0.8.2 is on npm, the fix is applied to the local install automatically before the tests
+(`scripts/patch-usub.mjs`, wired into vitest); apps pinned to 0.8.1 can run the same script or use
+`patch-package` with the change below (`docs/usub-0.8.2-upstream.patch` is the upstream form).
 
 ```jsx
 import { h, props, api } from "uele";
@@ -556,9 +557,9 @@ h("div", { unmount: off }, render);
 Alternatively subscribe by hand (`r(store, render)` + a `disconnect` on route change) and let `add()` render
 plain functions - a function child is re-evaluated on every change of the signals it reads.
 
-For **strict release** (apps that churn subscriptions, e.g. subscribing per list row), apply usub's one-line
-fix locally - keep the disposer the effect runner returned and only fall back to the registry when there is
-none. Verified: with this patch the retained chains above drop to zero and the whole suite stays green.
+The usub 0.8.2 fix itself, for reference - keep the disposer the effect runner returned and only fall back to
+the registry when no effect owns the subscription (verified: retained chains drop to zero and the whole suite
+stays green):
 
 ```js
 // node_modules/usub (dist + tiny): in sub(), add `fx` to the signature and to the effect branch,
@@ -568,7 +569,8 @@ none. Verified: with this patch the retained chains above drop to zero and the w
 fx || registry.register(target, unsub),
 ```
 
-Apply it with `pnpm patch usub` / `npx patch-package usub` so the fix survives reinstalls.
+Apply it with `pnpm patch usub` / `npx patch-package usub` so the fix survives reinstalls, or simply upgrade
+to usub 0.8.2 once published.
 
 ### Other Settings
 

@@ -345,13 +345,32 @@ describe('subscription lifetimes', () => {
 		expect(run.second).toBeLessThanOrEqual(SLACK);
 	});
 
-	test('the default usub path keeps a subscription reachable while its source lives', async () => {
-		// usub's `register(target, unsub)` (see the oracle test above) means the entry can
-		// never be cleared. This is the behaviour the README documents, with the
-		// MutationObserver + `unmount` recipe as the workaround for long lived stores.
-		// The assertions are an upper bound, not an exact count: they hold today (20 and
-		// 40) and they hold after usub stops registering effect owned subscriptions (0),
-		// while a per-update leak would still blow past them.
+	test('a disposed subscription releases its whole chain (usub 0.8.2 fix applied)', async () => {
+		// usub used to park the effect disposer in its FinalizationRegistry (see the oracle
+		// test above for why that entry could never clear): one chain - source plus whatever
+		// the callback reached - retained per subscription, forever, even after stop(). The
+		// fix (scripts/patch-usub.mjs applies it to the local install; upstream patch in
+		// docs/usub-0.8.2-upstream.patch) only parks subscriptions usub does not own, so
+		// everything below must be collected. Zero is exact: any residue is either the old
+		// registry cycle back or a new leak of ours.
+		const cycle = () => {
+			const ids = [];
+			for (let i = 0; i < 20; i++) {
+				const cell = signal('a');
+				const payload = { big: new Array(64).fill(1) };
+				main.sub(cell, () => payload)();
+				ids.push(watch(payload));
+			}
+			return ids;
+		};
+		const run = await measure(cycle);
+		expect(run.first).toBe(0);
+		expect(run.total).toBe(0);
+	});
+
+	test('a dropped source releases its subscribers without an api.any seam', async () => {
+		// the other half of the fix: nothing parked means nothing pins the source either -
+		// when the test frame drops it (and its payload), both go
 		const cycle = () => {
 			const ids = [];
 			for (let i = 0; i < 20; i++) {
@@ -363,14 +382,9 @@ describe('subscription lifetimes', () => {
 			return ids;
 		};
 		const run = await measure(cycle);
-		expect(run.first).toBeLessThanOrEqual(20); // at most one entry per subscription
-		expect(run.total).toBeLessThanOrEqual(40); // and never a per-update leak
+		expect(run.first).toBe(0);
+		expect(run.total).toBe(0);
 	});
-
-	// TODO when usub stops parking effect owned subscriptions in its registry
-	// (`fx = api.effect?.(...)`; `fx || registry.register(target, unsub)`), the test above
-	// flips to `run.total <= SLACK` and the cycle described in the oracle is gone.
-	test.todo('a dropped source releases its subscribers without an api.any seam');
 });
 
 describe('the document is clean afterwards', () => {
