@@ -525,7 +525,12 @@ nodes reachable - until the store itself goes away. `FinalizationRegistry` canno
 the callback has to close over the source (that is how it reads it), the unsubscriber usub parks in the registry
 reaches the callback, and a target that can be reached from the value registered for it is never released
 (`test/memory.test.js` pins both halves of that rule with `--expose-gc`).
-For long lived stores, dispose explicitly when the subtree is unmounted:
+Calling the returned unsubscribe stops updates immediately, but on the effect path it does **not** free that
+retained chain - the registry entry keeps the disposer, which still reaches the source (`test/memory.test.js`
+asserts `sub(signal, cb)` with and without `stop()` keep one entry per subscription, and fails if a release ever
+grows past that bound).
+For long lived stores, dispose explicitly when the subtree is unmounted (this stops the updates and lets the
+signal drop the subscriber; full release needs the patch below):
 
 ```jsx
 import { h, props, api } from "uele";
@@ -550,6 +555,20 @@ h("div", { unmount: off }, render);
 
 Alternatively subscribe by hand (`r(store, render)` + a `disconnect` on route change) and let `add()` render
 plain functions - a function child is re-evaluated on every change of the signals it reads.
+
+For **strict release** (apps that churn subscriptions, e.g. subscribing per list row), apply usub's one-line
+fix locally - keep the disposer the effect runner returned and only fall back to the registry when there is
+none. Verified: with this patch the retained chains above drop to zero and the whole suite stays green.
+
+```js
+// node_modules/usub (dist + tiny): in sub(), add `fx` to the signature and to the effect branch,
+// then register only when no effect owns the subscription:
+(api.any?.(target)?.(next, error, cleanup) ||
+    (fx = api.effect?.(() => (next(get(target)), api.cleanup?.(cleanup), cleanup)))) || ...,
+fx || registry.register(target, unsub),
+```
+
+Apply it with `pnpm patch usub` / `npx patch-package usub` so the fix survives reinstalls.
 
 ### Other Settings
 
