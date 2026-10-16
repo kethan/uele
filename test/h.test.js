@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { expect, test, vi } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { signal, effect, computed } from 'ulive'; // Adjust based on your signal library
 import { h, r, api, add, props, For, map, useLive } from '../src/index.js';
 
@@ -617,3 +617,27 @@ test('r function binds reactive event listeners', () => {
   expect(clickCount.value).toBe(2);
 });
 
+
+describe('a children key in attrs is content, never the read-only Element.children', () => {
+  test('a single child', () => {
+    const el = h('div', { children: 'text', id: 'a' });
+    expect(el.textContent).toBe('text');
+    expect(el.id).toBe('a');
+  });
+
+  test('an array of children, after the varargs ones', () => {
+    const el = h('div', { children: ['b', 'c'] }, 'a');
+    expect(el.textContent).toBe('abc');
+  });
+
+  test('null and undefined children leave the element empty', () => {
+    expect(h('div', { children: null }, 'x').textContent).toBe('x');
+    expect(h('div', { children: undefined }).textContent).toBe('');
+  });
+
+  test('a component that spreads its props onto a dom element does not crash', () => {
+    // jsx calls a component with `children: []`; void-like controls must survive it
+    const Void = ({ a, ...props }) => h('input', { ...props, id: a });
+    expect(() => h(Void, { a: 'x', children: [] })).not.toThrow();
+  });
+});

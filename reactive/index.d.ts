@@ -1,0 +1,11 @@
+export declare function signal<T>(value: T): any;
+export declare function computed<T>(fn: () => T): any;
+export declare function effect(fn: () => void): () => void;
+export declare function batch<T>(fn: () => T): T;
+export declare function untracked<T>(fn: () => T): T;
+export declare function read(cell: any): any;
+export declare function write(cell: any, value: any): void;
+export declare function isCell(value: unknown): boolean;
+export declare function canEffect(): boolean;
+export declare function canCompute(): boolean;
+export declare function active(): Record<string, unknown>;

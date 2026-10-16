@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+# build artifacts of the preset layer (sources are tracked, CJS twins are generated)
+adapters/*.cjs
+diffs/*.cjs

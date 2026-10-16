@@ -1,0 +1,23 @@
+{
+	"compilerOptions": {
+		"strict": true,
+		"noEmit": true,
+		"target": "es2022",
+		"lib": ["es2022", "dom", "dom.iterable"],
+		"module": "esnext",
+		"moduleResolution": "bundler",
+		"jsx": "react-jsx",
+		"jsxImportSource": "uele",
+		"skipLibCheck": true,
+		"types": [],
+		"paths": {
+			"uele": ["../../src/index.d.ts"],
+			"uele/lite": ["../../lite/index.d.ts"],
+			"uele/jsx-runtime": ["../../jsx-runtime/index.d.ts"],
+			"uele/jsx-dev-runtime": ["../../jsx-dev-runtime/index.d.ts"],
+			"uele/adapters/*": ["../../adapters/*.d.ts"],
+			"uele/diffs/*": ["../../diffs/*.d.ts"]
+		}
+	},
+	"include": ["app.tsx", "*.ts"]
+}

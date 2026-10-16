@@ -1,11 +1,17 @@
-import { h } from "../lite/index";
+import { h } from "uele";
+
+// automatic jsx runtime: children arrive inside props, `key` is the third argument
+const jsx = (tag, props = {}) => {
+    const { children, key, ...attrs } = props || {};
+    return h(tag, attrs, ...(children == null ? [] : Array.isArray(children) ? children : [children]));
+};
 
 export {
-    h,
+    jsx,
+    jsx as jsxs,
+    jsx as jsxDev,
+    jsx as jsxDEV,
     h as Fragment,
     h as createElement,
-    h as jsx,
-    h as jsxs,
-    h as jsxDev,
-    h as jsxDEV
+    h
 };
