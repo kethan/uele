@@ -29,6 +29,9 @@ export const accents = {
 	amber: { accent: '#d97706', accentHover: '#b45309', accentText: '#ffffff', accentSoft: '#fffbeb' },
 	violet: { accent: '#7c3aed', accentHover: '#6d28d9', accentText: '#ffffff', accentSoft: '#f5f3ff' },
 	cyan: { accent: '#0891b2', accentHover: '#0e7490', accentText: '#ffffff', accentSoft: '#ecfeff' },
+	pink: { accent: '#db2777', accentHover: '#be185d', accentText: '#ffffff', accentSoft: '#fdf2f8' },
+	orange: { accent: '#ea580c', accentHover: '#c2410c', accentText: '#ffffff', accentSoft: '#fff7ed' },
+	teal: { accent: '#0d9488', accentHover: '#0f766e', accentText: '#ffffff', accentSoft: '#f0fdfa' },
 	neutral: { accent: '#171717', accentHover: '#262626', accentText: '#ffffff', accentSoft: '#f5f5f5' }
 };
 
@@ -72,7 +75,7 @@ const merge = (base, over) => {
  */
 export const createTheme = (options = {}) => {
 	if (typeof options === 'string') return { ...(themes[options] || themes.light) };
-	const { appearance = 'light', accent = 'blue', radius = 'medium', name, colors = {}, radii, ...rest } = options;
+	const { appearance = 'light', accent = 'blue', radius = 'medium', density = 'comfortable', name, colors = {}, radii, ...rest } = options;
 	const accentTokens = typeof accent === 'string' && accents[accent]
 		? accents[accent]
 		: typeof accent === 'string'
@@ -85,11 +88,14 @@ export const createTheme = (options = {}) => {
 			appearance,
 			accent: typeof accent === 'string' ? accent : 'custom',
 			radius: typeof radius === 'string' ? radius : 'custom',
+			density,
 			colors: { ...(neutrals[appearance] || neutrals.light), ...accentTokens },
 			radii: radiusTokens,
 			font: { fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif', fontSize: '16px' },
+			fontSizes: { xs: '0.75rem', sm: '0.875rem', md: '1rem', lg: '1.125rem', xl: '1.25rem' },
+			space: { 1: '0.25rem', 2: '0.5rem', 3: '0.75rem', 4: '1rem', 5: '1.5rem', 6: '2rem' },
 			shadow: {},
-			control: { controlHeight: '2.25rem' }
+			control: { controlHeight: density === 'compact' ? '2rem' : '2.5rem' }
 		},
 		{ colors, ...(radii ? { radii } : {}), ...rest }
 	);
@@ -114,7 +120,15 @@ export const themes = {
 		name: 'sunset', appearance: 'light', accent: 'rose',
 		colors: { bg: '#fff7f3', surface: '#ffffff', border: '#fed7cc', accentSoft: '#fff1ea' }
 	}),
-	ocean: createTheme({ name: 'ocean', appearance: 'light', accent: 'cyan' })
+	ocean: createTheme({ name: 'ocean', appearance: 'light', accent: 'cyan' }),
+	highContrast: createTheme({
+		name: 'highContrast', appearance: 'light', accent: 'blue',
+		colors: {
+			bg: '#ffffff', surface: '#ffffff', surfaceHover: '#f0f0f0', text: '#000000', textMuted: '#333333',
+			border: '#000000', accent: '#0033cc', accentHover: '#002a99', accentSoft: '#e6ecff',
+			danger: '#b30000', success: '#005c00', warning: '#8a6d00', info: '#003d99'
+		}
+	})
 };
 export const lightTheme = themes.light;
 export const darkTheme = themes.dark;
@@ -148,7 +162,32 @@ export const cssVars = (theme) => {
 	if (t.font?.fontFamily) out['--uele-font-family'] = t.font.fontFamily;
 	if (t.font?.fontSize) out['--uele-font-size'] = t.font.fontSize;
 	if (t.control?.controlHeight) out['--uele-control-height'] = t.control.controlHeight;
+	if (t.density) out['--uele-density'] = t.density;
+	for (const [k, v] of Object.entries(t.fontSizes || {})) out[`--uele-font-size-${k}`] = v;
+	for (const [k, v] of Object.entries(t.space || {})) out[`--uele-space-${k}`] = v;
 	return out;
+};
+
+/**
+ * Apply a theme imperatively to any element (no React tree needed):
+ * sets every `--uele-*` variable + `data-theme`/`data-appearance`.
+ * Returns the resolved theme.
+ */
+export const applyTheme = (el, theme) => {
+	const t = resolveTheme(theme);
+	if (el?.style) for (const [name, value] of Object.entries(cssVars(t))) el.style.setProperty(name, value);
+	el?.setAttribute?.('data-theme', t.name);
+	el?.setAttribute?.('data-appearance', t.appearance);
+	return t;
+};
+
+/** `'dark'` / `'light'` from the OS preference (defaults to `'light'`) */
+export const prefersColorScheme = () => {
+	try {
+		return typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+	} catch {
+		return 'light';
+	}
 };
 /** alias */
 export const themeVars = cssVars;
@@ -186,7 +225,8 @@ export const ThemeProvider = ({ theme = themes.light, children, style, ...props 
 		...props,
 		'data-theme': () => resolveTheme(theme).name,
 		'data-appearance': () => resolveTheme(theme).appearance,
-		style: { fontFamily: 'var(--uele-font-family)', color: 'var(--uele-text)', background: 'var(--uele-bg)', ...reactiveStyle, ...(style || {}) }
+		'data-density': () => resolveTheme(theme).density || 'comfortable',
+		style: { fontFamily: 'var(--uele-font-family)', color: 'var(--uele-text)', background: 'var(--uele-bg)', colorScheme: () => resolveTheme(theme).appearance, ...reactiveStyle, ...(style || {}) }
 	}, children);
 };
 

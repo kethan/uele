@@ -560,4 +560,470 @@ export const useForm = ({ initialValues = {}, validate, onSubmit } = {}) => {
 	};
 };
 
+/* ---------------------------------------------------- realtime & clocks */
+
+/** a `Date` cell ticking every `interval` ms (also `useClock`) */
+export const useNow = (interval = 1000) => {
+	const now = signal(new Date());
+	let timer = null;
+	if (interval != null && typeof setInterval !== 'undefined') timer = setInterval(() => write(now, new Date()), interval);
+	return [now, () => timer != null && clearInterval(timer)];
+};
+/** alias */
+export const useClock = useNow;
+
+/** stopwatch: `{ elapsed (seconds cell), running, start, pause, reset, lap, laps() }` */
+export const useStopwatch = () => {
+	const elapsed = signal(0);
+	const running = signal(false);
+	let timer = null;
+	let laps = [];
+	const start = () => {
+		if (timer != null) return;
+		write(running, true);
+		const startedAt = Date.now() - read(elapsed) * 1000;
+		timer = setInterval(() => write(elapsed, Math.floor((Date.now() - startedAt) / 1000)), 250);
+	};
+	const pause = () => (timer != null && clearInterval(timer), (timer = null), write(running, false));
+	const reset = () => (pause(), write(elapsed, 0), (laps = []));
+	return { elapsed, running, start, pause, reset, lap: () => (laps.push(read(elapsed)), [...laps]), laps: () => [...laps] };
+};
+
+/** throttle a source cell: at most one write per `interval` ms (leading edge) */
+export const useThrottle = (source, interval = 300) => {
+	const throttled = signal(val(source));
+	let last = 0;
+	let timer = null;
+	let pending;
+	const off = sub(source, (v) => {
+		const wait = interval - (Date.now() - last);
+		if (wait <= 0) {
+			last = Date.now();
+			write(throttled, v);
+		} else {
+			pending = v; // trailing edge must publish the LATEST value, not the first delayed one
+			if (!timer) timer = setTimeout(() => ((timer = null), (last = Date.now()), write(throttled, pending)), wait);
+		}
+	});
+	return [throttled, () => (timer && clearTimeout(timer), off())];
+};
+
+/** throttle any function (leading edge); the wrapper also has `.cancel()` */
+export const useThrottleFn = (fn, interval = 300) => {
+	let last = 0;
+	let timer = null;
+	const wrapped = (...args) => {
+		const wait = interval - (Date.now() - last);
+		if (wait <= 0) {
+			last = Date.now();
+			fn(...args);
+		} else if (!timer) timer = setTimeout(() => ((timer = null), (last = Date.now()), fn(...args)), wait);
+	};
+	wrapped.cancel = () => (timer && clearTimeout(timer), (timer = null));
+	return wrapped;
+};
+
+/**
+ * WebSocket state: `{ status, lastMessage, messages, send, close, open }`.
+ * `status` is a cell: `'connecting' | 'open' | 'closed' | 'error'`. Messages
+ * are JSON-parsed when possible. Without a `WebSocket` global (SSR/tests)
+ * everything stays `'closed'` and `send` is a no-op returning `false`.
+ */
+export const useWebSocket = (url, { onMessage, protocols, json = true } = {}) => {
+	const status = signal('closed');
+	const lastMessage = signal(null);
+	const messages = signal([]);
+	let socket = null;
+	const parse = (data) => {
+		if (!json) return data;
+		try { return JSON.parse(data); } catch { return data; }
+	};
+	const open = () => {
+		if (typeof WebSocket === 'undefined' || !url) return null;
+		close();
+		write(status, 'connecting');
+		socket = protocols ? new WebSocket(val(url), protocols) : new WebSocket(val(url));
+		socket.onopen = () => write(status, 'open');
+		socket.onclose = () => write(status, 'closed');
+		socket.onerror = () => write(status, 'error');
+		socket.onmessage = (event) => {
+			const data = parse(event.data);
+			write(lastMessage, data);
+			write(messages, [...read(messages), data]);
+			onMessage?.(data, event);
+		};
+		return socket;
+	};
+	const close = () => {
+		try { socket?.close(); } catch { /* already gone */ }
+		socket = null;
+	};
+	const send = (data) => {
+		if (!socket || read(status) !== 'open') return false;
+		socket.send(typeof data === 'string' ? data : JSON.stringify(data));
+		return true;
+	};
+	if (url) open();
+	return { status, lastMessage, messages, send, close, open, socket: () => socket };
+};
+
+/**
+ * Server-Sent Events: `{ status, lastMessage, messages, close }`.
+ * Same contract as `useWebSocket`, over `EventSource` (guarded when absent).
+ */
+export const useEventSource = (url, { onMessage, withCredentials } = {}) => {
+	const status = signal('closed');
+	const lastMessage = signal(null);
+	const messages = signal([]);
+	let source = null;
+	if (typeof EventSource !== 'undefined' && url) {
+		write(status, 'connecting');
+		source = new EventSource(val(url), { withCredentials });
+		source.onopen = () => write(status, 'open');
+		source.onerror = () => write(status, 'error');
+		source.onmessage = (event) => {
+			let data = event.data;
+			try { data = JSON.parse(data); } catch { /* plain text event */ }
+			write(lastMessage, data);
+			write(messages, [...read(messages), data]);
+			onMessage?.(data, event);
+		};
+	}
+	return { status, lastMessage, messages, close: () => (source?.close(), write(status, 'closed')), source: () => source };
+};
+
+/**
+ * Cross-tab messaging over `BroadcastChannel`:
+ * `{ lastMessage, messages, post, close, supported }` (guarded when absent).
+ */
+export const useBroadcastChannel = (name, { onMessage } = {}) => {
+	const lastMessage = signal(null);
+	const messages = signal([]);
+	let channel = null;
+	let supported = typeof BroadcastChannel !== 'undefined';
+	if (supported && name) {
+		channel = new BroadcastChannel(val(name));
+		channel.onmessage = (event) => {
+			write(lastMessage, event.data);
+			write(messages, [...read(messages), event.data]);
+			onMessage?.(event.data, event);
+		};
+	}
+	return {
+		supported, lastMessage, messages,
+		post: (data) => (channel ? (channel.postMessage(data), true) : false),
+		close: () => channel?.close()
+	};
+};
+
+/** fetch JSON with loading/error state and aborts: `{ data, error, loading, run, abort }` */
+export const useFetch = (url, options) => {
+	const base = useAsync(async (target, opts) => {
+		const res = await fetch(target ?? val(url), opts ?? options);
+		if (!res.ok) throw new Error(`fetch failed: ${res.status}`);
+		const type = res.headers?.get?.('content-type') || '';
+		return type.includes('json') ? res.json() : res.text();
+	});
+	let controller = null;
+	const run = (target, opts) => {
+		controller?.abort?.();
+		controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+		return base.run(target, { ...opts, signal: controller?.signal });
+	};
+	return { ...base, run, abort: () => controller?.abort?.() };
+};
+
+/* ------------------------------------------------------------ browser APIs */
+
+/** geolocation: `{ position, error, loading, refresh, supported }` */
+export const useGeolocation = ({ immediate = false } = {}) => {
+	const position = signal(null);
+	const error = signal(null);
+	const loading = signal(false);
+	const supported = typeof navigator !== 'undefined' && !!navigator.geolocation;
+	const refresh = () => {
+		if (!supported) return;
+		write(loading, true);
+		navigator.geolocation.getCurrentPosition(
+			(pos) => (write(position, pos), write(loading, false)),
+			(err) => (write(error, err), write(loading, false))
+		);
+	};
+	if (immediate) refresh();
+	return { position, error, loading, refresh, supported };
+};
+
+/** `'visible' | 'hidden'` cell for the document, kept live */
+export const useDocumentVisibility = () => {
+	const visibility = signal(typeof document === 'undefined' ? 'visible' : document.visibilityState || 'visible');
+	if (typeof document !== 'undefined') on(document, 'visibilitychange', () => write(visibility, document.visibilityState));
+	return visibility;
+};
+
+/** boolean cell: whether the window currently has focus */
+export const useWindowFocus = () => {
+	const focused = signal(typeof document === 'undefined' ? true : document.hasFocus?.() ?? true);
+	if (typeof window !== 'undefined') {
+		on(window, 'focus', () => write(focused, true));
+		on(window, 'blur', () => write(focused, false));
+	}
+	return focused;
+};
+
+/** `{ x, y, direction }` scroll cell for the window */
+export const useScrollPosition = () => {
+	const pos = signal({ x: 0, y: 0, direction: 'none' });
+	let lastY = 0;
+	if (typeof window !== 'undefined') {
+		on(window, 'scroll', () => {
+			const y = window.scrollY || 0;
+			write(pos, { x: window.scrollX || 0, y, direction: y > lastY ? 'down' : y < lastY ? 'up' : 'none' });
+			lastY = y;
+		}, { passive: true });
+	}
+	return pos;
+};
+/** alias */
+export const useScroll = useScrollPosition;
+
+/** body scroll lock with reference counting: `{ lock, unlock, locked }` */
+export const useScrollLock = () => {
+	const locked = signal(false);
+	let count = 0;
+	let previous = '';
+	const apply = () => {
+		if (typeof document === 'undefined') return;
+		if (count > 0 && !read(locked)) (previous = document.body.style.overflow, document.body.style.overflow = 'hidden', write(locked, true));
+		else if (count <= 0 && read(locked)) (document.body.style.overflow = previous, write(locked, false));
+	};
+	return {
+		locked,
+		lock: () => (count++, apply()),
+		unlock: () => (count = Math.max(0, count - 1), apply())
+	};
+};
+
+/**
+ * Focus trap for dialogs/menus: `const trap = useFocusTrap()` then
+ * `trap.ref(el)` — Tab/Shift+Tab cycle inside `el`. Returns `{ ref, activate, deactivate }`.
+ */
+export const useFocusTrap = () => {
+	let container = null;
+	let activeTrap = false;
+	const FOCUSABLE = 'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])';
+	const handler = (e) => {
+		if (!activeTrap || !container || e.key !== 'Tab') return;
+		const items = [...container.querySelectorAll(FOCUSABLE)].filter((el) => !el.disabled && el.type !== 'hidden');
+		if (!items.length) return;
+		const first = items[0];
+		const last = items[items.length - 1];
+		if (e.shiftKey && document.activeElement === first) (e.preventDefault(), last.focus());
+		else if (!e.shiftKey && document.activeElement === last) (e.preventDefault(), first.focus());
+	};
+	const deactivate = () => {
+		activeTrap = false;
+		if (typeof document !== 'undefined') document.removeEventListener('keydown', handler, true);
+	};
+	const activate = (el) => {
+		container = el || container;
+		if (!container) return;
+		activeTrap = true;
+		if (typeof document !== 'undefined') document.addEventListener('keydown', handler, true);
+		container.querySelector(FOCUSABLE)?.focus?.();
+	};
+	return { ref: (el) => el && activate(el), activate, deactivate, active: () => activeTrap };
+};
+
+/** fullscreen over an element (or the document): `{ fullscreen, toggle, enter, exit, supported }` */
+export const useFullscreen = (target) => {
+	const fullscreen = signal(false);
+	const supported = typeof document !== 'undefined' && !!document.documentElement?.requestFullscreen;
+	const sync = () => write(fullscreen, typeof document !== 'undefined' && !!document.fullscreenElement);
+	if (typeof document !== 'undefined') on(document, 'fullscreenchange', sync);
+	const enter = () => targetOf(target)?.requestFullscreen?.() || document.documentElement.requestFullscreen?.();
+	const exit = () => document.exitFullscreen?.();
+	return { fullscreen, supported, enter, exit, toggle: () => (read(fullscreen) ? exit() : enter()) };
+};
+
+/** current breakpoint name from a `{ sm: 640, md: 768, … }` map (window-width based) */
+export const useBreakpoint = (breakpoints = { sm: 640, md: 768, lg: 1024, xl: 1280 }) => {
+	const sorted = Object.entries(breakpoints).sort((a, b) => a[1] - b[1]);
+	const pick = () => {
+		const w = typeof window === 'undefined' ? 0 : window.innerWidth;
+		let current = 'base';
+		for (const [name, min] of sorted) if (w >= min) current = name;
+		return current;
+	};
+	const breakpoint = signal(pick());
+	if (typeof window !== 'undefined') on(window, 'resize', () => write(breakpoint, pick()));
+	return breakpoint;
+};
+
+/**
+ * Colour scheme for `uele/themes`: `{ scheme, dark, toggle, setScheme }`.
+ * Follows `prefers-color-scheme`, remembers an explicit override in
+ * `localStorage` (key `uele-scheme`) unless `persist: false`.
+ */
+export const useColorScheme = ({ persist = true, key = 'uele-scheme', initial } = {}) => {
+	const stored = () => {
+		try { return persist ? localStorage.getItem(key) : null; } catch { return null; }
+	};
+	const media = () => {
+		try {
+			return typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+		} catch { return 'light'; }
+	};
+	const scheme = signal(initial || stored() || media());
+	const dark = signal(read(scheme) === 'dark');
+	const setScheme = (v) => {
+		const next = typeof v === 'function' ? v(read(scheme)) : v;
+		write(scheme, next);
+		write(dark, next === 'dark');
+		try { persist && localStorage.setItem(key, next); } catch { /* private mode */ }
+	};
+	if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+		const mql = window.matchMedia('(prefers-color-scheme: dark)');
+		on(mql, 'change', () => !stored() && setScheme(media()));
+	}
+	return { scheme, dark, setScheme, toggle: () => setScheme(read(scheme) === 'dark' ? 'light' : 'dark') };
+};
+/** alias */
+export const useDarkMode = useColorScheme;
+
+/** two-way sync with one URL query param: `[value, setValue]` (pushState + popstate) */
+export const useQueryParam = (key, initial = '') => {
+	const readParam = () => {
+		try { return new URLSearchParams(window.location.search).get(key) ?? initial; } catch { return initial; }
+	};
+	const cell = signal(typeof window === 'undefined' ? initial : readParam());
+	const setValue = (v) => {
+		const next = typeof v === 'function' ? v(read(cell)) : v;
+		write(cell, next);
+		if (typeof window === 'undefined') return;
+		const url = new URL(window.location.href);
+		if (next == null || next === '') url.searchParams.delete(key);
+		else url.searchParams.set(key, String(next));
+		window.history.pushState(null, '', url);
+	};
+	if (typeof window !== 'undefined') on(window, 'popstate', () => write(cell, readParam()));
+	return [cell, setValue];
+};
+
+/** cookie value cell: reads on create, `setValue(v, days)` writes, `setValue(null)` deletes */
+export const useCookie = (name, initial = '') => {
+	const readCookie = () => {
+		try {
+			const found = document.cookie.split('; ').find((row) => row.startsWith(name + '='));
+			return found ? decodeURIComponent(found.split('=').slice(1).join('=')) : initial;
+		} catch { return initial; }
+	};
+	const cell = signal(typeof document === 'undefined' ? initial : readCookie());
+	const setValue = (v, days = 365) => {
+		const next = typeof v === 'function' ? v(read(cell)) : v;
+		write(cell, next ?? '');
+		if (typeof document === 'undefined') return;
+		const expires = next == null ? 'Thu, 01 Jan 1970 00:00:00 GMT' : new Date(Date.now() + days * 864e5).toUTCString();
+		document.cookie = `${name}=${encodeURIComponent(next ?? '')}; expires=${expires}; path=/`;
+	};
+	return [cell, setValue];
+};
+
+/** boolean cell: true after `timeout` ms without mouse/key/touch activity */
+export const useIdle = (timeout = 60000) => {
+	const idle = signal(false);
+	let timer = null;
+	const reset = () => {
+		write(idle, false);
+		clearTimeout(timer);
+		timer = setTimeout(() => write(idle, true), timeout);
+	};
+	if (typeof window !== 'undefined') for (const evt of ['mousemove', 'mousedown', 'keydown', 'touchstart']) on(window, evt, reset, { passive: true });
+	reset();
+	return idle;
+};
+
+/** long-press bind props: spread on an element, `handler` fires after `delay` ms held */
+export const useLongPress = (handler, delay = 500) => {
+	let timer = null;
+	const clear = () => (timer && clearTimeout(timer), (timer = null));
+	return {
+		onmousedown: () => (clear(), (timer = setTimeout(handler, delay))),
+		ontouchstart: () => (clear(), (timer = setTimeout(handler, delay))),
+		onmouseup: clear,
+		onmouseleave: clear,
+		ontouchend: clear
+	};
+};
+
+/** swipe bind props: `useSwipe({ onSwipeLeft, onSwipeRight, onSwipeUp, onSwipeDown, threshold })` */
+export const useSwipe = ({ threshold = 40, ...handlers } = {}) => {
+	let start = null;
+	return {
+		ontouchstart: (e) => (start = { x: e.touches[0].clientX, y: e.touches[0].clientY }),
+		ontouchend: (e) => {
+			if (!start) return;
+			const dx = e.changedTouches[0].clientX - start.x;
+			const dy = e.changedTouches[0].clientY - start.y;
+			start = null;
+			if (Math.max(Math.abs(dx), Math.abs(dy)) < threshold) return;
+			if (Math.abs(dx) > Math.abs(dy)) handlers[dx > 0 ? 'onSwipeRight' : 'onSwipeLeft']?.({ dx, dy });
+			else handlers[dy > 0 ? 'onSwipeDown' : 'onSwipeUp']?.({ dx, dy });
+		}
+	};
+};
+
+/** requestAnimationFrame loop: `{ start, stop, running }`, callback gets `(time, delta)` */
+export const useAnimationFrame = (callback) => {
+	const running = signal(false);
+	let frame = null;
+	let last = 0;
+	const loop = (time) => {
+		callback(time, last ? time - last : 0);
+		last = time;
+		if (read(running)) frame = requestAnimationFrame(loop);
+	};
+	const start = () => {
+		if (read(running) || typeof requestAnimationFrame === 'undefined') return;
+		write(running, true);
+		last = 0;
+		frame = requestAnimationFrame(loop);
+	};
+	const stop = () => (write(running, false), frame != null && cancelAnimationFrame(frame), (frame = null));
+	return { start, stop, running };
+};
+/** alias */
+export const useRaf = useAnimationFrame;
+
+/** just the boolean from `useIntersectionObserver`, for a getter/element/ref */
+export const useInView = (target, options) => {
+	const io = useIntersectionObserver(options);
+	if (target) io.ref(targetOf(target));
+	return io.visible;
+};
+
+/** set `document.title` from a value/cell/thunk, restoring the old title on `restore()` */
+export const useTitle = (title) => {
+	const previous = typeof document === 'undefined' ? '' : document.title;
+	const apply = (v) => { if (typeof document !== 'undefined') document.title = v == null ? '' : String(v); };
+	if (is(title) || typeof title === 'function') sub(title, apply, () => {});
+	else apply(val(title));
+	return { restore: () => apply(previous) };
+};
+
+/** a cell that always mirrors the latest value of a source (read it in callbacks) */
+export const useLatest = (source) => {
+	const latest = signal(val(source));
+	sub(source, (v) => write(latest, v));
+	return latest;
+};
+
+/** `[mounted, isMounted]` — true from creation until `unmount()` (call it on teardown) */
+export const useIsMounted = () => {
+	const mounted = signal(true);
+	return [mounted, () => read(mounted), () => write(mounted, false)];
+};
+
+/** element-size hook with the friendlier name (same as `useResizeObserver`) */
+export const useElementSize = useResizeObserver;
+
 export { signal, computed, read, write, effect, batch, untracked, isCell, canEffect, canCompute };

@@ -796,8 +796,26 @@ too — JSX is just nicer.
 `Tabs` `TabList` `Tab` `TabPanel` `Accordion` `AccordionItem` `Collapsible`
 `Stepper` `Carousel`
 
-**Overlays & feedback** — `Dialog` `Drawer` `Popover` `Tooltip` `Menu`
+**Overlays & feedback** — `Dialog` `Drawer` (`Sheet`) `Popover` `Tooltip` `Menu`
 (`DropdownMenu`) `MenuItem` `Toast` `Toaster`
+
+**Everyday & real-world** — `Toggle` `ToggleGroup` `SegmentedControl`
+`MultiSelect` `Listbox` `PasswordInput` `ColorPicker` `Calendar` `DatePicker`
+`TimeAgo` (`RelativeTime`) `CountdownTimer` `AvatarGroup` `InputGroup`
+`CopyButton` `StatusDot` `VisuallyHidden` `SkipLink`
+
+**Data-heavy & app chrome** — `DataTable` (sortable, pageable) `Tree`
+(`TreeView`) `VirtualList` `InfiniteScroll` `CommandPalette` (`Command`)
+`ContextMenu` `NavigationMenu` `HoverCard` `AlertDialog` (`ConfirmDialog`)
+`SplitPane` (`Resizable`) `Editable` `Lightbox` (`Gallery`) `FileList`
+`Wizard` `Toolbar` `Navbar` `AppShell` `Timeline`
+
+`Drawer` is anchored to its edge, `Dialog` locks body scroll and closes on a
+global Escape, and `AlertDialog` wires Cancel/Confirm to close for you. The
+whole catalogue composed into one themed admin screen lives in
+[`examples/dashboard.jsx`](examples/dashboard.jsx) (AppShell, Stat cards, a
+searchable DataTable, Dialog, CommandPalette) and is driven by
+`test/ui.advanced.test.jsx`.
 
 State components follow the Radix controlled/uncontrolled pattern: pass
 `model` (or `value`/`checked`/`open`/`page`) to control them, `defaultValue` /
@@ -843,7 +861,7 @@ end by `test/ui.primitives.test.jsx`, `test/ui.test.js` and `test/ui.test.jsx`
 
 ## Hooks (`uele/hooks`)
 
-Thirty-plus useful hooks, written once against `uele/reactive`, so they run on
+Sixty-plus useful hooks, written once against `uele/reactive`, so they run on
 every preset (the DOM/timer ones need no effect runner at all):
 
 ```js
@@ -869,6 +887,21 @@ const otp = useOTP(6, { onComplete: (code) => submit(code) });
 `useIntersectionObserver` `useResizeObserver`
 **Composite logic** — `usePagination` (+ pure `paginationRange`) `useOTP`
 (`usePinInput`) `useForm` (per-field cells, validation, submit)
+
+**Realtime & clocks** — `useWebSocket` `useEventSource` (SSE)
+`useBroadcastChannel` (cross-tab) `useFetch` (abortable, on `useAsync`)
+`useNow` (`useClock`) `useStopwatch` `useThrottle` `useThrottleFn`
+
+**Browser APIs** — `useGeolocation` `useDocumentVisibility` `useWindowFocus`
+`useScrollPosition` `useScrollLock` `useFocusTrap` `useFullscreen`
+`useBreakpoint` `useColorScheme` (`useDarkMode`, pairs with `uele/themes`)
+`useQueryParam` `useCookie` `useIdle` `useLongPress` `useSwipe`
+`useAnimationFrame` `useInView` `useTitle` `useLatest` `useIsMounted`
+
+Transports and observers degrade gracefully when the browser API is absent
+(SSR, jsdom, old browsers): status cells stay `closed`/false and sends are
+no-ops. Covered by `test/hooks.test.js` and `test/hooks.realtime.test.js` —
+the realtime transports are tested against stubbed globals, never a network.
 
 Hooks return cells you can render directly (`{count}`), teardown functions, or
 small objects of both; observers and storage degrade gracefully when the
@@ -896,10 +929,16 @@ const brand = createTheme({ appearance: "dark", accent: "rose", radius: "small" 
 const css = stylesheet(brand); // ":root { --uele-accent: #e11d48; … }" for SSR
 ```
 
-`createTheme({ appearance, accent, radius, colors })` builds a theme from six
-shipped presets (`light`, `dark`, `midnight`, `forest`, `sunset`, `ocean`) and
-eight accent scales (`blue`, `emerald`, `rose`, `amber`, `violet`, `cyan`,
-`slate`, `neutral`) — or pass a raw CSS color. `cssVars(theme)` gives the
+`createTheme({ appearance, accent, radius, density, colors })` builds a theme
+from seven shipped presets (`light`, `dark`, `midnight`, `forest`, `sunset`,
+`ocean`, `highContrast`) and eleven accent scales (`blue`, `emerald`, `rose`,
+`amber`, `violet`, `cyan`, `pink`, `orange`, `teal`, `slate`, `neutral`) — or
+pass a raw CSS color. `density: "compact"` tightens control heights, and the
+spacing/type scales ride along as `--uele-space-*` / `--uele-font-size-*`
+variables. Outside a component tree, `applyTheme(el, theme)` stamps the
+variables onto any element directly, `prefersColorScheme()` reads the OS
+setting, and `useColorScheme` from `uele/hooks` keeps a scheme cell in sync
+with it (persisted, toggleable). `cssVars(theme)` gives the
 `--uele-*` map, `ThemeStyle` renders it as a reactive `<style>` element, and
 `useTheme()` is the state hook (`toggle()` flips light/dark). The same module
 ships the class helpers Radix apps pair with themes — `cx(...)` for joining
@@ -1368,7 +1407,7 @@ which keeps `<my-icon>`/`<m-button>` in the HTML namespace. For the few ambiguou
 ### Testing, types and size
 
 ```sh
-npm test               # vitest, 1399 tests: src, lite, jsx runtimes, presets, ui, hooks, themes, flow, router and every example app
+npm test               # vitest, 1460 tests: src, lite, jsx runtimes, presets, ui, hooks, themes, flow, router and every example app
 npm run test:coverage  # 100% statements/branches/functions/lines are enforced
 npm run test:bundles   # re-runs the suites against the built ESM and CJS output
 npm run test:types     # type-checks the public api and jsx usage

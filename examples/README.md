@@ -32,6 +32,14 @@ Read any two side by side: only the imports, the cell creation and the actions d
 identical, because `uele/ui`, `For` and the renderer only ever talk to the `api` hooks the preset
 installed.
 
+## dashboard — the component catalogue composed
+
+[`dashboard.jsx`](dashboard.jsx) is one themed admin screen built from the extended
+catalogue: `ThemeProvider` + `AppShell`/`Navbar`, `Stat` cards, a `SearchInput` filtering a
+sortable `DataTable`, a settings `Dialog` and a `CommandPalette` — on `@preact/signals-core`,
+with `useNow` from `uele/hooks` ticking the clock. It exports `DashboardApp` / `mountDashboard`
+like the todos apps and is mounted, filtered and clicked through by `test/ui.advanced.test.jsx`.
+
 ## JSX setup
 
 uele ships an [automatic JSX runtime](https://reactjs.org/blog/2020/09/22/introducing-the-new-jsx-transform.html),

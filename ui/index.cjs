@@ -824,6 +824,27 @@ const Dialog = ({ open, model: modelProp, defaultOpen = false, onOpenChange, onC
 	const titleId = nextId('uele-dialog-title');
 	const descId = nextId('uele-dialog-desc');
 	const close = () => setOpen(false);
+	let host = null;
+	let locked = false;
+	let prevOverflow = '';
+	const applyLock = () => {
+		if (typeof document === 'undefined') return;
+		if (isOpen() && !locked) {
+			locked = true;
+			prevOverflow = document.body.style.overflow;
+			document.body.style.overflow = 'hidden';
+			setTimeout(() => host?.querySelector('[role="dialog"]')?.focus?.(), 0);
+		} else if (!isOpen() && locked) {
+			locked = false;
+			document.body.style.overflow = prevOverflow;
+		}
+	};
+	if (typeof document !== 'undefined') {
+		document.addEventListener('keydown', (e) => e.key === 'Escape' && isOpen() && close());
+		applyLock();
+		const source = modelProp ?? open;
+		if (uele.is(source)) uele.sub(source, applyLock, () => {});
+	}
 	const panel = () => {
 		if (!isOpen()) return '';
 		return [
@@ -849,16 +870,56 @@ const Dialog = ({ open, model: modelProp, defaultOpen = false, onOpenChange, onC
 				uele.h('button', { type: 'button', 'aria-label': closeLabel, onclick: close, style: { position: 'absolute', top: '0.5rem', right: '0.5rem', cursor: 'pointer' } }, '×'))
 		];
 	};
-	return uele.h('div', { style: { display: 'contents' }, onkeydown: (e) => e.key === 'Escape' && isOpen() && close() },
+	host = uele.h('div', { style: { display: 'contents' }, onkeydown: (e) => e.key === 'Escape' && isOpen() && close() },
 		trigger != null
 			? uele.h('button', { type: 'button', 'aria-haspopup': 'dialog', 'aria-expanded': () => String(!!isOpen()), onclick: () => setOpen(true) }, trigger)
 			: null,
 		() => panel());
+	return host;
 };
 
-/** dialog that slides from an edge (`side`: right/left/top/bottom) */
-const Drawer = ({ side = 'right', ...props } = {}) =>
-	Dialog({ ...props, 'data-side': side });
+const DRAWER_STYLES = {
+	right: { top: 0, right: 0, left: 'auto', transform: 'none', height: '100dvh', maxHeight: '100dvh', width: 'min(24rem, 92vw)', maxWidth: '92vw', borderRadius: 0 },
+	left: { top: 0, left: 0, right: 'auto', transform: 'none', height: '100dvh', maxHeight: '100dvh', width: 'min(24rem, 92vw)', maxWidth: '92vw', borderRadius: 0 },
+	top: { top: 0, left: 0, right: 0, transform: 'none', width: '100%', maxWidth: '100%', maxHeight: '70dvh', borderRadius: 0 },
+	bottom: { bottom: 0, left: 0, right: 0, top: 'auto', transform: 'none', width: '100%', maxWidth: '100%', maxHeight: '70dvh', borderRadius: 0 }
+};
+
+/** dialog that slides from an edge (`side`: right/left/top/bottom) — anchored, full-height on the sides */
+const Drawer = ({ side = 'right', style, ...props } = {}) =>
+	Dialog({ ...props, 'data-side': side, style: { ...DRAWER_STYLES[side] || DRAWER_STYLES.right, ...style } });
+/** alias (the name shadcn/ui popularised for the same component) */
+const Sheet = Drawer;
+
+/**
+ * Confirmation dialog: a Dialog preset with Cancel/Confirm actions.
+ * `onConfirm` fires on the danger button, `onCancel`/close on anything else.
+ */
+const AlertDialog = ({ open, model: modelProp, defaultOpen = false, onOpenChange, confirmLabel = 'Confirm', cancelLabel = 'Cancel', danger, onConfirm, onCancel, children, ...props } = {}) => {
+	const inner = own(!!defaultOpen);
+	const controlledCell = reactive.isCell(modelProp ?? open) ? (modelProp ?? open) : null;
+	const setOpen = (v) => {
+		if (controlledCell) reactive.write(controlledCell, v);
+		else reactive.write(inner, v);
+		onOpenChange?.(v);
+	};
+	return Dialog({
+		...props,
+		model: controlledCell || inner,
+		children: [
+			children,
+			uele.h('div', { style: { display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '1rem' } },
+				uele.h('button', { type: 'button', 'data-action': 'cancel', onclick: (e) => (onCancel?.(e), setOpen(false)) }, cancelLabel),
+				uele.h('button', {
+					type: 'button', 'data-action': 'confirm',
+					style: danger ? { background: 'var(--uele-danger, #dc2626)', color: '#fff', border: '1px solid transparent', borderRadius: 'var(--uele-radius, 10px)', padding: '0.375rem 0.875rem', cursor: 'pointer' } : { cursor: 'pointer' },
+					onclick: (e) => (onConfirm?.(e), setOpen(false))
+				}, confirmLabel))
+		]
+	});
+};
+/** alias */
+const ConfirmDialog = AlertDialog;
 
 /** popover panel anchored to a trigger button; toggles, Escape closes */
 const Popover = ({ trigger, label, open, model: modelProp, defaultOpen = false, onOpenChange, children, ...props } = {}) => {
@@ -1015,6 +1076,853 @@ const Carousel = ({ items, renderItem, model: modelProp, index, defaultIndex = 0
 			}, () => (active() === i ? '●' : '○')))));
 };
 
+/* ------------------------------------------- wave 2: everyday components */
+
+/** pressable toggle button (`aria-pressed`), two-way via `model`/`pressed` */
+const Toggle = ({ model: cell, pressed, value, selected, onChange, onPressedChange, children, ...props } = {}) => {
+	const controlled = cell ?? pressed;
+	const [on, setOn] = controllable(controlled, false, onPressedChange || onChange);
+	// inside a ToggleGroup, `value`+`selected` describe group membership instead
+	const inGroup = selected !== undefined && value !== undefined;
+	const isOn = () => (inGroup ? (Array.isArray(val(selected)) ? val(selected).includes(value) : val(selected) === value) : !!on());
+	return uele.h('button', {
+		type: 'button', ...props,
+		'aria-pressed': () => String(isOn()),
+		'data-state': () => (isOn() ? 'on' : 'off'),
+		...(value !== undefined ? { 'data-value': value } : {}),
+		style: { cursor: 'pointer', ...props.style },
+		onclick: (e) => {
+			if (inGroup) {
+				if (Array.isArray(val(selected))) {
+					const arr = val(selected);
+					const next = arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value];
+					if (reactive.isCell(selected)) reactive.write(selected, next);
+					onChange?.(next, e);
+				} else {
+					if (reactive.isCell(selected)) reactive.write(selected, val(selected) === value ? '' : value);
+					onChange?.(val(selected) === value ? '' : value, e);
+				}
+			} else setOn(!on());
+		}
+	}, children);
+};
+
+/** a row of Toggles: `type="single"` (scalar model) or `"multiple"` (array model), options- or children-driven */
+const ToggleGroup = ({ model: cell, value, type = 'single', options, defaultValue, onChange, children, ...props } = {}) => {
+	const [current, setCurrent] = controllable(cell ?? value, defaultValue ?? (type === 'multiple' ? [] : ''), onChange);
+	if (!hasKids(children)) {
+		const toggleValue = (v) => {
+			if (type === 'multiple') {
+				const arr = current() || [];
+				setCurrent(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
+			} else setCurrent(current() === v ? '' : v);
+		};
+		const isOn = (v) => (type === 'multiple' ? (current() || []).includes(v) : current() === v);
+		return uele.h('div', { role: 'group', 'data-uele-toggle-group': '', ...props, style: { display: 'inline-flex', gap: '0.25rem', ...props.style } },
+			(options || []).map((o) => {
+				const opt = typeof o === 'object' ? o : { value: o, label: o };
+				return uele.h('button', {
+					type: 'button', disabled: opt.disabled, 'data-value': opt.value,
+					'aria-pressed': () => String(isOn(opt.value)),
+					'data-state': () => (isOn(opt.value) ? 'on' : 'off'),
+					style: { cursor: 'pointer' },
+					onclick: () => toggleValue(opt.value)
+				}, opt.label);
+			}));
+	}
+	return uele.h('div', { role: 'group', 'data-uele-toggle-group': '', ...props }, children);
+};
+
+/** segmented control: a radiogroup rendered as one joined pill bar */
+const SegmentedControl = ({ model: cell, value, options = [], defaultValue, onChange, label, ...props } = {}) => {
+	const [current, setCurrent] = controllable(cell ?? value, defaultValue ?? (typeof options[0] === 'object' ? options[0]?.value : options[0]), onChange);
+	return uele.h('div', {
+		role: 'radiogroup', 'aria-label': label, 'data-uele-segmented': '', ...props,
+		style: { display: 'inline-flex', background: 'var(--uele-surface-hover, #f1f5f9)', borderRadius: 'var(--uele-radius-full, 9999px)', padding: '0.25rem', gap: '0.25rem', ...props.style }
+	}, options.map((o) => {
+		const opt = typeof o === 'object' ? o : { value: o, label: o };
+		const active = () => current() === opt.value;
+		return uele.h('button', {
+			type: 'button', role: 'radio', disabled: opt.disabled,
+			'aria-checked': () => String(active()), 'data-value': opt.value,
+			'data-state': () => (active() ? 'active' : 'inactive'),
+			style: { border: 'none', cursor: 'pointer', borderRadius: 'var(--uele-radius-full, 9999px)', padding: '0.375rem 0.875rem' },
+			onclick: () => setCurrent(opt.value)
+		}, () => opt.label);
+	}));
+};
+
+/** visually hidden but screen-reader available (Radix VisuallyHidden equivalent) */
+const VisuallyHidden = ({ children, ...props } = {}) =>
+	uele.h('span', {
+		...props,
+		style: { position: 'absolute', width: '1px', height: '1px', margin: '-1px', padding: 0, overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap', border: 0, ...props.style }
+	}, children);
+
+/** skip-to-content link: invisible until focused, then pinned top-left */
+const SkipLink = ({ href = '#main', children, ...props } = {}) => {
+	const el = uele.h('a', {
+		...props, href,
+		style: { position: 'absolute', left: '-9999px', top: 0, zIndex: 100, background: 'var(--uele-accent, #2563eb)', color: 'var(--uele-accent-text, #fff)', padding: '0.5rem 1rem' },
+		onfocus: (e) => (e.currentTarget.style.left = '0'),
+		onblur: (e) => (e.currentTarget.style.left = '-9999px')
+	}, children ?? 'Skip to content');
+	return el;
+};
+
+const STATUS_COLORS = { online: '#22c55e', away: '#f59e0b', busy: '#ef4444', offline: '#94a3b8' };
+/** presence dot with an accessible label */
+const StatusDot = ({ status = 'online', label, ...props } = {}) =>
+	uele.h('span', {
+		role: 'status', 'aria-label': label || status, 'data-status': status, ...props,
+		style: { display: 'inline-block', width: '0.625rem', height: '0.625rem', borderRadius: '50%', background: STATUS_COLORS[status] || STATUS_COLORS.offline, ...props.style }
+	});
+/** alias */
+const Presence = StatusDot;
+
+/** overlapping avatar stack with a +n overflow bubble */
+const AvatarGroup = ({ avatars, max = 4, children, ...props } = {}) => {
+	const list = val(avatars) || [];
+	const shown = hasKids(children) ? children : list.slice(0, max).map((a) => Avatar(typeof a === 'string' ? { name: a } : a));
+	const extra = list.length > max ? list.length - max : 0;
+	return uele.h('div', { 'data-uele-avatar-group': '', ...props, style: { display: 'inline-flex', alignItems: 'center', ...props.style } },
+		shown,
+		extra > 0 ? uele.h('span', { 'aria-label': `${extra} more`, style: { marginLeft: '-0.375rem', background: 'var(--uele-surface-hover, #f1f5f9)', borderRadius: '50%', padding: '0.375rem', fontSize: '0.75rem', fontWeight: 600 } }, `+${extra}`) : null);
+};
+
+/** input with prefix/suffix addons (search icons, units, domains…) */
+const InputGroup = ({ prefix, suffix, children, ...props } = {}) =>
+	uele.h('div', {
+		'data-uele-input-group': '', ...props,
+		style: { display: 'inline-flex', alignItems: 'stretch', border: '1px solid var(--uele-border, #e2e8f0)', borderRadius: 'var(--uele-radius, 10px)', overflow: 'hidden', ...props.style }
+	},
+		prefix != null ? uele.h('span', { 'data-addon': 'prefix', style: { display: 'inline-flex', alignItems: 'center', padding: '0 0.625rem', background: 'var(--uele-surface-hover, #f8fafc)', color: 'var(--uele-text-muted, #64748b)' } }, prefix) : null,
+		children,
+		suffix != null ? uele.h('span', { 'data-addon': 'suffix', style: { display: 'inline-flex', alignItems: 'center', padding: '0 0.625rem', background: 'var(--uele-surface-hover, #f8fafc)', color: 'var(--uele-text-muted, #64748b)' } }, suffix) : null);
+
+/** password field with a show/hide toggle and an optional strength meter */
+const PasswordInput = ({ model: cell, value, showStrength, onChange, ...props } = {}) => {
+	const visible = own(false);
+	const [current, setCurrent] = controllable(cell ?? value, '', onChange);
+	const strength = () => {
+		const v = String(current() || '');
+		let score = 0;
+		if (v.length >= 8) score++;
+		if (/[a-z]/.test(v) && /[A-Z]/.test(v)) score++;
+		if (/\d/.test(v)) score++;
+		if (/[^A-Za-z0-9]/.test(v)) score++;
+		return score;
+	};
+	const input = uele.h('input', {
+		type: () => (reactive.read(visible) ? 'text' : 'password'),
+		...props,
+		value: () => current() || '',
+		onInput: (e) => setCurrent(e.target.value)
+	});
+	const toggle = uele.h('button', {
+		type: 'button',
+		'aria-label': () => (reactive.read(visible) ? 'Hide password' : 'Show password'),
+		onclick: () => reactive.write(visible, !reactive.read(visible))
+	}, () => (reactive.read(visible) ? 'Hide' : 'Show'));
+	return uele.h('div', { 'data-uele-password': '' },
+		uele.h('div', { style: { display: 'inline-flex', gap: '0.25rem', alignItems: 'center' } }, input, toggle),
+		showStrength ? uele.h('div', {
+			role: 'progressbar', 'aria-label': 'Password strength', 'aria-valuemin': 0, 'aria-valuemax': 4,
+			'aria-valuenow': () => strength(), 'data-strength': () => strength(),
+			style: { height: '0.375rem', marginTop: '0.375rem', background: 'var(--uele-surface-hover, #f1f5f9)', borderRadius: '9999px', overflow: 'hidden' }
+		}, uele.h('div', { style: { height: '100%', width: () => strength() * 25 + '%', background: () => ['#ef4444', '#f59e0b', '#eab308', '#22c55e'][Math.max(0, strength() - 1)] || '#ef4444' } })) : null);
+};
+
+/** copy-to-clipboard button with transient "Copied" feedback */
+const CopyButton = ({ text, label = 'Copy', copiedLabel = 'Copied', ...props } = {}) => {
+	const copied = own(false);
+	let timer = null;
+	return uele.h('button', {
+		type: 'button', ...props, 'data-copied': () => String(!!reactive.read(copied)),
+		onclick: async () => {
+			const value = String(val(text) ?? '');
+			try { await navigator.clipboard.writeText(value); }
+			catch {
+				const area = document.createElement('textarea');
+				area.value = value;
+				document.body.append(area);
+				area.select();
+				try { document.execCommand('copy'); } catch { /* unavailable */ }
+				area.remove();
+			}
+			reactive.write(copied, true);
+			clearTimeout(timer);
+			timer = setTimeout(() => reactive.write(copied, false), 1500);
+		}
+	}, () => (reactive.read(copied) ? copiedLabel : label));
+};
+
+/** colour picker: native swatch input + hex text + preset swatches, two-way via `model` */
+const ColorPicker = ({ model: cell, value, swatches = ['#2563eb', '#059669', '#e11d48', '#d97706', '#7c3aed', '#0f172a'], onChange, ...props } = {}) => {
+	const [current, setCurrent] = controllable(cell ?? value, '#2563eb', onChange);
+	return uele.h('div', { 'data-uele-color': '', ...props, style: { display: 'inline-flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', ...props.style } },
+		uele.h('input', { type: 'color', 'aria-label': 'Pick a colour', value: () => current(), onInput: (e) => setCurrent(e.target.value), style: { width: '2.5rem', height: '2.5rem', padding: 0, border: 'none', background: 'none', cursor: 'pointer' } }),
+		uele.h('input', { type: 'text', 'aria-label': 'Hex colour', value: () => current(), onInput: (e) => /^#[0-9a-fA-F]{6}$/.test(e.target.value) && setCurrent(e.target.value), style: { width: '6rem' } }),
+		swatches.map((s) => uele.h('button', {
+			type: 'button', 'aria-label': `Use ${s}`, 'data-swatch': s,
+			style: { width: '1.5rem', height: '1.5rem', borderRadius: '50%', background: s, border: '1px solid var(--uele-border, #e2e8f0)', cursor: 'pointer' },
+			onclick: () => setCurrent(s)
+		})));
+};
+
+/** custom listbox (the non-native Select): click or ArrowKeys + Enter to choose */
+const Listbox = ({ model: cell, value, options = [], label, onChange, ...props } = {}) => {
+	const [current, setCurrent] = controllable(cell ?? value, undefined, onChange);
+	const active = own(0);
+	const opts = () => (val(options) || []).map((o) => (typeof o === 'object' ? o : { value: o, label: o }));
+	return uele.h('ul', {
+		role: 'listbox', 'aria-label': label, tabIndex: 0, ...props,
+		style: { listStyle: 'none', margin: 0, padding: '0.25rem', border: '1px solid var(--uele-border, #e2e8f0)', borderRadius: 'var(--uele-radius, 10px)', ...props.style },
+		onkeydown: (e) => {
+			const list = opts();
+			if (e.key === 'ArrowDown') reactive.write(active, Math.min(list.length - 1, reactive.read(active) + 1));
+			else if (e.key === 'ArrowUp') reactive.write(active, Math.max(0, reactive.read(active) - 1));
+			else if (e.key === 'Enter' && list[reactive.read(active)]) setCurrent(list[reactive.read(active)].value);
+			else return;
+			e.preventDefault();
+		}
+	}, () => opts().map((o, i) => uele.h('li', {
+		role: 'option', 'data-value': o.value, 'data-active': () => String(reactive.read(active) === i),
+		'aria-selected': () => String(current() === o.value),
+		style: { padding: '0.375rem 0.5rem', cursor: 'pointer', borderRadius: 'var(--uele-radius-sm, 6px)' },
+		onclick: () => (reactive.write(active, i), setCurrent(o.value)),
+		onmouseenter: () => reactive.write(active, i)
+	}, String(o.label))));
+};
+
+/** multi-select dropdown: checkbox list + chips/count summary, array model */
+const MultiSelect = ({ model: cell, value, options = [], placeholder = 'Select…', label, onChange, ...props } = {}) => {
+	const [current, setCurrent] = controllable(cell ?? value, [], onChange);
+	const open = own(false);
+	const opts = () => (val(options) || []).map((o) => (typeof o === 'object' ? o : { value: o, label: o }));
+	const toggleValue = (v) => {
+		const arr = current() || [];
+		setCurrent(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
+	};
+	const summary = () => {
+		const arr = current() || [];
+		if (!arr.length) return placeholder;
+		const labels = opts().filter((o) => arr.includes(o.value)).map((o) => o.label);
+		return labels.length <= 2 ? labels.join(', ') : `${arr.length} selected`;
+	};
+	return uele.h('div', { 'data-uele-multi-select': '', style: { position: 'relative', display: 'inline-block' } },
+		uele.h('button', {
+			type: 'button', 'aria-haspopup': 'listbox', 'aria-expanded': () => String(!!reactive.read(open)),
+			'aria-label': label || placeholder, ...props, onclick: () => reactive.write(open, !reactive.read(open))
+		}, () => summary()),
+		() => (reactive.read(open)
+			? uele.h('ul', {
+					role: 'listbox', 'aria-multiselectable': 'true', 'aria-label': label || placeholder,
+					style: { position: 'absolute', zIndex: 10, listStyle: 'none', margin: 0, padding: '0.25rem', minWidth: '12rem', background: 'var(--uele-surface, #fff)', border: '1px solid var(--uele-border, #e2e8f0)', borderRadius: 'var(--uele-radius, 10px)', boxShadow: 'var(--uele-shadow-md, 0 4px 16px rgba(0,0,0,0.12))' }
+				}, opts().map((o) => uele.h('li', {
+					role: 'option', 'data-value': o.value,
+					'aria-selected': () => String((current() || []).includes(o.value)),
+					style: { display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '0.25rem', cursor: 'pointer' },
+					onclick: () => toggleValue(o.value)
+				}, uele.h('input', { type: 'checkbox', tabindex: -1, checked: () => (current() || []).includes(o.value) }), String(o.label))))
+			: ''));
+};
+
+/* ---------------------------------------------------------- date & time */
+
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const DAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+const pad2 = (n) => String(n).padStart(2, '0');
+const toISODate = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+const parseDateValue = (v) => {
+	if (v == null || v === '') return null;
+	if (v instanceof Date) return isNaN(v) ? null : v;
+	const d = new Date(v);
+	return isNaN(d) ? null : d;
+};
+const sameDay = (a, b) => a && b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+
+/**
+ * Month calendar: `model` holds a Date or an ISO `yyyy-mm-dd` string (the
+ * written type follows the held type), `onChange(date, iso)`, `min`/`max` clamp.
+ */
+const Calendar = ({ model: cell, value, defaultValue, onChange, min, max, weekStartsOn = 0, ...props } = {}) => {
+	const [current, setCurrent] = controllable(cell ?? value, defaultValue ?? null);
+	const initial = parseDateValue(current()) || new Date();
+	const cursor = own(new Date(initial.getFullYear(), initial.getMonth(), 1));
+	const minDate = parseDateValue(min);
+	const maxDate = parseDateValue(max);
+	const writeDate = (day) => {
+		const next = typeof current() === 'string' ? toISODate(day) : day;
+		setCurrent(next);
+		onChange?.(day, toISODate(day));
+	};
+	const grid = () => {
+		const view = reactive.read(cursor);
+		const year = view.getFullYear();
+		const month = view.getMonth();
+		const first = new Date(year, month, 1);
+		const startOffset = (first.getDay() - weekStartsOn + 7) % 7;
+		const daysInMonth = new Date(year, month + 1, 0).getDate();
+		const cells = [];
+		for (let i = 0; i < startOffset; i++) cells.push(null);
+		for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d));
+		while (cells.length % 7) cells.push(null);
+		return cells;
+	};
+	return uele.h('div', { 'data-uele-calendar': '', ...props, style: { display: 'inline-block', ...props.style } },
+		uele.h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' } },
+			uele.h('button', { type: 'button', 'aria-label': 'Previous month', onclick: () => { const v = reactive.read(cursor); reactive.write(cursor, new Date(v.getFullYear(), v.getMonth() - 1, 1)); } }, '‹'),
+			uele.h('strong', { 'aria-live': 'polite' }, () => `${MONTHS[reactive.read(cursor).getMonth()]} ${reactive.read(cursor).getFullYear()}`),
+			uele.h('button', { type: 'button', 'aria-label': 'Next month', onclick: () => { const v = reactive.read(cursor); reactive.write(cursor, new Date(v.getFullYear(), v.getMonth() + 1, 1)); } }, '›')),
+		uele.h('div', { role: 'grid', 'aria-label': 'Calendar' },
+			uele.h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(7, 2.25rem)', gap: '0.125rem' } },
+				Array.from({ length: 7 }, (_, i) => uele.h('span', { 'aria-hidden': 'true', style: { textAlign: 'center', fontWeight: 600, color: 'var(--uele-text-muted, #64748b)' } }, DAYS[(weekStartsOn + i) % 7])),
+				() => grid().map((day) => {
+					if (!day) return uele.h('span', null, '');
+					const disabled = (minDate && day < new Date(minDate.getFullYear(), minDate.getMonth(), minDate.getDate())) || (maxDate && day > new Date(maxDate.getFullYear(), maxDate.getMonth(), maxDate.getDate()));
+					const selected = () => sameDay(parseDateValue(current()), day);
+					return uele.h('button', {
+						type: 'button', disabled, 'data-date': toISODate(day),
+						'aria-selected': () => String(selected()),
+						'data-today': sameDay(day, new Date()) ? 'true' : undefined,
+						style: { width: '2.25rem', height: '2.25rem', borderRadius: 'var(--uele-radius-sm, 6px)', cursor: 'pointer', border: '1px solid transparent' },
+						onclick: () => writeDate(day)
+					}, String(day.getDate()));
+				}))));
+};
+
+/** date input + calendar popover; `model` is an ISO `yyyy-mm-dd` string cell */
+const DatePicker = ({ model: cell, value, placeholder = 'Pick a date', label, onChange, ...props } = {}) => {
+	const [current, setCurrent] = controllable(cell ?? value, '', onChange);
+	const open = own(false);
+	const input = uele.h('input', {
+		type: 'text', placeholder, 'aria-label': label || placeholder, ...props,
+		value: () => (current() instanceof Date ? toISODate(current()) : current() || ''),
+		onInput: (e) => {
+			const parsed = parseDateValue(e.target.value);
+			if (parsed && /^\d{4}-\d{2}-\d{2}$/.test(e.target.value)) setCurrent(toISODate(parsed));
+		}
+	});
+	return uele.h('div', { 'data-uele-datepicker': '', style: { position: 'relative', display: 'inline-block' } },
+		input,
+		uele.h('button', { type: 'button', 'aria-label': 'Open calendar', 'aria-expanded': () => String(!!reactive.read(open)), onclick: () => reactive.write(open, !reactive.read(open)) }, '📅'),
+		() => (reactive.read(open)
+			? uele.h('div', { style: { position: 'absolute', zIndex: 10, background: 'var(--uele-surface, #fff)', border: '1px solid var(--uele-border, #e2e8f0)', borderRadius: 'var(--uele-radius, 10px)', boxShadow: 'var(--uele-shadow-md, 0 4px 16px rgba(0,0,0,0.12))', padding: '0.75rem' } },
+					Calendar({ value: current(), onChange: (day, iso) => (setCurrent(iso), reactive.write(open, false)) }))
+			: ''));
+};
+
+const relativeParts = (diffMs) => {
+	const seconds = Math.round(Math.abs(diffMs) / 1000);
+	if (seconds < 5) return [0, 'just now'];
+	if (seconds < 60) return [seconds, 'second'];
+	const minutes = Math.floor(seconds / 60);
+	if (minutes < 60) return [minutes, 'minute'];
+	const hours = Math.floor(minutes / 60);
+	if (hours < 24) return [hours, 'hour'];
+	const days = Math.floor(hours / 24);
+	if (days < 30) return [days, 'day'];
+	const months = Math.floor(days / 30);
+	if (months < 12) return [months, 'month'];
+	return [Math.floor(months / 12), 'year'];
+};
+/** live "3 minutes ago" text; re-renders every `interval` ms (span, `dateTime` on hover via title) */
+const TimeAgo = ({ date, value, interval = 30000, ...props } = {}) => {
+	const tick = own(Date.now());
+	if (interval != null && typeof setInterval !== 'undefined') setInterval(() => reactive.write(tick, Date.now()), interval);
+	const target = parseDateValue(val(date ?? value));
+	return uele.h('span', { 'data-uele-timeago': '', title: target ? target.toISOString() : undefined, ...props },
+		() => {
+			reactive.read(tick);
+			const t = parseDateValue(val(date ?? value));
+			if (!t) return '';
+			const diff = t.getTime() - Date.now();
+			const [n, unit] = relativeParts(diff);
+			if (n === 0) return 'just now';
+			const label = `${n} ${unit}${n === 1 ? '' : 's'}`;
+			return diff < 0 ? `${label} ago` : `in ${label}`;
+		});
+};
+/** alias */
+const RelativeTime = TimeAgo;
+
+/** ticking countdown to a date (or from `seconds`), `onComplete` at zero; renders `hh:mm:ss` */
+const CountdownTimer = ({ to, seconds, onComplete, ...props } = {}) => {
+	const tick = own(Date.now());
+	const done = own(false);
+	const target = to != null ? parseDateValue(val(to))?.getTime() : null;
+	const startAt = Date.now();
+	const total = seconds != null ? Number(val(seconds)) * 1000 : 0;
+	const end = target ?? startAt + total;
+	if (typeof setInterval !== 'undefined') {
+		const timer = setInterval(() => {
+			reactive.write(tick, Date.now());
+			if (Date.now() >= end && !reactive.read(done)) (reactive.write(done, true), clearInterval(timer), onComplete?.());
+		}, 250);
+	}
+	const format = () => {
+		reactive.read(tick);
+		let left = Math.max(0, Math.floor((end - Date.now()) / 1000));
+		const hh = Math.floor(left / 3600);
+		const mm = Math.floor((left % 3600) / 60);
+		const ss = left % 60;
+		return `${pad2(hh)}:${pad2(mm)}:${pad2(ss)}`;
+	};
+	return uele.h('span', { role: 'timer', 'data-uele-countdown': '', 'data-done': () => String(!!reactive.read(done)), ...props }, () => format());
+};
+
+/* ------------------------------------------------- data-heavy components */
+
+/**
+ * Sortable data table: `columns={[{key,label,sortable,render}]}`, rows from
+ * `data` (array or cell), `pageSize` adds the Pagination bar, `onRowClick`.
+ */
+const DataTable = ({ columns = [], data, rows, pageSize, empty = 'No rows', onRowClick, ...props } = {}) => {
+	const sort = own({ key: null, dir: 1 });
+	const page = own(1);
+	const all = () => val(data ?? rows) || [];
+	const sorted = () => {
+		const { key, dir } = reactive.read(sort);
+		const copy = [...all()];
+		if (!key) return copy;
+		return copy.sort((a, b) => {
+			const av = a[key];
+			const bv = b[key];
+			if (av == bv) return 0;
+			return (av > bv ? 1 : -1) * dir;
+		});
+	};
+	const visible = () => (pageSize ? sorted().slice((reactive.read(page) - 1) * pageSize, reactive.read(page) * pageSize) : sorted());
+	const headerCell = (col) => uele.h('th', {
+		scope: 'col',
+		...(col.sortable ? { 'aria-sort': () => (reactive.read(sort).key === col.key ? (reactive.read(sort).dir === 1 ? 'ascending' : 'descending') : undefined), 'data-sorted': () => String(reactive.read(sort).key === col.key) } : {}),
+		style: { textAlign: 'left', padding: '0.5rem', borderBottom: '2px solid var(--uele-border, #e2e8f0)' }
+	}, col.sortable
+		? uele.h('button', { type: 'button', 'data-sort': col.key, style: { background: 'none', border: 'none', cursor: 'pointer', font: 'inherit', fontWeight: 600 }, onclick: () => { const s = reactive.read(sort); reactive.write(sort, { key: col.key, dir: s.key === col.key ? -s.dir : 1 }); } },
+				() => `${col.label}${reactive.read(sort).key === col.key ? (reactive.read(sort).dir === 1 ? ' ↑' : ' ↓') : ''}`)
+		: col.label);
+	return uele.h('div', { 'data-uele-datatable': '' },
+		uele.h('table', { ...props, style: { borderCollapse: 'collapse', width: '100%', ...props.style } },
+			uele.h('thead', null, uele.h('tr', null, columns.map(headerCell))),
+			uele.h('tbody', null, () => {
+				const list = visible();
+				if (!list.length) return uele.h('tr', null, uele.h('td', { colspan: Math.max(1, columns.length), style: { padding: '1rem', textAlign: 'center', color: 'var(--uele-text-muted, #64748b)' } }, empty));
+				return list.map((row, ri) => uele.h('tr', { 'data-row-index': ri, onclick: onRowClick ? (e) => onRowClick(row, ri, e) : undefined },
+					columns.map((col) => uele.h('td', { style: { padding: '0.5rem', borderBottom: '1px solid var(--uele-border, #e2e8f0)' } }, col.render ? col.render(row[col.key], row, ri) : row[col.key]))));
+			})),
+		pageSize ? uele.h('div', { style: { marginTop: '0.5rem' } }, Pagination({
+			defaultPage: 1,
+			totalPages: () => Math.max(1, Math.ceil(sorted().length / pageSize)),
+			onChange: (p) => reactive.write(page, p)
+		})) : null);
+};
+
+/** expandable tree: `items={[{label,value,children}]}`, `model` = selected value, `defaultExpanded` values */
+const Tree = ({ items, model: cell, value, defaultExpanded = [], onSelect, ...props } = {}) => {
+	const [selected, setSelected] = controllable(cell ?? value, undefined, onSelect);
+	const expanded = own(new Set(defaultExpanded));
+	const toggleExpand = (v) => {
+		const next = new Set(reactive.read(expanded));
+		next.has(v) ? next.delete(v) : next.add(v);
+		reactive.write(expanded, next);
+	};
+	const renderItems = (list, depth) => (list || []).map((item) => {
+		const kids = item.children || [];
+		const isParent = kids.length > 0;
+		const key = item.value ?? item.label;
+		const openNow = () => reactive.read(expanded).has(key);
+		return uele.h('li', { role: 'treeitem', 'aria-expanded': isParent ? () => String(openNow()) : undefined, 'aria-selected': () => String(selected() === key), 'data-value': key },
+			uele.h('button', {
+				type: 'button',
+				style: { background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', paddingLeft: `${depth * 1.25 + 0.25}rem` },
+				onclick: () => (isParent && toggleExpand(key), setSelected(key))
+			}, isParent ? () => (openNow() ? '▾ ' : '▸ ') : '  ', item.label),
+			isParent ? uele.h('ul', { role: 'group', hidden: () => !openNow(), style: { listStyle: 'none', margin: 0, padding: 0 } }, () => renderItems(kids, depth + 1)) : null);
+	});
+	return uele.h('ul', { role: 'tree', 'data-uele-tree': '', ...props, style: { listStyle: 'none', margin: 0, padding: 0, ...props.style } },
+		() => renderItems(val(items) || [], 0));
+};
+/** alias */
+const TreeView = Tree;
+
+/**
+ * Windowed list for very long data: only the visible slice (+ overscan) is
+ * in the DOM. `items` array/cell, fixed `itemHeight`, `renderItem(item, i)`.
+ */
+const VirtualList = ({ items, itemHeight = 32, height = 320, overscan = 3, renderItem, ...props } = {}) => {
+	const scrollTop = own(0);
+	const list = () => val(items) || [];
+	const range = () => {
+		const start = Math.max(0, Math.floor(reactive.read(scrollTop) / itemHeight) - overscan);
+		const count = Math.ceil(height / itemHeight) + overscan * 2;
+		return [start, Math.min(list().length, start + count)];
+	};
+	return uele.h('div', {
+		'data-uele-virtual-list': '', tabIndex: 0, ...props,
+		style: { height: typeof height === 'number' ? `${height}px` : height, overflowY: 'auto', position: 'relative', ...props.style },
+		onscroll: (e) => reactive.write(scrollTop, e.currentTarget.scrollTop)
+	}, uele.h('div', { style: { height: () => `${list().length * itemHeight}px`, position: 'relative' } },
+		() => {
+			const [start, end] = range();
+			return list().slice(start, end).map((item, i) => uele.h('div', {
+				'data-index': start + i,
+				style: { position: 'absolute', top: `${(start + i) * itemHeight}px`, left: 0, right: 0, height: `${itemHeight}px`, overflow: 'hidden' }
+			}, renderItem ? renderItem(item, start + i) : item));
+		}));
+};
+
+/** sentinel-driven lazy loading: calls `onLoadMore` when the end scrolls into view (button fallback without IntersectionObserver) */
+const InfiniteScroll = ({ onLoadMore, loading, hasMore = true, children, ...props } = {}) => {
+	const sentinel = uele.h('div', { 'data-uele-sentinel': '', style: { height: '1px' } });
+	const tryLoad = () => {
+		if (val(hasMore) && !val(loading)) onLoadMore?.();
+	};
+	if (typeof IntersectionObserver !== 'undefined') {
+		setTimeout(() => {
+			const io = new IntersectionObserver((entries) => entries[0]?.isIntersecting && tryLoad());
+			io.observe(sentinel);
+		}, 0);
+	}
+	return uele.h('div', { 'data-uele-infinite-scroll': '', ...props },
+		children,
+		sentinel,
+		typeof IntersectionObserver === 'undefined'
+			? uele.h('button', { type: 'button', disabled: () => !!val(loading) || !val(hasMore), onclick: tryLoad }, () => (val(loading) ? 'Loading…' : 'Load more'))
+			: uele.h('div', { 'aria-live': 'polite' }, () => (val(loading) ? 'Loading…' : '')));
+};
+
+/**
+ * Command palette (Cmd+K style): filterable action list with keyboard
+ * navigation. Controlled via `model`/`open` or opened by its `trigger`.
+ * `items={[{label, hint, keywords, onSelect}]}`.
+ */
+const CommandPalette = ({ open, model: modelProp, defaultOpen = false, trigger, items = [], placeholder = 'Type a command or search…', onSelect, onOpenChange, ...props } = {}) => {
+	const inner = own(!!defaultOpen);
+	const controlledCell = reactive.isCell(modelProp ?? open) ? (modelProp ?? open) : null;
+	const isOpen = () => (controlledCell ? !!val(controlledCell) : !!reactive.read(inner));
+	const setOpen = (v) => (controlledCell ? reactive.write(controlledCell, v) : reactive.write(inner, v), onOpenChange?.(v));
+	const query = own('');
+	const active = own(0);
+	const results = () => {
+		const q = String(reactive.read(query)).toLowerCase();
+		const all = (val(items) || []).map((it) => (typeof it === 'string' ? { label: it } : it));
+		if (!q) return all;
+		return all.filter((it) => String(it.label).toLowerCase().includes(q) || String(it.keywords || '').toLowerCase().includes(q));
+	};
+	const choose = (item) => {
+		if (!item) return;
+		item.onSelect?.(item);
+		onSelect?.(item);
+		setOpen(false);
+		reactive.write(query, '');
+		reactive.write(active, 0);
+	};
+	const panel = () => {
+		if (!isOpen()) return '';
+		return uele.h('div', {
+			'data-uele-overlay': '', onclick: () => setOpen(false),
+			style: { position: 'fixed', inset: 0, background: 'var(--uele-overlay, rgba(15,23,42,0.5))', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '15vh', zIndex: 60 }
+		}, uele.h('div', {
+			role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Command palette',
+			style: { background: 'var(--uele-surface, #fff)', color: 'var(--uele-text, #0f172a)', borderRadius: 'var(--uele-radius-lg, 14px)', boxShadow: 'var(--uele-shadow-lg, 0 12px 32px rgba(0,0,0,0.2))', width: 'min(34rem, calc(100% - 2rem))', overflow: 'hidden' },
+			onclick: (e) => e.stopPropagation()
+		},
+			uele.h('input', {
+				type: 'text', placeholder, 'aria-label': placeholder, 'data-uele-command-input': '',
+				value: () => reactive.read(query),
+				style: { width: '100%', boxSizing: 'border-box', padding: '0.875rem 1rem', border: 'none', borderBottom: '1px solid var(--uele-border, #e2e8f0)', fontSize: '1rem' },
+				onInput: (e) => (reactive.write(query, e.target.value), reactive.write(active, 0)),
+				onkeydown: (e) => {
+					const list = results();
+					if (e.key === 'ArrowDown') (e.preventDefault(), reactive.write(active, Math.min(list.length - 1, reactive.read(active) + 1)));
+					else if (e.key === 'ArrowUp') (e.preventDefault(), reactive.write(active, Math.max(0, reactive.read(active) - 1)));
+					else if (e.key === 'Enter') choose(list[reactive.read(active)]);
+					else if (e.key === 'Escape') setOpen(false);
+				}
+			}),
+			uele.h('ul', { role: 'listbox', 'aria-label': 'Commands', style: { listStyle: 'none', margin: 0, padding: '0.375rem', maxHeight: '18rem', overflowY: 'auto' } },
+				() => {
+					const list = results();
+					if (!list.length) return uele.h('li', { style: { padding: '0.75rem', color: 'var(--uele-text-muted, #64748b)' } }, 'No results');
+					return list.map((item, i) => uele.h('li', {
+						role: 'option', 'data-label': item.label,
+						'aria-selected': () => String(reactive.read(active) === i), 'data-active': () => String(reactive.read(active) === i),
+						style: { display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0.625rem', borderRadius: 'var(--uele-radius-sm, 6px)', cursor: 'pointer' },
+						onmouseenter: () => reactive.write(active, i),
+						onclick: () => choose(item)
+					}, uele.h('span', null, item.label), item.hint ? uele.h('span', { style: { color: 'var(--uele-text-muted, #64748b)' } }, item.hint) : null));
+				})));
+	};
+	if (typeof document !== 'undefined') document.addEventListener('keydown', (e) => e.key === 'Escape' && isOpen() && setOpen(false));
+	return uele.h('div', { style: { display: 'contents' }, ...props },
+		trigger != null ? uele.h('button', { type: 'button', 'aria-haspopup': 'dialog', onclick: () => setOpen(true) }, trigger) : null,
+		() => panel());
+};
+/** alias */
+const Command = CommandPalette;
+
+/* ------------------------------------------------ menus, nav & overlays 2 */
+
+/** right-click menu: wrap the target area in `children`, items like Menu's */
+const ContextMenu = ({ items = [], onSelect, children, ...props } = {}) => {
+	const state = own({ open: false, x: 0, y: 0 });
+	const close = () => reactive.write(state, { ...reactive.read(state), open: false });
+	if (typeof document !== 'undefined') document.addEventListener('click', () => reactive.read(state).open && close());
+	return uele.h('div', {
+		'data-uele-context-menu': '', ...props,
+		oncontextmenu: (e) => (e.preventDefault(), reactive.write(state, { open: true, x: e.clientX, y: e.clientY })),
+		onkeydown: (e) => e.key === 'Escape' && close()
+	}, children,
+		() => (reactive.read(state).open
+			? uele.h('div', {
+					role: 'menu',
+					style: { position: 'fixed', left: `${reactive.read(state).x}px`, top: `${reactive.read(state).y}px`, zIndex: 70, minWidth: '10rem', background: 'var(--uele-surface, #fff)', border: '1px solid var(--uele-border, #e2e8f0)', borderRadius: 'var(--uele-radius, 10px)', boxShadow: 'var(--uele-shadow-md, 0 4px 16px rgba(0,0,0,0.12))', padding: '0.25rem' },
+					onclick: (e) => e.stopPropagation()
+				}, (val(items) || []).map((item) => MenuItem({
+					disabled: item.disabled,
+					onSelect: () => (item.onSelect?.(item), onSelect?.(item), close()),
+					children: item.label
+				})))
+			: ''));
+};
+
+/** site navigation with dropdown panels: `items={[{label, href, content | links:[{label,href}]}]` */
+const NavigationMenu = ({ items = [], ...props } = {}) => {
+	const open = own('');
+	return uele.h('nav', { 'aria-label': 'Main', 'data-uele-nav-menu': '', ...props, onmouseleave: () => reactive.write(open, '') },
+		uele.h('ul', { style: { display: 'flex', gap: '0.25rem', listStyle: 'none', margin: 0, padding: 0 } },
+			(val(items) || []).map((item) => {
+				const hasPanel = !!(item.content || item.links);
+				return uele.h('li', { style: { position: 'relative' }, onmouseenter: () => hasPanel && reactive.write(open, item.label) },
+					item.href && !hasPanel
+						? uele.h('a', { href: item.href, style: { padding: '0.5rem 0.75rem', display: 'inline-block' } }, item.label)
+						: uele.h('button', {
+								type: 'button', 'aria-haspopup': hasPanel ? 'true' : undefined,
+								'aria-expanded': hasPanel ? () => String(reactive.read(open) === item.label) : undefined, 'data-label': item.label,
+								onclick: () => hasPanel && reactive.write(open, reactive.read(open) === item.label ? '' : item.label),
+								style: { background: 'none', border: 'none', cursor: 'pointer', padding: '0.5rem 0.75rem', font: 'inherit' }
+							}, item.label),
+					hasPanel
+						? uele.h('div', {
+								role: 'menu', hidden: () => reactive.read(open) !== item.label,
+								style: { position: 'absolute', top: '100%', left: 0, zIndex: 30, minWidth: '14rem', background: 'var(--uele-surface, #fff)', border: '1px solid var(--uele-border, #e2e8f0)', borderRadius: 'var(--uele-radius, 10px)', boxShadow: 'var(--uele-shadow-md, 0 4px 16px rgba(0,0,0,0.12))', padding: '0.75rem' }
+							}, item.content ?? (item.links || []).map((link) => uele.h('a', { href: link.href, role: 'menuitem', style: { display: 'block', padding: '0.375rem 0.5rem' } }, link.label)))
+						: null);
+			})));
+};
+
+/** hover card: rich content on hover/focus after a short delay (Tooltip's big sibling) */
+const HoverCard = ({ trigger, content, children, delay = 300, ...props } = {}) => {
+	const visible = own(false);
+	let openTimer = null;
+	let closeTimer = null;
+	const scheduleOpen = () => (clearTimeout(closeTimer), (openTimer = setTimeout(() => reactive.write(visible, true), delay)));
+	const scheduleClose = () => (clearTimeout(openTimer), (closeTimer = setTimeout(() => reactive.write(visible, false), 120)));
+	return uele.h('span', {
+		style: { position: 'relative', display: 'inline-block' },
+		onmouseenter: scheduleOpen, onmouseleave: scheduleClose, onfocus: scheduleOpen, onblur: scheduleClose
+	}, trigger ?? children,
+		uele.h('span', {
+			role: 'dialog', 'data-uele-hover-card': '', hidden: () => !reactive.read(visible), ...props,
+			style: { position: 'absolute', top: '100%', left: 0, zIndex: 25, marginTop: '0.375rem', background: 'var(--uele-surface, #fff)', border: '1px solid var(--uele-border, #e2e8f0)', borderRadius: 'var(--uele-radius, 10px)', boxShadow: 'var(--uele-shadow-md, 0 4px 16px rgba(0,0,0,0.12))', padding: '0.875rem', minWidth: '14rem', ...props.style }
+		}, content));
+};
+
+/** two resizable panels with a draggable divider; ratio via `model` (0..1) */
+const SplitPane = ({ first, second, children, direction = 'horizontal', model: cell, defaultRatio = 0.5, min = 0.15, max = 0.85, onChange, ...props } = {}) => {
+	const [ratio, setRatio] = controllable(cell, defaultRatio, onChange);
+	const horizontal = direction === 'horizontal';
+	let container = null;
+	const startDrag = (e) => {
+		e.preventDefault();
+		const move = (ev) => {
+			if (!container) return;
+			const rect = container.getBoundingClientRect();
+			const raw = horizontal ? (ev.clientX - rect.left) / rect.width : (ev.clientY - rect.top) / rect.height;
+			setRatio(Math.min(max, Math.max(min, raw)));
+		};
+		const up = () => {
+			document.removeEventListener('mousemove', move);
+			document.removeEventListener('mouseup', up);
+		};
+		document.addEventListener('mousemove', move);
+		document.addEventListener('mouseup', up);
+	};
+	const left = hasKids(children) && Array.isArray(children) ? children[0] : first;
+	const right = hasKids(children) && Array.isArray(children) ? children[1] : second;
+	return uele.h('div', {
+		'data-uele-split': '', ...props,
+		ref: (el) => (container = el),
+		style: { display: 'flex', flexDirection: horizontal ? 'row' : 'column', width: '100%', height: '100%', ...props.style }
+	},
+		uele.h('div', { 'data-pane': 'first', style: horizontal ? { width: () => ratio() * 100 + '%', overflow: 'auto' } : { height: () => ratio() * 100 + '%', overflow: 'auto' } }, left),
+		uele.h('div', {
+			role: 'separator', 'aria-orientation': horizontal ? 'vertical' : 'horizontal', tabIndex: 0,
+			'aria-valuemin': Math.round(min * 100), 'aria-valuemax': Math.round(max * 100), 'aria-valuenow': () => Math.round(ratio() * 100),
+			'data-uele-split-divider': '',
+			style: horizontal ? { width: '6px', cursor: 'col-resize', background: 'var(--uele-border, #e2e8f0)', flex: 'none' } : { height: '6px', cursor: 'row-resize', background: 'var(--uele-border, #e2e8f0)', flex: 'none' },
+			onmousedown: startDrag,
+			onkeydown: (e) => {
+				const step = e.shiftKey ? 0.1 : 0.02;
+				if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') setRatio(Math.max(min, ratio() - step));
+				if (e.key === 'ArrowRight' || e.key === 'ArrowDown') setRatio(Math.min(max, ratio() + step));
+			}
+		}),
+		uele.h('div', { 'data-pane': 'second', style: { flex: '1 1 auto', overflow: 'auto' } }, right));
+};
+/** alias */
+const Resizable = SplitPane;
+
+/** click-to-edit inline text: Enter/blur commits, Escape cancels */
+const Editable = ({ model: cell, value, placeholder = 'Click to edit', onChange, label, ...props } = {}) => {
+	const [current, setCurrent] = controllable(cell ?? value, '', onChange);
+	const editing = own(false);
+	let draft = '';
+	let input = null;
+	const commit = () => (setCurrent(draft), reactive.write(editing, false));
+	const view = uele.h('button', {
+		type: 'button', 'aria-label': label || 'Edit',
+		hidden: () => !!reactive.read(editing),
+		style: { background: 'none', border: 'none', cursor: 'text', font: 'inherit', padding: '0.25rem' },
+		onclick: () => {
+			draft = String(current() ?? '');
+			reactive.write(editing, true);
+			setTimeout(() => input?.focus(), 0);
+		}
+	}, () => String(current() ?? '') || placeholder);
+	input = uele.h('input', {
+		type: 'text', 'aria-label': label || 'Edit value', ...props,
+		hidden: () => !reactive.read(editing),
+		value: () => (reactive.read(editing) ? draft : current() ?? ''),
+		onInput: (e) => (draft = e.target.value),
+		onkeydown: (e) => {
+			if (e.key === 'Enter') commit();
+			if (e.key === 'Escape') reactive.write(editing, false);
+		},
+		onblur: () => reactive.read(editing) && commit()
+	});
+	return uele.h('span', { 'data-uele-editable': '', 'data-editing': () => String(!!reactive.read(editing)) }, view, input);
+};
+
+/** thumbnail gallery with a lightbox viewer (prev/next/close, Escape closes) */
+const Lightbox = ({ images = [], ...props } = {}) => {
+	const list = () => (val(images) || []).map((img) => (typeof img === 'string' ? { src: img, alt: '' } : img));
+	const open = own(false);
+	const index = own(0);
+	const show = (i) => (reactive.write(index, i), reactive.write(open, true));
+	const step = (d) => {
+		const len = list().length || 1;
+		reactive.write(index, ((reactive.read(index) + d) % len + len) % len);
+	};
+	if (typeof document !== 'undefined') document.addEventListener('keydown', (e) => {
+		if (!reactive.read(open)) return;
+		if (e.key === 'Escape') reactive.write(open, false);
+		if (e.key === 'ArrowRight') step(1);
+		if (e.key === 'ArrowLeft') step(-1);
+	});
+	return uele.h('div', { 'data-uele-lightbox': '', ...props },
+		uele.h('div', { style: { display: 'flex', gap: '0.5rem', flexWrap: 'wrap' } },
+			() => list().map((img, i) => uele.h('button', {
+				type: 'button', 'aria-label': `View image ${i + 1}`, style: { padding: 0, border: 'none', cursor: 'pointer', background: 'none' },
+				onclick: () => show(i)
+			}, uele.h('img', { src: img.src, alt: img.alt || '', width: 96, height: 96, style: { objectFit: 'cover', borderRadius: 'var(--uele-radius-sm, 6px)' } })))),
+		() => (reactive.read(open) && list()[reactive.read(index)]
+			? uele.h('div', {
+					role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Image viewer',
+					style: { position: 'fixed', inset: 0, zIndex: 65, background: 'var(--uele-overlay, rgba(0,0,0,0.7))', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' },
+					onclick: () => reactive.write(open, false)
+				},
+					uele.h('button', { type: 'button', 'aria-label': 'Previous image', onclick: (e) => (e.stopPropagation(), step(-1)) }, '‹'),
+					uele.h('img', { src: list()[reactive.read(index)].src, alt: list()[reactive.read(index)].alt || '', 'data-uele-lightbox-img': '', style: { maxWidth: '80vw', maxHeight: '85vh' }, onclick: (e) => e.stopPropagation() }),
+					uele.h('button', { type: 'button', 'aria-label': 'Next image', onclick: (e) => (e.stopPropagation(), step(1)) }, '›'),
+					uele.h('button', { type: 'button', 'aria-label': 'Close viewer', onclick: () => reactive.write(open, false), style: { position: 'absolute', top: '1rem', right: '1rem' } }, '×'))
+			: ''));
+};
+/** alias */
+const Gallery = Lightbox;
+
+const formatBytes = (bytes) => {
+	if (bytes == null) return '';
+	const units = ['B', 'KB', 'MB', 'GB'];
+	let n = Number(bytes);
+	let i = 0;
+	while (n >= 1024 && i < units.length - 1) (n /= 1024, i++);
+	return `${n.toFixed(i ? 1 : 0)} ${units[i]}`;
+};
+/** uploaded-file list with progress + status + remove: `files={[{name,size,progress,status}]}` */
+const FileList = ({ files, onRemove, ...props } = {}) =>
+	uele.h('ul', { 'data-uele-file-list': '', ...props, style: { listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem', ...props.style } },
+		() => (val(files) || []).map((file, i) => uele.h('li', {
+			'data-file': file.name, 'data-status': file.status || 'done',
+			style: { display: 'flex', gap: '0.625rem', alignItems: 'center', border: '1px solid var(--uele-border, #e2e8f0)', borderRadius: 'var(--uele-radius, 10px)', padding: '0.5rem 0.75rem' }
+		},
+			uele.h('span', { style: { fontWeight: 600 } }, file.name),
+			uele.h('span', { style: { color: 'var(--uele-text-muted, #64748b)', fontSize: '0.8125rem' } }, formatBytes(file.size)),
+			file.status === 'error'
+				? Badge({ tone: 'danger', children: file.error || 'Failed' })
+				: file.progress != null && file.progress < 100
+					? Progress({ value: file.progress, label: `Uploading ${file.name}` })
+					: Badge({ tone: 'success', children: 'Done' }),
+			onRemove ? uele.h('button', { type: 'button', 'aria-label': `Remove ${file.name}`, onclick: () => onRemove(file, i) }, '×') : null)));
+
+/** multi-step wizard: Stepper header + panel + Back/Next/Finish over `steps={[{label,content}]}` */
+const Wizard = ({ steps = [], model: cell, defaultStep = 0, onChange, onFinish, finishLabel = 'Finish', ...props } = {}) => {
+	const [step, setStep] = controllable(cell, defaultStep, onChange);
+	const list = val(steps) || [];
+	const last = list.length - 1;
+	return uele.h('div', { 'data-uele-wizard': '', ...props },
+		Stepper({ steps: list, current: () => step(), onChange: (i) => setStep(i) }),
+		uele.h('div', { 'data-uele-wizard-panel': '', style: { padding: '1rem 0' } }, () => list[step()]?.content),
+		uele.h('div', { style: { display: 'flex', gap: '0.5rem', justifyContent: 'space-between' } },
+			uele.h('button', { type: 'button', disabled: () => step() <= 0, onclick: () => setStep(step() - 1) }, 'Back'),
+			() => (step() >= last
+				? uele.h('button', { type: 'button', 'data-action': 'finish', onclick: (e) => onFinish?.(e) }, finishLabel)
+				: uele.h('button', { type: 'button', 'data-action': 'next', onclick: () => setStep(step() + 1) }, 'Next'))));
+};
+/** alias */
+const FormWizard = Wizard;
+
+/* ------------------------------------------------------ app chrome & misc */
+
+/** toolbar landmark (`role="toolbar"`) */
+const Toolbar = ({ label = 'Toolbar', children, ...props } = {}) =>
+	uele.h('div', { role: 'toolbar', 'aria-label': label, ...props, style: { display: 'flex', gap: '0.375rem', alignItems: 'center', ...props.style } }, children);
+
+/** top navigation bar: brand, links and actions slots */
+const Navbar = ({ brand, links, actions, children, ...props } = {}) =>
+	uele.h('header', {
+		'data-uele-navbar': '', ...props,
+		style: { display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.625rem 1rem', borderBottom: '1px solid var(--uele-border, #e2e8f0)', background: 'var(--uele-surface, #fff)', ...props.style }
+	},
+		brand ? uele.h('span', { 'data-uele-brand': '', style: { fontWeight: 700 } }, brand) : null,
+		links ? uele.h('nav', { 'aria-label': 'Primary', style: { display: 'flex', gap: '0.75rem' } },
+			(val(links) || []).map((link) => uele.h('a', { href: link.href || '#', ...(link.current ? { 'aria-current': 'page' } : {}) }, link.label))) : null,
+		uele.h('span', { style: { flex: '1 1 auto' } }),
+		actions || children || null);
+
+/** dashboard shell: optional header + sidebar + main (+ footer) grid */
+const AppShell = ({ header, sidebar, footer, children, main, ...props } = {}) =>
+	uele.h('div', {
+		'data-uele-app-shell': '', ...props,
+		style: { display: 'grid', minHeight: '100dvh', gridTemplateRows: `${header ? 'auto ' : ''}1fr${footer ? ' auto' : ''}`, gridTemplateColumns: sidebar ? '16rem 1fr' : '1fr', ...props.style }
+	},
+		header ? uele.h('header', { style: sidebar ? { gridColumn: '1 / -1' } : undefined }, header) : null,
+		sidebar ? uele.h('aside', { 'data-uele-sidebar': '', style: { borderRight: '1px solid var(--uele-border, #e2e8f0)', padding: '1rem', overflowY: 'auto' } }, sidebar) : null,
+		uele.h('main', { id: 'main', style: { padding: '1rem', overflowY: 'auto' } }, main ?? children),
+		footer ? uele.h('footer', { style: sidebar ? { gridColumn: '1 / -1' } : undefined }, footer) : null);
+
+/** vertical timeline: `items={[{title, time, description}]}` (or children) */
+const Timeline = ({ items, children, ...props } = {}) =>
+	uele.h('ol', { 'data-uele-timeline': '', ...props, style: { listStyle: 'none', margin: 0, padding: 0, ...props.style } },
+		hasKids(children) ? children : (val(items) || []).map((item) => uele.h('li', {
+			style: { position: 'relative', paddingLeft: '1.5rem', paddingBottom: '1.25rem', borderLeft: '2px solid var(--uele-border, #e2e8f0)', marginLeft: '0.375rem' }
+		},
+			uele.h('span', { 'aria-hidden': 'true', style: { position: 'absolute', left: '-0.4375rem', top: '0.125rem', width: '0.75rem', height: '0.75rem', borderRadius: '50%', background: 'var(--uele-accent, #2563eb)' } }),
+			uele.h('strong', null, item.title),
+			item.time ? uele.h('span', { style: { display: 'block', color: 'var(--uele-text-muted, #64748b)', fontSize: '0.8125rem' } }, item.time) : null,
+			item.description ? uele.h('p', { style: { margin: '0.25rem 0 0' } }, item.description) : null)));
+
 Object.defineProperty(exports, "paginationRange", {
 	enumerable: true,
 	get: function () { return hooks.paginationRange; }
@@ -1022,8 +1930,11 @@ Object.defineProperty(exports, "paginationRange", {
 exports.Accordion = Accordion;
 exports.AccordionItem = AccordionItem;
 exports.Alert = Alert;
+exports.AlertDialog = AlertDialog;
+exports.AppShell = AppShell;
 exports.AspectRatio = AspectRatio;
 exports.Avatar = Avatar;
+exports.AvatarGroup = AvatarGroup;
 exports.Badge = Badge;
 exports.Blockquote = Blockquote;
 exports.Breadcrumb = Breadcrumb;
@@ -1031,57 +1942,88 @@ exports.BreadcrumbItem = BreadcrumbItem;
 exports.BreadcrumbLink = BreadcrumbLink;
 exports.BreadcrumbSeparator = BreadcrumbSeparator;
 exports.Button = Button;
+exports.Calendar = Calendar;
 exports.Card = Card;
 exports.Carousel = Carousel;
 exports.Center = Center;
 exports.Checkbox = Checkbox;
 exports.Code = Code;
 exports.Collapsible = Collapsible;
+exports.ColorPicker = ColorPicker;
 exports.Combobox = Combobox;
+exports.Command = Command;
+exports.CommandPalette = CommandPalette;
+exports.ConfirmDialog = ConfirmDialog;
 exports.Container = Container;
+exports.ContextMenu = ContextMenu;
+exports.CopyButton = CopyButton;
+exports.CountdownTimer = CountdownTimer;
+exports.DataTable = DataTable;
+exports.DatePicker = DatePicker;
 exports.Dialog = Dialog;
 exports.Divider = Divider;
 exports.Drawer = Drawer;
 exports.DropdownMenu = DropdownMenu;
 exports.Dropzone = Dropzone;
+exports.Editable = Editable;
 exports.Empty = Empty;
 exports.Field = Field;
 exports.FieldError = FieldError;
 exports.FieldHint = FieldHint;
 exports.FileInput = FileInput;
+exports.FileList = FileList;
 exports.Form = Form;
+exports.FormWizard = FormWizard;
+exports.Gallery = Gallery;
 exports.Grid = Grid;
 exports.Heading = Heading;
+exports.HoverCard = HoverCard;
+exports.InfiniteScroll = InfiniteScroll;
 exports.Input = Input;
+exports.InputGroup = InputGroup;
 exports.Kbd = Kbd;
 exports.Label = Label;
+exports.Lightbox = Lightbox;
 exports.Link = Link;
 exports.List = List;
 exports.ListItem = ListItem;
+exports.Listbox = Listbox;
 exports.Menu = Menu;
 exports.MenuItem = MenuItem;
+exports.MultiSelect = MultiSelect;
+exports.Navbar = Navbar;
+exports.NavigationMenu = NavigationMenu;
 exports.NumberInput = NumberInput;
 exports.OTP = OTP;
 exports.OTPInput = OTPInput;
 exports.Option = Option;
 exports.Pagination = Pagination;
+exports.PasswordInput = PasswordInput;
 exports.PinInput = PinInput;
 exports.Popover = Popover;
+exports.Presence = Presence;
 exports.Progress = Progress;
 exports.Radio = Radio;
 exports.RadioGroup = RadioGroup;
 exports.Rating = Rating;
+exports.RelativeTime = RelativeTime;
+exports.Resizable = Resizable;
 exports.Row = Row;
 exports.ScrollArea = ScrollArea;
 exports.SearchInput = SearchInput;
+exports.SegmentedControl = SegmentedControl;
 exports.Select = Select;
 exports.Separator = Separator;
+exports.Sheet = Sheet;
 exports.Skeleton = Skeleton;
+exports.SkipLink = SkipLink;
 exports.Slider = Slider;
 exports.Spacer = Spacer;
 exports.Spinner = Spinner;
+exports.SplitPane = SplitPane;
 exports.Stack = Stack;
 exports.Stat = Stat;
+exports.StatusDot = StatusDot;
 exports.Stepper = Stepper;
 exports.Switch = Switch;
 exports.Tab = Tab;
@@ -1101,6 +2043,16 @@ exports.Text = Text;
 exports.Textarea = Textarea;
 exports.Th = Th;
 exports.Thead = Thead;
+exports.TimeAgo = TimeAgo;
+exports.Timeline = Timeline;
 exports.Toast = Toast;
 exports.Toaster = Toaster;
+exports.Toggle = Toggle;
+exports.ToggleGroup = ToggleGroup;
+exports.Toolbar = Toolbar;
 exports.Tooltip = Tooltip;
+exports.Tree = Tree;
+exports.TreeView = TreeView;
+exports.VirtualList = VirtualList;
+exports.VisuallyHidden = VisuallyHidden;
+exports.Wizard = Wizard;

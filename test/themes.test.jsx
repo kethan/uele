@@ -12,7 +12,7 @@ import { read } from 'uele/reactive';
 import {
 	accents, themes, lightTheme, darkTheme, createTheme, defineTheme, resolveTheme,
 	cssVars, themeVars, stylesheet, ThemeProvider, ThemeStyle, useTheme, cx,
-	variants, cva, defineVariants, styled
+	variants, cva, defineVariants, styled, applyTheme, prefersColorScheme
 } from 'uele/themes';
 import { Button } from 'uele/ui';
 
@@ -165,5 +165,37 @@ describe('ThemeProvider, ThemeStyle, useTheme', () => {
 		t.setTheme('dark');
 		expect(read(t.theme).name).toBe('dark');
 		expect(t.vars()['--uele-bg']).toBe(darkTheme.colors.bg);
+	});
+});
+
+describe('wave-2 theme additions', () => {
+	it('ships pink/orange/teal accents and a high-contrast preset', () => {
+		expect(accents.pink.accent).toBe('#db2777');
+		expect(accents.teal.accent).toBe('#0d9488');
+		expect(themes.highContrast.colors.text).toBe('#000000');
+		expect(themes.highContrast.colors.border).toBe('#000000');
+		expect(createTheme({ accent: 'orange' }).colors.accent).toBe(accents.orange.accent);
+	});
+
+	it('density and the spacing/type scales become CSS variables', () => {
+		const compact = cssVars(createTheme({ density: 'compact' }));
+		expect(compact['--uele-density']).toBe('compact');
+		expect(compact['--uele-control-height']).toBe('2rem');
+		expect(compact['--uele-space-4']).toBe('1rem');
+		expect(compact['--uele-font-size-sm']).toBe('0.875rem');
+		expect(cssVars(createTheme())['--uele-control-height']).toBe('2.5rem');
+	});
+
+	it('applyTheme writes variables + data attributes onto any element', () => {
+		const el = document.createElement('section');
+		const applied = applyTheme(el, 'dark');
+		expect(applied).toBe(darkTheme);
+		expect(el.style.getPropertyValue('--uele-bg')).toBe(darkTheme.colors.bg);
+		expect(el.dataset.theme).toBe('dark');
+		expect(el.dataset.appearance).toBe('dark');
+	});
+
+	it('prefersColorScheme answers light/dark', () => {
+		expect(['light', 'dark']).toContain(prefersColorScheme());
 	});
 });

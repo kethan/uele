@@ -14,15 +14,17 @@ export interface UeleTheme {
 }
 
 export declare const accents: Record<string, { accent: string; accentHover: string; accentText: string; accentSoft: string }>;
-export declare const themes: Record<'light' | 'dark' | 'midnight' | 'forest' | 'sunset' | 'ocean', UeleTheme>;
+export declare const themes: Record<'light' | 'dark' | 'midnight' | 'forest' | 'sunset' | 'ocean' | 'highContrast', UeleTheme>;
 export declare const lightTheme: UeleTheme;
 export declare const darkTheme: UeleTheme;
 export declare function createTheme(options?: {
 	name?: string; appearance?: string;
 	accent?: string | Partial<(typeof accents)['blue']>;
-	radius?: string; colors?: Record<string, string>; radii?: Record<string, string>;
+	radius?: string; density?: 'compact' | 'comfortable' | string; colors?: Record<string, string>; radii?: Record<string, string>;
 	[key: string]: unknown;
 } | string): UeleTheme;
+export declare function applyTheme(el: Element | null, theme: unknown): UeleTheme;
+export declare function prefersColorScheme(): 'dark' | 'light';
 export declare const defineTheme: typeof createTheme;
 export declare function resolveTheme(input: unknown, fallback?: UeleTheme): UeleTheme;
 export declare function cssVars(theme: unknown): Record<string, string>;

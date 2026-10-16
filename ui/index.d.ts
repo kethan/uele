@@ -101,3 +101,53 @@ export declare const Toast: Factory<AnyProps & { open?: unknown; title?: unknown
 export declare const Toaster: Factory<AnyProps & { toasts?: unknown }>;
 export declare const Stepper: Factory<AnyProps & { steps?: Array<{ label: unknown; description?: unknown }> | number; current?: unknown; onChange?: (index: number) => void }>;
 export declare const Carousel: Factory<AnyProps & { items?: unknown; renderItem?: (item: any, index: number) => unknown; index?: unknown; defaultIndex?: number; onChange?: (index: number) => void }>;
+
+export declare const Toggle: Factory<AnyProps & { pressed?: unknown; value?: unknown; selected?: unknown; onPressedChange?: (value: boolean) => void }>;
+export declare const ToggleGroup: Factory<ModelProps & { type?: 'single' | 'multiple'; options?: Array<unknown>; defaultValue?: unknown }>;
+export declare const SegmentedControl: Factory<ModelProps & { options?: Array<unknown>; defaultValue?: unknown; label?: string }>;
+export declare const Sheet: typeof Drawer;
+export declare const AlertDialog: Factory<ModelProps & { open?: unknown; defaultOpen?: boolean; onOpenChange?: (open: boolean) => void; confirmLabel?: unknown; cancelLabel?: unknown; danger?: boolean; onConfirm?: (event: Event) => void; onCancel?: (event: Event) => void; title?: unknown; description?: unknown; trigger?: unknown }>;
+export declare const ConfirmDialog: typeof AlertDialog;
+
+export declare const VisuallyHidden: Factory<AnyProps>;
+export declare const SkipLink: Factory<AnyProps & { href?: string }>;
+export declare const StatusDot: Factory<AnyProps & { status?: 'online' | 'away' | 'busy' | 'offline' | string; label?: string }>;
+export declare const Presence: typeof StatusDot;
+export declare const AvatarGroup: Factory<AnyProps & { avatars?: Array<unknown>; max?: number }>;
+export declare const InputGroup: Factory<AnyProps & { prefix?: unknown; suffix?: unknown }>;
+export declare const PasswordInput: Factory<ModelProps & { showStrength?: boolean }>;
+export declare const CopyButton: Factory<AnyProps & { text: unknown; label?: unknown; copiedLabel?: unknown }>;
+export declare const ColorPicker: Factory<ModelProps & { swatches?: string[] }>;
+export declare const Listbox: Factory<ModelProps & { options?: Array<unknown>; label?: string }>;
+export declare const MultiSelect: Factory<ModelProps & { options?: Array<unknown>; placeholder?: string; label?: string }>;
+
+export declare const Calendar: Factory<AnyProps & { model?: unknown; value?: unknown; defaultValue?: unknown; min?: unknown; max?: unknown; weekStartsOn?: number; onChange?: (date: Date, iso: string) => void }>;
+export declare const DatePicker: Factory<ModelProps & { placeholder?: string; label?: string }>;
+export declare const TimeAgo: Factory<AnyProps & { date?: unknown; value?: unknown; interval?: number }>;
+export declare const RelativeTime: typeof TimeAgo;
+export declare const CountdownTimer: Factory<AnyProps & { to?: unknown; seconds?: number; onComplete?: () => void }>;
+
+export declare const DataTable: Factory<AnyProps & { columns?: Array<{ key: string; label: unknown; sortable?: boolean; render?: (value: any, row: any, index: number) => unknown }>; data?: unknown; rows?: unknown; pageSize?: number; empty?: unknown; onRowClick?: (row: any, index: number, event: Event) => void }>;
+export declare const Tree: Factory<ModelProps & { items?: Array<{ label: unknown; value?: unknown; children?: Array<any> }>; defaultExpanded?: Array<unknown>; onSelect?: (value: any) => void }>;
+export declare const TreeView: typeof Tree;
+export declare const VirtualList: Factory<AnyProps & { items?: unknown; itemHeight?: number; height?: number | string; overscan?: number; renderItem?: (item: any, index: number) => unknown }>;
+export declare const InfiniteScroll: Factory<AnyProps & { onLoadMore?: () => void; loading?: unknown; hasMore?: unknown }>;
+export declare const CommandPalette: Factory<AnyProps & { open?: unknown; defaultOpen?: boolean; trigger?: unknown; items?: Array<{ label: unknown; hint?: unknown; keywords?: string; onSelect?: (item: any) => void }>; placeholder?: string; onSelect?: (item: any) => void; onOpenChange?: (open: boolean) => void }>;
+export declare const Command: typeof CommandPalette;
+
+export declare const ContextMenu: Factory<AnyProps & { items?: Array<{ label: unknown; onSelect?: (item: any) => void; disabled?: boolean }>; onSelect?: (item: any) => void }>;
+export declare const NavigationMenu: Factory<AnyProps & { items?: Array<{ label: unknown; href?: string; content?: unknown; links?: Array<{ label: unknown; href?: string }> }> }>;
+export declare const HoverCard: Factory<AnyProps & { trigger?: unknown; content?: unknown; delay?: number }>;
+export declare const SplitPane: Factory<ModelProps & { first?: unknown; second?: unknown; direction?: 'horizontal' | 'vertical'; defaultRatio?: number; min?: number; max?: number }>;
+export declare const Resizable: typeof SplitPane;
+export declare const Editable: Factory<ModelProps & { placeholder?: string; label?: string }>;
+export declare const Lightbox: Factory<AnyProps & { images?: Array<string | { src: string; alt?: string }> }>;
+export declare const Gallery: typeof Lightbox;
+export declare const FileList: Factory<AnyProps & { files?: Array<{ name: string; size?: number; progress?: number; status?: string; error?: string }>; onRemove?: (file: any, index: number) => void }>;
+export declare const Wizard: Factory<AnyProps & { steps?: Array<{ label: unknown; content?: unknown }>; defaultStep?: number; onChange?: (step: number) => void; onFinish?: (event: Event) => void; finishLabel?: unknown }>;
+export declare const FormWizard: typeof Wizard;
+
+export declare const Toolbar: Factory<AnyProps & { label?: string }>;
+export declare const Navbar: Factory<AnyProps & { brand?: unknown; links?: Array<{ label: unknown; href?: string; current?: boolean }>; actions?: unknown }>;
+export declare const AppShell: Factory<AnyProps & { header?: unknown; sidebar?: unknown; footer?: unknown; main?: unknown }>;
+export declare const Timeline: Factory<AnyProps & { items?: Array<{ title: unknown; time?: unknown; description?: unknown }> }>;
