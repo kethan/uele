@@ -93,20 +93,82 @@ No bundler? One script tag is enough — `unpkg` serves the IIFE build, which pu
 </script>
 ```
 
+Or as real ES modules — import the URL and it runs as is, no import map and no build step (this is the whole
+app; paste it into JSFiddle or CodePen):
+
+```html
+<script type="module">
+  import { h, useLive } from "https://esm.sh/uele";
+  let [count, setCount] = useLive(0);
+
+  document.body.append(
+    h("main", [
+      h("button", { onclick: () => setCount((c) => c - 1) }, "-"),
+      count,
+      h("button", { onclick: () => setCount((c) => c + 1) }, "+"),
+    ])
+  );
+</script>
+```
+
+A full URL works for every subpath — `https://esm.sh/uele/lite`, `…/uele/ui`, `…/uele/adapters/preact` — and
+the CDN rewrites the plain `'uele'` imports inside them, so they all land on **one** copy of the runtime:
+`api`, `props` and `h` are shared, exactly as under a bundler. An import map is only sugar — it buys back the
+bare `uele` specifiers:
+
+```html
+<script type="importmap">
+  {
+    "imports": {
+      "uele": "https://esm.sh/uele@1",
+      "uele/": "https://esm.sh/uele@1/"
+    }
+  }
+</script>
+```
+
+Two rules once it is more than a fiddle: **pin the major** (`uele@1`, not bare `uele`) so every specifier
+resolves to the same version, and leave the query string alone — `?bundle` or `?external=uele` inlines a
+*second* copy of the runtime, and then the `api` you configure is not the `api` that `uele/ui` renders through.
+Presets need nothing installed locally either: `import { usePreactSignals } from
+"https://esm.sh/uele/adapters/preact"` pulls its library from the CDN.
+
+JSX is the one thing a CDN cannot do for you — a browser does not compile `<div />`. Without a build step use
+`h` (below), or [`htm`](https://github.com/developit/htm) for tagged templates
+(`import htm from "https://esm.sh/htm"; const html = htm.bind(h);` — see `#### 2. html`). With a bundler, the
+import map is unnecessary: it resolves `uele` from `node_modules`.
+
 #### 1. h
 
-```js
-import { h, useLive } from "uele";
+```html
+<script type="importmap">
+	{
+		"imports": {
+			"uele": "https://esm.sh/uele@1",
+			"uele/": "https://esm.sh/uele@1/"
+		}
+	}
+</script>
+<script type="module">
+	import { h, useLive } from "uele";
 
-let [count, setCount] = useLive(0);
+	let [count, setCount] = useLive(0);
+	document.body.append(
+		h("button", { onclick: () => setCount((c) => c + 1) }, count),
+	);
+</script>
+```
+or 
 
-document.body.append(
-  h("main", [
-    h("button", { onclick: () => setCount((c) => c - 1) }, "-"),
-    count,
-    h("button", { onclick: () => setCount((c) => c + 1) }, "+"),
-  ])
-);
+```html
+<script type="module">
+  import { h, useLive } from "https://esm.sh/uele";
+  import { Button, Row } from "https://esm.sh/uele/ui";
+
+  let [count, setCount] = useLive(0);
+  document.body.append(h("button", { onclick: () => setCount((c) => c + 1) }, count));
+
+</script>
 ```
 
 #### 2. html
@@ -118,15 +180,13 @@ const html = htm.bind(h);
 
 let [count, setCount] = useLive(0);
 
-document.body.append(
-  html`
-    <main>
-      <button onClick=${() => setCount((c) => c - 1)}>-</button>
-      ${count}
-      <button onClick=${() => setCount((c) => c + 1)}>+</button>
-    </main>
-  `
-);
+document.body.append(html`
+	<main>
+		<button onClick=${() => setCount((c) => c - 1)}>-</button>
+		${count}
+		<button onClick=${() => setCount((c) => c + 1)}>+</button>
+	</main>
+`);
 ```
 
 #### 3. f
@@ -138,11 +198,11 @@ const { button, main } = f(h);
 let [count, setCount] = useLive(0);
 
 document.body.append(
-  main([
-    button({ onclick: () => setCount((c) => c - 1) }, "-"),
-    count,
-    button({ onclick: () => setCount((c) => c + 1) }, "+"),
-  ])
+	main([
+		button({ onclick: () => setCount((c) => c - 1) }, "-"),
+		count,
+		button({ onclick: () => setCount((c) => c + 1) }, "+"),
+	]),
 );
 ```
 
@@ -161,7 +221,7 @@ so no `h` import is needed and components are resolved from the same module inst
 ```js
 // or esbuild/vite - vite.config.js
 export default {
-  esbuild: { jsx: "automatic", jsxImportSource: "uele" }
+	esbuild: { jsx: "automatic", jsxImportSource: "uele" },
 };
 ```
 
@@ -171,11 +231,11 @@ import { useLive } from "uele";
 let [count, setCount] = useLive(0);
 
 document.body.append(
-  <main>
-    <button onClick={() => setCount((c) => c - 1)}>-</button>
-    {count}
-    <button onClick={() => setCount((c) => c + 1)}>+</button>
-  </main>
+	<main>
+		<button onClick={() => setCount((c) => c - 1)}>-</button>
+		{count}
+		<button onClick={() => setCount((c) => c + 1)}>+</button>
+	</main>,
 );
 ```
 
@@ -186,9 +246,10 @@ the runtime and the library never duplicates the implementation.
 
 ```jsx
 let frag = (
-  <>
-    {asyncIterable} or {promise} {/* or any html node, component, signal or library */}
-  </>
+	<>
+		{asyncIterable} or {promise}{" "}
+		{/* or any html node, component, signal or library */}
+	</>
 );
 ```
 
@@ -213,27 +274,31 @@ import { map } from "uele";
 let items = o([1, 2, 3]);
 
 const Items = () => {
-  return map(
-    items,
-    (item, i) => (
-      <div>
-        {item} {i}
-      </div>
-    ),
-    <div>No items</div>,
-    (item, i) => item.id // optional key, defaults to the item itself
-  );
+	return map(
+		items,
+		(item, i) => (
+			<div>
+				{item} {i}
+			</div>
+		),
+		<div>No items</div>,
+		(item, i) => item.id, // optional key, defaults to the item itself
+	);
 };
 ```
 
-**Node reuse**: a node is reused while its key is present, and the callback is *not* re-run for reused keys.
+**Node reuse**: a node is reused while its key is present, and the callback is _not_ re-run for reused keys.
 Items are keyed by identity (`key = (v, i) => v`) unless a `key` function is given, so a pure reorder only moves
 existing nodes - the rendered content (including `i`) stays as it was for that node. Give a key (or make the
 content reactive) when the callback output depends on the index. `For` uses the same engine:
 
 ```jsx
 <For each={items} key={(item) => item.id} fallback={<div>No items</div>}>
-  {(item, i) => <div>{item} {i}</div>}
+	{(item, i) => (
+		<div>
+			{item} {i}
+		</div>
+	)}
 </For>
 ```
 
@@ -245,18 +310,7 @@ node).
 ### Example
 
 ```jsx
-import {
-  h,
-  lazy,
-  api,
-  If,
-  For,
-  map,
-  get,
-  r,
-  useLive,
-  props,
-} from "uele";
+import { h, lazy, api, If, For, map, get, r, useLive, props } from "uele";
 
 import { o, effect, memo } from "ulive/fn"; // Or any other reactive library
 
@@ -271,15 +325,15 @@ const LazyComp = lazy(() => import("./lazy"));
 
 // Async Component
 const TodoItem = async ({ id }) => {
-  let api = await fetch(`https://jsonplaceholder.typicode.com/todos/${id}`);
-  let todo = await api.json();
+	let api = await fetch(`https://jsonplaceholder.typicode.com/todos/${id}`);
+	let todo = await api.json();
 
-  return (
-    <li>
-      <span>{todo.title}</span>
-      <input type="checkbox" checked={todo.completed} />
-    </li>
-  );
+	return (
+		<li>
+			<span>{todo.title}</span>
+			<input type="checkbox" checked={todo.completed} />
+		</li>
+	);
 };
 
 const count = o(0);
@@ -287,59 +341,59 @@ const inc = () => count(count() + 1);
 const dec = () => count(count() - 1);
 
 const Counter = () => {
-  let square = memo(() => count() * count());
-  let cube = memo(() => square() * count());
-  effect(() => console.log(count(), square(), cube()));
-  return (
-    <div>
-      <div>
-        Count: {count} {square} {cube}
-      </div>
-      <button onclick={inc}>+</button>
-      <button onclick={dec}>-</button>
-    </div>
-  );
+	let square = memo(() => count() * count());
+	let cube = memo(() => square() * count());
+	effect(() => console.log(count(), square(), cube()));
+	return (
+		<div>
+			<div>
+				Count: {count} {square} {cube}
+			</div>
+			<button onclick={inc}>+</button>
+			<button onclick={dec}>-</button>
+		</div>
+	);
 };
 
 // AsyncIterator
 
 const asyncIterable = {
-  [Symbol.asyncIterator]() {
-    return {
-      i: 0,
-      next() {
-        if (this.i < 200)
-          return new Promise((ok) =>
-            setTimeout(
-              () =>
-                ok({
-                  value: <div>{this.i++}</div>,
-                  done: false,
-                }),
-              10
-            )
-          );
-        return new Promise((ok) => ok({ done: true }));
-      },
-    };
-  },
+	[Symbol.asyncIterator]() {
+		return {
+			i: 0,
+			next() {
+				if (this.i < 200)
+					return new Promise((ok) =>
+						setTimeout(
+							() =>
+								ok({
+									value: <div>{this.i++}</div>,
+									done: false,
+								}),
+							10,
+						),
+					);
+				return new Promise((ok) => ok({ done: true }));
+			},
+		};
+	},
 };
 
 let items = o([1, 2, 3]);
 
 const App = () => (
-  <main>
-    <Counter />
-    <LazyComp />
-    <TodoItem />
-    {asyncIterable}
-    {map(items, (item, i) => (
-      <div>
-        {item} {i}
-      </div>
-    ))}
-    <svg>...</svg>
-  </main>
+	<main>
+		<Counter />
+		<LazyComp />
+		<TodoItem />
+		{asyncIterable}
+		{map(items, (item, i) => (
+			<div>
+				{item} {i}
+			</div>
+		))}
+		<svg>...</svg>
+	</main>
 );
 
 document.body.append(<App />);
@@ -365,19 +419,23 @@ The `r` function handles reactive subscriptions, providing a callback when the v
 import { r } from "uele";
 
 r(someObservable, (value, is) => {
-  console.log("Value changed to", value, is);
+	console.log("Value changed to", value, is);
 });
 ```
 
 #### `sub`
 
 `sub` is the subscription itself — no unwrapping, no "run once for plain values": it returns the
-unsubscribe function, so *you* decide when it ends. Errors are the third argument.
+unsubscribe function, so _you_ decide when it ends. Errors are the third argument.
 
 ```js
 import { sub } from "uele";
 
-const off = sub(source, (value) => console.log(value), (err) => console.error(err));
+const off = sub(
+	source,
+	(value) => console.log(value),
+	(err) => console.error(err),
+);
 
 // later - the subscription is released, and the callback with it
 off();
@@ -394,9 +452,9 @@ import { is } from "uele";
 
 const node = document.createElement("div");
 
-is(cell);    // true  -> uele subscribes and re-renders it
-is(node);    // false -> appended as is
-is(42);      // false
+is(cell); // true  -> uele subscribes and re-renders it
+is(node); // false -> appended as is
+is(42); // false
 is(() => 1); // true  -> a function child is an effect (see "How it works")
 ```
 
@@ -411,11 +469,11 @@ const { button, main } = f(h);
 const [count, setCount] = useLive(0);
 
 document.body.append(
-  main([
-    button({ onclick: () => setCount((c) => c - 1) }, "-"),
-    count,
-    button({ onclick: () => setCount((c) => c + 1) }, "+"),
-  ])
+	main([
+		button({ onclick: () => setCount((c) => c - 1) }, "-"),
+		count,
+		button({ onclick: () => setCount((c) => c + 1) }, "+"),
+	]),
 );
 ```
 
@@ -430,7 +488,7 @@ let [live, setLive] = useLive("....");
 
 let c = 0;
 setInterval(() => {
-  setLive(c++);
+	setLive(c++);
 }, 1000);
 
 const App = () => <main>{live}</main>;
@@ -446,7 +504,11 @@ region, and returns a plain `Node[]`. Reach for it when you mount content yourse
 import { add } from "uele";
 
 // everything below is optional: arrays, null, and pending promises are all fine
-const nodes = add("Hello", [1, 2, 3].map((n) => <li>{n}</li>), fetchCount());
+const nodes = add(
+	"Hello",
+	[1, 2, 3].map((n) => <li>{n}</li>),
+	fetchCount(),
+);
 document.body.append(...nodes);
 ```
 
@@ -504,40 +566,44 @@ props.set("tooltip", (node, value) => {
 
 props.set("unmount", (node, cleanupFn) => {
 	// Check if the node has a parent node
-const setupObserver = () => {
-	if (node.parentNode) {
-		// Create a MutationObserver to watch for DOM changes (removals)
-		const observer = new MutationObserver((mutationsList) => {
-			for (let mutation of mutationsList) {
-				mutation.removedNodes.forEach((removedNode) => {
-					if (removedNode === node) {
-						// Node has been removed, trigger the cleanup function
-						cleanupFn();
-						observer.disconnect(); // Stop observing
-					}
-				});
-			}
-		});
+	const setupObserver = () => {
+		if (node.parentNode) {
+			// Create a MutationObserver to watch for DOM changes (removals)
+			const observer = new MutationObserver((mutationsList) => {
+				for (let mutation of mutationsList) {
+					mutation.removedNodes.forEach((removedNode) => {
+						if (removedNode === node) {
+							// Node has been removed, trigger the cleanup function
+							cleanupFn();
+							observer.disconnect(); // Stop observing
+						}
+					});
+				}
+			});
 
-		// Start observing the parent node for childList changes (node removals)
-		observer.observe(node.parentNode, { childList: true });
-	} else {
-		// If node has no parentNode, retry after DOM insertion
-		requestAnimationFrame(setupObserver); // Try again on the next frame
-	}
-};
+			// Start observing the parent node for childList changes (node removals)
+			observer.observe(node.parentNode, { childList: true });
+		} else {
+			// If node has no parentNode, retry after DOM insertion
+			requestAnimationFrame(setupObserver); // Try again on the next frame
+		}
+	};
 
 	setupObserver(); // Initialize the observer
 });
 <>
-	<input autofocus/>
+	<input autofocus />
 	<input validate={(val) => (val.length < 3 ? "Too short" : "")} />
 	<button tooltip={<div>click me!</div>}>Hover me</button>
-	<div ref={(v) => { setTimeout(() => v.remove(), 2000)}}
-		 unmount={() => console.log("unmounted!")}>
+	<div
+		ref={(v) => {
+			setTimeout(() => v.remove(), 2000);
+		}}
+		unmount={() => console.log("unmounted!")}
+	>
 		Remove me
 	</div>
-</>
+</>;
 ```
 
 ### Control Flow Components
@@ -547,17 +613,17 @@ Control flow components accept boolean or reactive values for conditions.
 #### `If` and `Show`
 
 ```jsx
-import { If, Show } from 'uele';
+import { If, Show } from "uele";
 
 <>
-  <If when={cond} fallback={<div>False</div>}>
-    <div>True</div>
-  </If>
+	<If when={cond} fallback={<div>False</div>}>
+		<div>True</div>
+	</If>
 
-  <Show when={cond} fallback={<div>False</div>}>
-    <div>True</div>
-  </Show>
-</>
+	<Show when={cond} fallback={<div>False</div>}>
+		<div>True</div>
+	</Show>
+</>;
 ```
 
 #### `For`
@@ -566,7 +632,7 @@ import { If, Show } from 'uele';
 import { For } from "uele";
 
 <For each={[1, 2, 3]} fallback={<div>No Items</div>}>
-  {(val) => <div>{val}</div>}
+	{(val) => <div>{val}</div>}
 </For>;
 ```
 
@@ -576,12 +642,12 @@ import { For } from "uele";
 import { Switch, Match } from "uele";
 
 <Switch fallback={<div>Default case</div>}>
-  <Match when={condition1}>
-    <div>Case 1</div>
-  </Match>
-  <Match when={condition2}>
-    <div>Case 2</div>
-  </Match>
+	<Match when={condition1}>
+		<div>Case 1</div>
+	</Match>
+	<Match when={condition2}>
+		<div>Case 2</div>
+	</Match>
 </Switch>;
 ```
 
@@ -607,44 +673,66 @@ Copy, paste, run — the whole app in JSX (this is the exact code `test/readme.t
 import { For } from "uele";
 import { usePreactSignals } from "uele/adapters/preact";
 import { signal } from "@preact/signals-core";
-import { Form, Row, Card, Stack, Button, Input, Checkbox, Label } from "uele/ui";
+import {
+	Form,
+	Row,
+	Card,
+	Stack,
+	Button,
+	Input,
+	Checkbox,
+	Label,
+} from "uele/ui";
 
 usePreactSignals(); // one call, whole api configured
 
 const TodoApp = () => {
-  const text = signal("");
-  const todos = signal([]);
-  let seq = 0;
-  const add = () => {
-    const title = text.value.trim();
-    if (title) todos.value = [...todos.value, { id: ++seq, title, done: false }];
-    text.value = "";
-  };
-  const toggle = (todo) =>
-    (todos.value = todos.value.map((t) => (t.id === todo.id ? { ...t, done: !t.done } : t)));
+	const text = signal("");
+	const todos = signal([]);
+	let seq = 0;
+	const add = () => {
+		const title = text.value.trim();
+		if (title)
+			todos.value = [...todos.value, { id: ++seq, title, done: false }];
+		text.value = "";
+	};
+	const toggle = (todo) =>
+		(todos.value = todos.value.map((t) =>
+			t.id === todo.id ? { ...t, done: !t.done } : t,
+		));
 
-  return (
-    <Card>
-      <h1>Todos</h1>
-      <Form onSubmit={add}>
-        <Row>
-          <Input model={text} placeholder="What needs doing?" />
-          <Button type="submit">Add</Button>
-        </Row>
-      </Form>
-      <Stack>
-        <For each={todos} fallback={<Label>Nothing here</Label>}>
-          {(todo) => (
-            <Row>
-              <Checkbox checked={todo.done} onChange={() => toggle(todo)} />
-              <Label style={todo.done ? { textDecoration: "line-through" } : null}>{todo.title}</Label>
-              <Button onclick={() => (todos.value = todos.value.filter((t) => t.id !== todo.id))}>×</Button>
-            </Row>
-          )}
-        </For>
-      </Stack>
-    </Card>
-  );
+	return (
+		<Card>
+			<h1>Todos</h1>
+			<Form onSubmit={add}>
+				<Row>
+					<Input model={text} placeholder="What needs doing?" />
+					<Button type="submit">Add</Button>
+				</Row>
+			</Form>
+			<Stack>
+				<For each={todos} fallback={<Label>Nothing here</Label>}>
+					{(todo) => (
+						<Row>
+							<Checkbox checked={todo.done} onChange={() => toggle(todo)} />
+							<Label
+								style={todo.done ? { textDecoration: "line-through" } : null}
+							>
+								{todo.title}
+							</Label>
+							<Button
+								onclick={() =>
+									(todos.value = todos.value.filter((t) => t.id !== todo.id))
+								}
+							>
+								×
+							</Button>
+						</Row>
+					)}
+				</For>
+			</Stack>
+		</Card>
+	);
 };
 
 document.body.append(TodoApp());
@@ -661,17 +749,31 @@ independent instances.
 pass a signal anywhere a value is expected:
 
 ```jsx
-import { Form, Field, Button, Input, Textarea, Checkbox, Select, Card, Stack, Row, Label } from "uele/ui";
+import {
+	Form,
+	Field,
+	Button,
+	Input,
+	Textarea,
+	Checkbox,
+	Select,
+	Card,
+	Stack,
+	Row,
+	Label,
+} from "uele/ui";
 
 <>
-  <Button onclick={save}>Save</Button>                  {/* defaults to type="button" */}
-  <Input model={cell} />                                {/* two-way bound (a value cell works too) */}
-  <Checkbox model={done} />                             {/* checked <-> boolean */}
-  <Select model={choice} options={["a", { value: "b", label: "B" }]} />
-  <Field label="Name"><Input model={name} /></Field>
-  <Card>…</Card> <Stack>…</Stack> <Row>…</Row>           {/* minimal layout defaults */}
-  <Form onSubmit={save}>…</Form>                        {/* preventDefault, then onSubmit */}
-</>
+	<Button onclick={save}>Save</Button> {/* defaults to type="button" */}
+	<Input model={cell} /> {/* two-way bound (a value cell works too) */}
+	<Checkbox model={done} /> {/* checked <-> boolean */}
+	<Select model={choice} options={["a", { value: "b", label: "B" }]} />
+	<Field label="Name">
+		<Input model={name} />
+	</Field>
+	<Card>…</Card> <Stack>…</Stack> <Row>…</Row> {/* minimal layout defaults */}
+	<Form onSubmit={save}>…</Form> {/* preventDefault, then onSubmit */}
+</>;
 ```
 
 They are plain functions, so the call form (`Card({ children: "…" })`) works too — JSX is just nicer.
@@ -705,13 +807,23 @@ preact, vue, usignal, alien-signals, s-js, mobx and solid — and, for the parts
 on rxjs, nanostores and `@tanstack/store`:
 
 ```jsx
-import { signal, computed, read, write, effect, batch, untracked, canEffect, canCompute } from "uele/reactive";
+import {
+	signal,
+	computed,
+	read,
+	write,
+	effect,
+	batch,
+	untracked,
+	canEffect,
+	canCompute,
+} from "uele/reactive";
 
 // written once, no knowledge of the library underneath
 const useCounter = (start = 0) => {
-  const count = signal(start);
-  const doubled = canCompute() ? computed(() => read(count) * 2) : null;
-  return { count, doubled, inc: () => write(count, read(count) + 1) };
+	const count = signal(start);
+	const doubled = canCompute() ? computed(() => read(count) * 2) : null;
+	return { count, doubled, inc: () => write(count, read(count) + 1) };
 };
 
 // and it renders like any other cell
@@ -730,17 +842,24 @@ subscribe-only store has no effect runner — ask instead of guessing). `uele/ui
 import { Suspense, Await, ErrorBoundary, Portal, Title } from "uele/flow";
 
 <>
-  <Title>My app</Title>{/* document.title: a string, a cell or a thunk */}
-  <ErrorBoundary fallback={(e) => <p>Failed: {e.message}</p>}>{risky()}</ErrorBoundary>
-  <Suspense fallback={<Spinner />}>{lazyView()}</Suspense>
-  <Await for={fetchUser(id)} fallback={<Spinner />}>{(user) => <b>{user.name}</b>}</Await>
-  <Portal mount={document.body}><Toast /></Portal>
-</>
+	<Title>My app</Title>
+	{/* document.title: a string, a cell or a thunk */}
+	<ErrorBoundary fallback={(e) => <p>Failed: {e.message}</p>}>
+		{risky()}
+	</ErrorBoundary>
+	<Suspense fallback={<Spinner />}>{lazyView()}</Suspense>
+	<Await for={fetchUser(id)} fallback={<Spinner />}>
+		{(user) => <b>{user.name}</b>}
+	</Await>
+	<Portal mount={document.body}>
+		<Toast />
+	</Portal>
+</>;
 ```
 
 `Await` takes a promise, a thunk or a cell (a cell re-resolves whenever it changes, and a late response
 never overwrites a newer one). `Suspense` shows its fallback until the async children resolve.
-`ErrorBoundary` catches a synchronous throw *and* a rejected promise, keeps rendering the fallback and
+`ErrorBoundary` catches a synchronous throw _and_ a rejected promise, keeps rendering the fallback and
 calls `onError`. `Portal` moves its children into another container and leaves a comment marker where it
 was. Every one of them is signal-agnostic: the reactive parts are function children, so uele re-runs and
 disposes them — and they work on all eleven presets, not just the ones with an effect runner.
@@ -763,17 +882,17 @@ app.get("*", () => <h1>404</h1>);
 
 // one line: the live view, click interception, and a navigate() function
 const App = () => {
-  const [view, linkProps, navigate] = useRouter(app);
-  return (
-    <main {...linkProps()}>
-      <nav>
-        <Link to="/">Home</Link>
-        <Link to="/user/42">A user</Link>
-      </nav>
-      {view}
-      <button onclick={() => navigate("/user/7")}>Go</button>
-    </main>
-  );
+	const [view, linkProps, navigate] = useRouter(app);
+	return (
+		<main {...linkProps()}>
+			<nav>
+				<Link to="/">Home</Link>
+				<Link to="/user/42">A user</Link>
+			</nav>
+			{view}
+			<button onclick={() => navigate("/user/7")}>Go</button>
+		</main>
+	);
 };
 
 document.body.append(<Router app={app} />);
@@ -819,15 +938,17 @@ import { r, props } from "uele";
 
 // a plugin is a function: install, then return the undo
 export const tooltip = () => {
-  // custom props get the RAW value - wrap it in r() and any cell works
-  props.set("tooltip", (node, value) => r(value, (text) => (node.title = text == null ? "" : text)));
-  return () => props.delete("tooltip");
+	// custom props get the RAW value - wrap it in r() and any cell works
+	props.set("tooltip", (node, value) =>
+		r(value, (text) => (node.title = text == null ? "" : text)),
+	);
+	return () => props.delete("tooltip");
 };
 
 // plugins compose: a kit is a plugin that installs plugins
 export const useKit = () => {
-  const undo = [tooltip(), autofocus()];
-  return () => undo.forEach((off) => off());
+	const undo = [tooltip(), autofocus()];
+	return () => undo.forEach((off) => off());
 };
 ```
 
@@ -848,21 +969,21 @@ import { api } from "uele";
 import { scoped, wire } from "uele/adapters/util"; // the helpers every shipped preset uses
 
 export const useMySignals = (target = api) => {
-  const s = scoped(myEffect); // wraps the library's effect runner for uele
-  return wire(target, {
-    // the four hooks uele itself needs
-    is: (v) => v instanceof Cell, //   "is this one of our cells?"
-    get: (v) => v.peek(), //           read it (and subscribe, from inside an effect)
-    effect: s.effect, //               run fn now, re-run when the cells it read change
-    cleanup: s.cleanup, //             register a teardown for the current run
-    // the authoring hooks - uele/reactive builds on these, so uele/ui, uele/flow and
-    // uele/router keep working on your preset too
-    signal: (v) => new Cell(v),
-    derived: (fn) => myComputed(fn),
-    set: (cell, v) => cell.set(v),
-    batch: (fn) => myBatch(fn),
-    untracked: (fn) => myUntracked(fn)
-  });
+	const s = scoped(myEffect); // wraps the library's effect runner for uele
+	return wire(target, {
+		// the four hooks uele itself needs
+		is: (v) => v instanceof Cell, //   "is this one of our cells?"
+		get: (v) => v.peek(), //           read it (and subscribe, from inside an effect)
+		effect: s.effect, //               run fn now, re-run when the cells it read change
+		cleanup: s.cleanup, //             register a teardown for the current run
+		// the authoring hooks - uele/reactive builds on these, so uele/ui, uele/flow and
+		// uele/router keep working on your preset too
+		signal: (v) => new Cell(v),
+		derived: (fn) => myComputed(fn),
+		set: (cell, v) => cell.set(v),
+		batch: (fn) => myBatch(fn),
+		untracked: (fn) => myUntracked(fn),
+	});
 };
 ```
 
@@ -873,7 +994,7 @@ useMySignals(); // configure the main instance (the default target)
 useMySignals(liteApi); // or the lite one
 ```
 
-Call it **once, before you render**: `api` is one shared object. `wire` assigns *every* hook, clearing the ones
+Call it **once, before you render**: `api` is one shared object. `wire` assigns _every_ hook, clearing the ones
 your library has no answer for, so switching presets can never leave a stale hook behind. Only `is`, `get`,
 `effect` and `cleanup` are required — skip `signal`/`derived`/`set`/`batch`/`untracked` for a subscribe-only
 library and `uele/reactive` will report the missing features through `canEffect()`/`canCompute()` instead of
@@ -885,20 +1006,22 @@ failing.
 import { api } from "uele";
 
 export const useMyDiff = (target = api) => {
-  target.udom = undefined; // unset = the swapdom signature below
-  target.diff = (parent, oldNodes, newNodes, end) => {
-    const keep = new Set(newNodes);
-    oldNodes.forEach((node) => {
-      if (!keep.has(node) && node.parentNode === parent) parent.removeChild(node);
-    });
-    let anchor = end || null; // walk backwards: each node before the one placed last
-    for (let i = newNodes.length - 1; i >= 0; i--) {
-      const node = newNodes[i];
-      if (node.parentNode !== parent || node.nextSibling !== anchor) parent.insertBefore(node, anchor);
-      anchor = node;
-    }
-  };
-  return target;
+	target.udom = undefined; // unset = the swapdom signature below
+	target.diff = (parent, oldNodes, newNodes, end) => {
+		const keep = new Set(newNodes);
+		oldNodes.forEach((node) => {
+			if (!keep.has(node) && node.parentNode === parent)
+				parent.removeChild(node);
+		});
+		let anchor = end || null; // walk backwards: each node before the one placed last
+		for (let i = newNodes.length - 1; i >= 0; i--) {
+			const node = newNodes[i];
+			if (node.parentNode !== parent || node.nextSibling !== anchor)
+				parent.insertBefore(node, anchor);
+			anchor = node;
+		}
+	};
+	return target;
 };
 ```
 
@@ -933,22 +1056,22 @@ preset has to pass.
 Install the library you want, call one function. Every preset is driven by the same conformance suite.
 "install size" is the npm unpacked size of the library (all published files), not its bundle cost.
 
-| preset | library | install | preset | read | write | reactive thunks | subscribe path | notes |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `uele/adapters/ulive` | `ulive` | 15 kB | 266 B | `cell.value` | `cell.value = v` | yes | no | smallest default; the baseline uele is tested against |
-| `uele/adapters/preact` | `@preact/signals-core` | 254 kB | 360 B | `cell.value` | `cell.value = v` | yes | yes | signals also expose `.subscribe()`; great with Preact |
-| `uele/adapters/vue` | `@vue/reactivity` | 342 kB | 323 B | `cell.value` | `cell.value = v` | yes | no | `ref()`/`computed()`; the effect needs `stop(runner)` |
-| `uele/adapters/usignal` | `usignal` | 46 kB | 333 B | `cell.value` | `cell.value = v` | yes | no | tiny; attributes a read to every enclosing effect; usignal batches, so the first paint lands on the next tick |
-| `uele/adapters/alien-signals` | `alien-signals` | 46 kB | 288 B | `cell()` | `cell(v)` | yes | no | plain-function signals, very fast |
-| `uele/adapters/sjs` | `s-js` | 221 kB | 379 B | `cell()` | `cell(v)` | yes | no | classic S.js; `S.root` owns the disposer |
-| `uele/adapters/mobx` | `mobx` | 4723 kB | 365 B | `cell.get()` | `cell.set(v)` | yes | no | boxed observables; configure mobx yourself |
-| `uele/adapters/rxjs` | `rxjs` | 4392 kB | 431 B | `cell.value` | `cell.next(v)` | no | yes | subscribe-only: no reactive thunks; `BehaviorSubject` reads sync |
-| `uele/adapters/nanostores` | `nanostores` | 54 kB | 348 B | `cell.get()` | `cell.set(v)` | no | yes | subscribe-only atoms; tiny and framework-neutral |
-| `uele/adapters/tanstack` | `@tanstack/store` | 121 kB | 437 B | `cell.state` | `cell.setState(v)` | no | yes | `Store.subscribe()` is not synchronous, so a bare `Store` paints on its first change - `new Cell(v)` (or `api.signal(v)`) from the preset paints immediately |
-| `uele/adapters/solid` | `solid-js` | 1051 kB | 471 B | `cell()` | `cell.write(v)` | yes | no | client build (`solid-js/dist/solid.js`) |
+| preset                        | library                | install | preset | read         | write              | reactive thunks | subscribe path | notes                                                                                                                                                        |
+| ----------------------------- | ---------------------- | ------- | ------ | ------------ | ------------------ | --------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `uele/adapters/ulive`         | `ulive`                | 15 kB   | 266 B  | `cell.value` | `cell.value = v`   | yes             | no             | smallest default; the baseline uele is tested against                                                                                                        |
+| `uele/adapters/preact`        | `@preact/signals-core` | 254 kB  | 360 B  | `cell.value` | `cell.value = v`   | yes             | yes            | signals also expose `.subscribe()`; great with Preact                                                                                                        |
+| `uele/adapters/vue`           | `@vue/reactivity`      | 342 kB  | 323 B  | `cell.value` | `cell.value = v`   | yes             | no             | `ref()`/`computed()`; the effect needs `stop(runner)`                                                                                                        |
+| `uele/adapters/usignal`       | `usignal`              | 46 kB   | 333 B  | `cell.value` | `cell.value = v`   | yes             | no             | tiny; attributes a read to every enclosing effect; usignal batches, so the first paint lands on the next tick                                                |
+| `uele/adapters/alien-signals` | `alien-signals`        | 46 kB   | 288 B  | `cell()`     | `cell(v)`          | yes             | no             | plain-function signals, very fast                                                                                                                            |
+| `uele/adapters/sjs`           | `s-js`                 | 221 kB  | 379 B  | `cell()`     | `cell(v)`          | yes             | no             | classic S.js; `S.root` owns the disposer                                                                                                                     |
+| `uele/adapters/mobx`          | `mobx`                 | 4723 kB | 365 B  | `cell.get()` | `cell.set(v)`      | yes             | no             | boxed observables; configure mobx yourself                                                                                                                   |
+| `uele/adapters/rxjs`          | `rxjs`                 | 4392 kB | 431 B  | `cell.value` | `cell.next(v)`     | no              | yes            | subscribe-only: no reactive thunks; `BehaviorSubject` reads sync                                                                                             |
+| `uele/adapters/nanostores`    | `nanostores`           | 54 kB   | 348 B  | `cell.get()` | `cell.set(v)`      | no              | yes            | subscribe-only atoms; tiny and framework-neutral                                                                                                             |
+| `uele/adapters/tanstack`      | `@tanstack/store`      | 121 kB  | 437 B  | `cell.state` | `cell.setState(v)` | no              | yes            | `Store.subscribe()` is not synchronous, so a bare `Store` paints on its first change - `new Cell(v)` (or `api.signal(v)`) from the preset paints immediately |
+| `uele/adapters/solid`         | `solid-js`             | 1051 kB | 471 B  | `cell()`     | `cell.write(v)`    | yes             | no             | client build (`solid-js/dist/solid.js`)                                                                                                                      |
 
-* **reactive thunks** — functions and components that re-run when their signals change (needs an effect runner).
-* **subscribe path** — driven through `.subscribe()`: works without an effect runner, but reactive
+- **reactive thunks** — functions and components that re-run when their signals change (needs an effect runner).
+- **subscribe path** — driven through `.subscribe()`: works without an effect runner, but reactive
   thunks and components cannot re-render themselves.
 
 Short version: **ulive** if you have no preference (smallest, zero deps), **preact signals** if you use
@@ -959,16 +1082,16 @@ Preact, **nanostores** if you only need subscribe-based stores, **solid** if you
 Every engine satisfies the same `api.diff` contract — verified over 42 250 list-state transitions. The
 built-in marker walk is the right answer for most apps; swap one in when you have a specific reason.
 
-| preset | dependency | install | preset | strategy | pick it when |
-| --- | --- | --- | --- | --- | --- |
-| `uele/diffs/builtin` | `—` | — | 208 B | marker walk built into uele | default; zero dependencies |
-| `uele/diffs/swapdom` | `swapdom` | 45 kB | 209 B | keyed list diff written for uele's signature | small keyed lists |
-| `uele/diffs/udomdiff` | `udomdiff` | 25 kB | 245 B | keyed diff, the smallest of the classic trio | battle-tested keyed lists |
-| `uele/diffs/domdiff` | `domdiff` | 48 kB | 279 B | keyed diff with an options object (`{ before }`) | keyed lists, WebReflection stack |
-| `uele/diffs/morphdom` | `morphdom` | 199 kB | 291 B | morphs elements in place (the old element survives) | server-rendered HTML, keep focus/media state |
-| `uele/diffs/nanomorph` | `nanomorph` | 85 kB | 271 B | morphs in place, tiny | choo-style apps, keep DOM state |
-| `uele/diffs/fast-array-diff` | `fast-array-diff` | 40 kB | 448 B | an LCS patch decides the order, uele moves the nodes | ordered lists with few moves |
-| `uele/diffs/rebuild` | `—` | — | 303 B | remove all, insert all | tiny regions, or as a baseline in tests |
+| preset                       | dependency        | install | preset | strategy                                             | pick it when                                 |
+| ---------------------------- | ----------------- | ------- | ------ | ---------------------------------------------------- | -------------------------------------------- |
+| `uele/diffs/builtin`         | `—`               | —       | 208 B  | marker walk built into uele                          | default; zero dependencies                   |
+| `uele/diffs/swapdom`         | `swapdom`         | 45 kB   | 209 B  | keyed list diff written for uele's signature         | small keyed lists                            |
+| `uele/diffs/udomdiff`        | `udomdiff`        | 25 kB   | 245 B  | keyed diff, the smallest of the classic trio         | battle-tested keyed lists                    |
+| `uele/diffs/domdiff`         | `domdiff`         | 48 kB   | 279 B  | keyed diff with an options object (`{ before }`)     | keyed lists, WebReflection stack             |
+| `uele/diffs/morphdom`        | `morphdom`        | 199 kB  | 291 B  | morphs elements in place (the old element survives)  | server-rendered HTML, keep focus/media state |
+| `uele/diffs/nanomorph`       | `nanomorph`       | 85 kB   | 271 B  | morphs in place, tiny                                | choo-style apps, keep DOM state              |
+| `uele/diffs/fast-array-diff` | `fast-array-diff` | 40 kB   | 448 B  | an LCS patch decides the order, uele moves the nodes | ordered lists with few moves                 |
+| `uele/diffs/rebuild`         | `—`               | —       | 303 B  | remove all, insert all                               | tiny regions, or as a baseline in tests      |
 
 Short version: keep the **built-in** walk; reach for **swapdom** / **udomdiff** / **domdiff** for long keyed
 lists, **morphdom** / **nanomorph** when you must preserve DOM state (focus, media, CSS transitions).
@@ -1013,7 +1136,7 @@ lists, **morphdom** / **nanomorph** when you must preserve DOM state (focus, med
 ## Cleanup Support
 
 `sub`/`r` return an unsubscribe function and `usub` registers subscriptions with a `FinalizationRegistry`,
-so a subscription is released once the *source* (signal/observable) is garbage collected.
+so a subscription is released once the _source_ (signal/observable) is garbage collected.
 
 Since **usub 0.9.0** (which uele depends on), disposing a subscription releases the source and the callback
 immediately - the effect runner's disposer is no longer parked in the registry - while the finalizer safety net
@@ -1031,16 +1154,16 @@ moment the subtree goes away:
 import { h, props, api } from "uele";
 
 props.set("unmount", (node, cleanup) => {
-  const observe = () => {
-    if (!node.parentNode) return requestAnimationFrame(observe);
-    const observer = new MutationObserver((records) => {
-      for (const record of records)
-        for (const removed of record.removedNodes)
-          if (removed === node) (cleanup(), observer.disconnect());
-    });
-    observer.observe(node.parentNode, { childList: true });
-  };
-  observe();
+	const observe = () => {
+		if (!node.parentNode) return requestAnimationFrame(observe);
+		const observer = new MutationObserver((records) => {
+			for (const record of records)
+				for (const removed of record.removedNodes)
+					if (removed === node) (cleanup(), observer.disconnect());
+		});
+		observer.observe(node.parentNode, { childList: true });
+	};
+	observe();
 });
 
 // per binding: keep the unsubscribe returned by r()/sub()
@@ -1050,7 +1173,6 @@ h("div", { unmount: off }, render);
 
 Alternatively subscribe by hand (`r(store, render)` + a `disconnect` on route change) and let `add()` render
 plain functions - a function child is re-evaluated on every change of the signals it reads.
-
 
 ### Other Settings
 
@@ -1124,11 +1246,11 @@ library you actually use.
 The runtime has no dependencies except [`usub`](https://github.com/kethan/usub) and stays inside these budgets
 (raw / gzip):
 
-| bundle | budget | notes |
-| --- | --- | --- |
-| `dist/index.min.js` | ~3.7 kB / ~1.85 kB | full library, iife |
-| `lite/dist/index.min.js` | ~2.4 kB / ~1.3 kB | `h`, `add`, `useLive`, `props`, `r` |
-| `jsx-runtime/dist/index.es.js` | ~0.4 kB / ~0.3 kB | re-exports the shared `h` |
+| bundle                         | budget             | notes                               |
+| ------------------------------ | ------------------ | ----------------------------------- |
+| `dist/index.min.js`            | ~3.7 kB / ~1.85 kB | full library, iife                  |
+| `lite/dist/index.min.js`       | ~2.4 kB / ~1.3 kB  | `h`, `add`, `useLive`, `props`, `r` |
+| `jsx-runtime/dist/index.es.js` | ~0.4 kB / ~0.3 kB  | re-exports the shared `h`           |
 
 `lite` uses `usub/tiny`, so it supports functions/signals, promises and async iterables, but not `subscribe`
 based observables, and it ships no control flow components (`If`, `For`, `Switch`, `Dynamic`, `lazy`, `map`).
