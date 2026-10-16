@@ -4,16 +4,6 @@ All notable changes to `uele` are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/) and the project uses
 [semver](https://semver.org/): minor releases add features, patches fix bugs.
 
-## Unreleased
-
-### Added
-- `examples/pages/` — seven self-contained sample pages (login, dashboard, tables, website,
-  settings, shop, chat) written once against the unified layer (`uele/reactive` + `uele/hooks`
-  + `uele/ui` + `uele/themes`); no page imports a signal library, so any effect-capable preset
-  runs them unchanged. Covered by `test/pages.test.jsx` (66 tests): a source guard enforces the
-  unified imports, and every page's interactive flows are driven through the DOM on all eight
-  effect-capable presets, plus first paint on the three subscribe-only presets.
-
 ## 0.11.0 — 2026-10-16
 
 The UI release: `uele/ui` grows from a dozen wrappers into a full
@@ -22,8 +12,29 @@ and `uele/themes` — all built on `uele/reactive`, so everything runs on
 every signal preset (ulive, preact, vue, usignal, alien-signals, s-js, mobx,
 solid, and the subscribe-only rxjs/nanostores/tanstack where applicable).
 
+### Fixed
+
+- **Exports condition order:** in the `.`, `./lite`, `./jsx-runtime` and
+  `./jsx-dev-runtime` entries, `default` was listed before `require`, so
+  `require('uele')` resolved the ESM build instead of the CJS one. On Node 18
+  and Node < 20.19 that throws `ERR_REQUIRE_ESM` (despite `engines: >=18`);
+  elsewhere it silently loaded a second module instance, so presets installed
+  through one entry did not apply to the other. `require` now precedes
+  `default`, matching the subpath entries (`uele/ui`, `uele/hooks`, …) that
+  were already correct. The pack smoke test now asserts the resolved filename
+  so this cannot regress behind Node ≥ 22's `require(esm)` support. Also
+  added: a `LICENSE` file, and `prepack`/`prepublishOnly` scripts so a publish
+  can never ship a stale or missing `dist`.
+
 ### Added
 
+- **`examples/pages/` (repository examples, not shipped in the tarball)** — seven
+  self-contained sample pages (login, dashboard, tables, website, settings, shop, chat)
+  written once against the unified layer (`uele/reactive` + `uele/hooks` + `uele/ui` +
+  `uele/themes`); no page imports a signal library, so any effect-capable preset runs
+  them unchanged. Covered by `test/pages.test.jsx`: a source guard enforces the unified
+  imports, and every page's interactive flows are driven through the DOM on all eight
+  effect-capable presets, plus first paint on the three subscribe-only presets.
 - **`uele/ui` — 45+ new primitives (85 exports):**
   `Radio`/`RadioGroup`, `Switch`, `Slider`, `Rating`, `NumberInput`,
   `SearchInput`, `OTPInput` (+`PinInput`/`OTP`), `TagInput`, `FileInput`,

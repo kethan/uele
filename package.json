@@ -17,32 +17,32 @@
       "browser": "./dist/index.es.js",
       "umd": "./dist/index.umd.cjs",
       "import": "./dist/index.es.js",
-      "default": "./dist/index.es.js",
-      "require": "./dist/index.cjs"
+      "require": "./dist/index.cjs",
+      "default": "./dist/index.es.js"
     },
     "./lite": {
       "types": "./lite/index.d.ts",
       "browser": "./lite/dist/index.es.js",
       "umd": "./lite/dist/index.umd.cjs",
       "import": "./lite/dist/index.es.js",
-      "default": "./lite/dist/index.es.js",
-      "require": "./lite/dist/index.cjs"
+      "require": "./lite/dist/index.cjs",
+      "default": "./lite/dist/index.es.js"
     },
     "./jsx-runtime": {
       "types": "./jsx-runtime/index.d.ts",
       "browser": "./jsx-runtime/dist/index.es.js",
       "umd": "./jsx-runtime/dist/index.umd.cjs",
       "import": "./jsx-runtime/dist/index.es.js",
-      "default": "./jsx-runtime/dist/index.es.js",
-      "require": "./jsx-runtime/dist/index.cjs"
+      "require": "./jsx-runtime/dist/index.cjs",
+      "default": "./jsx-runtime/dist/index.es.js"
     },
     "./jsx-dev-runtime": {
       "types": "./jsx-dev-runtime/index.d.ts",
       "browser": "./jsx-dev-runtime/dist/index.es.js",
       "umd": "./jsx-dev-runtime/dist/index.umd.cjs",
       "import": "./jsx-dev-runtime/dist/index.es.js",
-      "default": "./jsx-dev-runtime/dist/index.es.js",
-      "require": "./jsx-dev-runtime/dist/index.cjs"
+      "require": "./jsx-dev-runtime/dist/index.cjs",
+      "default": "./jsx-dev-runtime/dist/index.es.js"
     },
     "./package.json": "./package.json",
     "./adapters/*": {
@@ -89,6 +89,8 @@
     }
   },
   "scripts": {
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run build && npm test && npm run test:bundles && npm run test:types && npm run size && npm run test:pack",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -178,7 +180,7 @@
     "themes",
     "ui",
     "useeffect",
-    "usginal",
+    "usignal",
     "watch",
     "websocket"
   ],

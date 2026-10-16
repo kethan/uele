@@ -84,6 +84,13 @@ for (const spec of specs) {
 const uele = require('uele');
 if (typeof uele.h !== 'function' || typeof uele.api !== 'function' && typeof uele.api !== 'object') throw new Error('require surface is not callable');
 if (uele.Fragment !== uele.h && typeof uele.Fragment !== 'undefined') throw new Error('Fragment must be the shared h');
+// 'require' must resolve the CJS builds, not fall through 'default' to the ESM
+// files - Node >= 22 silently loads ESM via require(), which masked a wrong
+// condition order in the exports map (Node 18/20 throw ERR_REQUIRE_ESM)
+for (const spec of ['uele', 'uele/lite', 'uele/jsx-runtime', 'uele/jsx-dev-runtime', 'uele/ui', 'uele/reactive', 'uele/hooks']) {
+	const resolved = require.resolve(spec);
+	if (!resolved.endsWith('.cjs')) throw new Error(spec + ' (require) resolved a non-CJS file: ' + resolved);
+}
 console.log('ok require() consumer');
 `
 	);
