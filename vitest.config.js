@@ -55,6 +55,9 @@ export default defineConfig({
 		// see test/helpers/react-classic.js: covers a vite that falls back to the
 		// classic `React.createElement` transform and imports nothing
 		setupFiles: ['./test/helpers/react-classic.js'],
+		// the stress suite alone does 1000 items x 200 keyed updates; the default 5s
+		// is not enough on a slower or loaded machine
+		testTimeout: 30000,
 		// vitest <= 3 (vitest 4+ reads the top-level option instead; the memory
 		// suite also works when NODE_OPTIONS=--expose-gc is exported)
 		...gcArgv,

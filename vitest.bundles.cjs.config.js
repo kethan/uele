@@ -60,6 +60,9 @@ export default defineConfig({
 		// see test/helpers/react-classic.js: covers a vite that falls back to the
 		// classic `React.createElement` transform and imports nothing
 		setupFiles: ['./test/helpers/react-classic.js'],
+		// the stress suite alone does 1000 items x 200 keyed updates; the default 5s
+		// is not enough on a slower or loaded machine
+		testTimeout: 30000,
 		include: [
 			'test/h.test.js', 'test/r.test.js', 'test/map.test.js', 'test/for.test.js',
 			'test/dom.test.js', 'test/dom.cleanup.test.js', 'test/components.test.js',

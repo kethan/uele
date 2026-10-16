@@ -11,10 +11,23 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-// `npm` is `npm.cmd` on windows and execFileSync does not go through PATHEXT, so
-// spawning "npm" fails with ENOENT there
-const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-const run = (cmd, args, cwd) => execFileSync(cmd, args, { cwd, stdio: 'pipe', encoding: 'utf8' });
+/**
+ * How to run npm from this script. Neither obvious form works on windows:
+ * `npm` is ENOENT (it is npm.cmd and execFileSync does not use PATHEXT) and
+ * `npm.cmd` is EINVAL (a .cmd is not an executable - it needs a shell, which then
+ * needs every argument quoted by hand). Running npm's own cli with node works on
+ * every platform, needs no shell and survives paths with spaces.
+ */
+const npm = (() => {
+	if (process.env.npm_execpath) return { file: process.execPath, args: [process.env.npm_execpath], shell: false };
+	return process.platform === 'win32'
+		? { file: 'npm.cmd', args: [], shell: true }
+		: { file: 'npm', args: [], shell: false };
+})();
+const exec = (file, args, cwd, shell = false) =>
+	execFileSync(file, args, { cwd, shell, stdio: 'pipe', encoding: 'utf8' });
+const runNpm = (args, cwd) => exec(npm.file, [...npm.args, ...args], cwd, npm.shell);
+const runNode = (args, cwd) => exec(process.execPath, args, cwd);
 
 const work = mkdtempSync(join(tmpdir(), 'uele-pack-'));
 const pkgDir = join(work, 'consumer');
@@ -22,7 +35,7 @@ const pkgDir = join(work, 'consumer');
 try {
 	console.log('packing...');
 	// npm prints CRLF on windows, so split on either and trim the name again
-const tarball = run(npm, ['pack', '--pack-destination', work], root).trim().split(/\r?\n/).pop().trim();
+const tarball = runNpm(['pack', '--pack-destination', work], root).trim().split(/\r?\n/).pop().trim();
 
 	console.log('installing into a clean project...');
 	writeFileSync(join(work, 'package.json'), JSON.stringify({ name: 'consumer', private: true, type: 'module' }));
@@ -46,7 +59,7 @@ console.log('ok shared module instance, Fragment is the main h');
 `
 	);
 
-	run(npm, ['install', join(work, tarball), '@preact/signals-core', 'swapdom', '--no-audit', '--no-fund', '--silent'], work); // the two presets exercised above
+	runNpm(['install', join(work, tarball), '@preact/signals-core', 'swapdom', '--no-audit', '--no-fund', '--silent'], work); // the two presets exercised above
 	const installed = join(work, 'node_modules', 'uele');
 	const files = readdirSync(installed);
 	console.log('published entries:', files.join(', '));
@@ -75,9 +88,9 @@ console.log('ok require() consumer');
 `
 	);
 	console.log('resolving subpath exports (import)...');
-	console.log(run('node', ['check.mjs'], work).trim());
+	console.log(runNode(['check.mjs'], work).trim());
 	console.log('resolving subpath exports (require)...');
-	console.log(run('node', ['check.cjs'], work).trim());
+	console.log(runNode(['check.cjs'], work).trim());
 
 	console.log('type checking a consumer tsx file...');
 	writeFileSync(
@@ -108,8 +121,7 @@ const el = h(App, { id: 'a' });
 export default el;
 `
 	);
-	run(
-		process.execPath,
+	runNode(
 		[
 			join(root, 'node_modules', 'typescript', 'bin', 'tsc'),
 			'--noEmit',

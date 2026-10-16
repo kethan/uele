@@ -1,7 +1,7 @@
 {
   "name": "uele",
   "description": "uele reactive frontend library",
-  "version": "0.10.1",
+  "version": "0.10.2",
   "type": "module",
   "source": "./src/index.js",
   "main": "./dist/index.cjs",
@@ -105,10 +105,10 @@
     "@preact/signals-core": "^1.14.4",
     "@rollup/plugin-commonjs": "^28.0.1",
     "@rollup/plugin-node-resolve": "^15.3.0",
-    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-terser": "^1.0.0",
     "@tanstack/store": "^0.11.2",
     "@thi.ng/diff": "^5.1.129",
-    "@vitest/coverage-v8": "^2.1.5",
+    "@vitest/coverage-v8": "^5.0.5",
     "@vue/reactivity": "^3.5.44",
     "alien-signals": "^3.2.1",
     "domdiff": "^2.2.2",
@@ -128,7 +128,7 @@
     "udomdiff": "^1.1.2",
     "ulive": "^1.0.7",
     "usignal": "^0.10.0",
-    "vitest": "^2.1.5"
+    "vitest": "^5.0.5"
   },
   "repository": {
     "type": "git",
@@ -169,23 +169,23 @@
     "node": ">=18"
   },
   "peerDependencies": {
-    "ulive": "^1.0.7",
     "@preact/signals-core": "^1.14.4",
-    "@vue/reactivity": "^3.5.44",
-    "usignal": "^0.10.0",
-    "alien-signals": "^3.2.1",
-    "s-js": "^0.4.9",
-    "mobx": "^7.0.6",
-    "rxjs": "^7.8.2",
-    "nanostores": "^1.5.5",
     "@tanstack/store": "^0.11.2",
+    "@vue/reactivity": "^3.5.44",
+    "alien-signals": "^3.2.1",
+    "domdiff": "^2.2.2",
+    "fast-array-diff": "^1.1.0",
+    "mobx": "^7.0.6",
+    "morphdom": "^2.7.8",
+    "nanomorph": "^5.4.3",
+    "nanostores": "^1.5.5",
+    "rxjs": "^7.8.2",
+    "s-js": "^0.4.9",
     "solid-js": "^1.9.17",
     "swapdom": "^1.2.1",
     "udomdiff": "^1.1.2",
-    "domdiff": "^2.2.2",
-    "morphdom": "^2.7.8",
-    "nanomorph": "^5.4.3",
-    "fast-array-diff": "^1.1.0"
+    "ulive": "^1.0.7",
+    "usignal": "^0.10.0"
   },
   "peerDependenciesMeta": {
     "ulive": {

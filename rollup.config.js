@@ -108,6 +108,9 @@ const presetFiles = [
 	'flow/index.js',
 	'reactive/index.js',
 	'ui/index.js',
+	// the shared helpers - a preset author is told to import these (see
+	// docs/ADAPTERS.md), so `require('uele/adapters/util')` has to resolve too
+	'adapters/util.js',
 	'adapters/ulive.js',
 	'adapters/preact.js',
 	'adapters/vue.js',
