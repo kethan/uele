@@ -793,7 +793,7 @@ describe('For stress', () => {
 		// node churn stays proportional to the changes, not to the list size
 		expect(candidates).toBeGreaterThan(5000);
 		expect(reused / candidates).toBeGreaterThan(0.99);
-	});
+	}, 60000); // 1000 items x 200 keyed updates: ~4s here, far more on a loaded machine
 
 	test('2000 updates never accumulate nodes', () => {
 		const items = signal([1, 2, 3]);

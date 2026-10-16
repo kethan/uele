@@ -49,32 +49,49 @@ api.get = (v) => v.value;
 - **Automatic Cleanup for Subscriptions**
 - **Extend html attributes and props**
 
-1. [counter](#counter)
+1. [Counter](#counter) — [without](#without-build-tools) and [with](#with-build-tools) build tools
 2. [h](#h)
 3. [lazy](#lazy)
 4. [map](#map)
 5. [Example](#example)
-6. [Utility Functions](#utility-functions)
-   - [get](#get)
-   - [r](#r)
-   - [f](#f)
-   - [useLive](#uselive)
-7. [Props](#props)
-8. [Control Flow Components](#control-flow-components)
-   - [If and Show](#if-and-show)
-   - [For](#for)
-   - [Switch and Match](#switch-and-match)
-9. [Cleanup Support](#cleanup-support)
-10. [Other Settings](#other-settings)
-
-11. [For any other reactive library](#for-any-other-reactive-library)
-
-12. [Thanks and Inspiration](#thanks-and-inspiration)
-13. [License](#license)
+6. [Utility Functions](#utility-functions) — [get](#get), [r](#r), [sub](#sub), [is](#is), [f](#f),
+   [useLive](#uselive), [add](#add)
+7. [Attributes, properties and events](#attributes-properties-and-events)
+8. [Props](#props)
+9. [Control Flow Components](#control-flow-components) — [If and Show](#if-and-show), [For](#for),
+   [Switch and Match](#switch-and-match), [Dynamic](#dynamic)
+10. [30-second todos app](#30-second-todos-app)
+11. [UI primitives](#ui-primitives)
+12. [Presets: one-call interop](#presets-one-call-interop)
+13. [Write once, run on any preset (`uele/reactive`)](#write-once-run-on-any-preset-uelereactive)
+14. [Flow components (`uele/flow`)](#flow-components-ueleflow)
+15. [Routing (`uele/router`)](#routing-uelerouter)
+16. [How it works](#how-it-works)
+17. [Authoring guides](#authoring-guides) — [a plugin](#write-a-plugin),
+    [a signal adapter](#write-a-signal-adapter), [a diff engine](#write-a-diff-engine)
+18. [Which one should I use?](#which-one-should-i-use)
+19. [Best practices](#best-practices)
+20. [Cleanup Support](#cleanup-support)
+21. [Other Settings](#other-settings) — [any other reactive library](#for-any-other-reactive-library),
+    [SVG and MathML](#svg-and-mathml)
+22. [Testing, types and size](#testing-types-and-size)
+23. [Errors](#errors)
+24. [Thanks and Inspiration](#thanks-and-inspiration)
+25. [License](#license)
 
 ### Counter
 
 ### Without Build tools
+
+No bundler? One script tag is enough — `unpkg` serves the IIFE build, which publishes a single `uele` global
+(`uele/lite` publishes its own):
+
+```html
+<script src="https://unpkg.com/uele"></script>
+<script>
+  const { h, useLive } = uele;
+</script>
+```
 
 #### 1. h
 
@@ -174,6 +191,9 @@ let frag = (
   </>
 );
 ```
+
+`<></>` **is** `h`: the fragment is the `h` function itself (`Fragment === h`), so a fragment simply returns
+its children — there is no wrapper element and nothing to unwrap.
 
 ### lazy
 
@@ -349,6 +369,37 @@ r(someObservable, (value, is) => {
 });
 ```
 
+#### `sub`
+
+`sub` is the subscription itself — no unwrapping, no "run once for plain values": it returns the
+unsubscribe function, so *you* decide when it ends. Errors are the third argument.
+
+```js
+import { sub } from "uele";
+
+const off = sub(source, (value) => console.log(value), (err) => console.error(err));
+
+// later - the subscription is released, and the callback with it
+off();
+```
+
+#### `is`
+
+`is(v)` answers the question uele asks about every child: "is this reactive?" - `true` for cells of the
+configured signal library, functions, promises, observables (`subscribe` or `Symbol.observable`) and async
+iterables.
+
+```js
+import { is } from "uele";
+
+const node = document.createElement("div");
+
+is(cell);    // true  -> uele subscribes and re-renders it
+is(node);    // false -> appended as is
+is(42);      // false
+is(() => 1); // true  -> a function child is an effect (see "How it works")
+```
+
 #### `f`
 
 The `f` function is a utility that provides a convenient shorthand for creating elements using the h function. It returns a proxy that allows you to call HTML elements as functions directly. The property name is used as the tag name, so `f(h)["my-widget"]({ id: "x" })` creates a custom element.
@@ -383,6 +434,20 @@ setInterval(() => {
 }, 1000);
 
 const App = () => <main>{live}</main>;
+```
+
+#### `add`
+
+`add(...children)` is the step `h` runs on its children: it flattens arrays, turns plain values into text
+nodes and turns anything reactive (a cell, a thunk, a promise, an observable, an async iterable) into a live
+region, and returns a plain `Node[]`. Reach for it when you mount content yourself.
+
+```jsx
+import { add } from "uele";
+
+// everything below is optional: arrays, null, and pending promises are all fine
+const nodes = add("Hello", [1, 2, 3].map((n) => <li>{n}</li>), fetchCount());
+document.body.append(...nodes);
 ```
 
 ### Attributes, properties and events
@@ -519,6 +584,20 @@ import { Switch, Match } from "uele";
   </Match>
 </Switch>;
 ```
+
+#### `Dynamic`
+
+`Dynamic` renders whatever component it is handed, with the rest of the props — a component chosen at
+runtime.
+
+```jsx
+import { Dynamic } from "uele";
+
+<Dynamic component={user.isAdmin ? AdminPanel : GuestPanel} user={user} />;
+```
+
+`component` is read when the element is created, so pick it inside a function component (or a thunk) when
+the choice itself depends on a signal — that parent re-runs, and `Dynamic` is rebuilt with the new component.
 
 ### 30-second todos app
 
@@ -706,10 +785,146 @@ browser) and `navigate(path)` pushes a history entry. Because the view is just a
 with every signal preset — and with `uflite/nano`, where `app.fetch(request)` resolves to the raw handler
 result.
 
+## How it works
+
+Three ideas, and everything else follows from them.
+
+- **A dynamic child is a marked region.** A cell, a thunk, a promise, an observable or an async iterable
+  becomes a pair of marker nodes around its current content. Updating it replaces what sits between the
+  markers — there is no vdom and no component tree to reconcile. `useLive` gives you that region by hand.
+- **A function child is an effect.** `add` sees a function and runs it inside `api.effect`, so it re-runs
+  whenever the cells it read change, and its previous content is replaced and released at that moment. That
+  is why `{count}` and `{() => count()}` both stay live, and why a component is just a function called with
+  `(props, ...children)`. With the default `api.effect` a thunk runs **once** — install a preset (or set
+  `api.effect`) and it re-runs for as long as the region is in the document.
+- **Lists are keyed, and a key is an identity.** `map`/`For` keep a `Map` of key → node: a node survives
+  while its key is present, and the region's engine (`api.diff`) only inserts, moves and removes real nodes.
+
+Nothing is scheduled: an update is synchronous with the write that caused it (a library that batches its own
+writes — `usignal` does — paints on the next tick). Use your preset's `batch()` to coalesce a burst of writes.
+
 ## Authoring guides
 
-Writing your own preset — a signal adapter or a diff engine — is documented with the pitfalls we hit while
-building the eleven that ship: [docs/ADAPTERS.md](docs/ADAPTERS.md).
+uele has no plugin registry and no build step: the extension points are plain values you assign — the `api`
+object (reactivity and diffing), the `props` Map (custom attributes) and `h` itself. So a plugin, a signal
+adapter and a diff engine are all the same thing: **a function that installs something, and optionally returns
+its own undo**. The eleven signal presets and eight diff presets that ship are written exactly that way — copy
+[adapters/preact.js](adapters/preact.js) or [diffs/swapdom.js](diffs/swapdom.js) as a starting point, and read
+[docs/ADAPTERS.md](docs/ADAPTERS.md) for the pitfalls we hit writing them.
+
+### Write a plugin
+
+```js
+import { r, props } from "uele";
+
+// a plugin is a function: install, then return the undo
+export const tooltip = () => {
+  // custom props get the RAW value - wrap it in r() and any cell works
+  props.set("tooltip", (node, value) => r(value, (text) => (node.title = text == null ? "" : text)));
+  return () => props.delete("tooltip");
+};
+
+// plugins compose: a kit is a plugin that installs plugins
+export const useKit = () => {
+  const undo = [tooltip(), autofocus()];
+  return () => undo.forEach((off) => off());
+};
+```
+
+```jsx
+// usage — `label` may be a cell, a thunk or a plain string
+<button tooltip={label}>Hover me</button>
+```
+
+Rules of thumb: a `props` handler runs for **elements only** (a component gets its props untouched), it is
+called as `(node, value, name, attrs)` while the element is being built, and it must not assume the node is in
+the document yet — `ref` (or the `unmount` prop in [Cleanup Support](#cleanup-support)) is the hook for that.
+Use a name that cannot collide with a future HTML attribute.
+
+### Write a signal adapter
+
+```js
+import { api } from "uele";
+import { scoped, wire } from "uele/adapters/util"; // the helpers every shipped preset uses
+
+export const useMySignals = (target = api) => {
+  const s = scoped(myEffect); // wraps the library's effect runner for uele
+  return wire(target, {
+    // the four hooks uele itself needs
+    is: (v) => v instanceof Cell, //   "is this one of our cells?"
+    get: (v) => v.peek(), //           read it (and subscribe, from inside an effect)
+    effect: s.effect, //               run fn now, re-run when the cells it read change
+    cleanup: s.cleanup, //             register a teardown for the current run
+    // the authoring hooks - uele/reactive builds on these, so uele/ui, uele/flow and
+    // uele/router keep working on your preset too
+    signal: (v) => new Cell(v),
+    derived: (fn) => myComputed(fn),
+    set: (cell, v) => cell.set(v),
+    batch: (fn) => myBatch(fn),
+    untracked: (fn) => myUntracked(fn)
+  });
+};
+```
+
+```js
+import { api as liteApi } from "uele/lite";
+
+useMySignals(); // configure the main instance (the default target)
+useMySignals(liteApi); // or the lite one
+```
+
+Call it **once, before you render**: `api` is one shared object. `wire` assigns *every* hook, clearing the ones
+your library has no answer for, so switching presets can never leave a stale hook behind. Only `is`, `get`,
+`effect` and `cleanup` are required — skip `signal`/`derived`/`set`/`batch`/`untracked` for a subscribe-only
+library and `uele/reactive` will report the missing features through `canEffect()`/`canCompute()` instead of
+failing.
+
+### Write a diff engine
+
+```js
+import { api } from "uele";
+
+export const useMyDiff = (target = api) => {
+  target.udom = undefined; // unset = the swapdom signature below
+  target.diff = (parent, oldNodes, newNodes, end) => {
+    const keep = new Set(newNodes);
+    oldNodes.forEach((node) => {
+      if (!keep.has(node) && node.parentNode === parent) parent.removeChild(node);
+    });
+    let anchor = end || null; // walk backwards: each node before the one placed last
+    for (let i = newNodes.length - 1; i >= 0; i--) {
+      const node = newNodes[i];
+      if (node.parentNode !== parent || node.nextSibling !== anchor) parent.insertBefore(node, anchor);
+      anchor = node;
+    }
+  };
+  return target;
+};
+```
+
+The contract, in four lines:
+
+1. `oldNodes` are the nodes currently in the region, and they are children of `parent`.
+2. When you return, `parent` holds exactly `newNodes`, once each, in order, **before** the `end` marker.
+3. Remove every old node you do not reuse; leave every other child of `parent` (including the markers) alone.
+4. Mutate `newNodes` **in place** when you keep an old node instead of a new one — uele keeps that array as
+   the region's current content. The return value is ignored.
+
+`end` is the region's end marker — always a node, and always a child of `parent` — so `insertBefore(node, end)`
+is how you append to the region. Engines that morph elements in place (`morphdom`, `nanomorph`) need rule 4
+the most; `diffs/util.js` ships `morphAdapter(fn)` for exactly that. Prefer the older udomdiff signature? Set
+`api.udom` to the key/get callback and uele calls `api.diff(parent, oldNodes, newNodes, api.udom, end)` — that
+is all [diffs/udomdiff.js](diffs/udomdiff.js) does.
+
+### Test it
+
+The conformance suites are parameterised lists, so a new preset is one entry away from the whole matrix: add
+your adapter to `ADAPTERS` in [test/helpers/signal-adapters.js](test/helpers/signal-adapters.js) — the signal
+conformance suite then runs it against both entry points — or your engine to `ENGINES` in
+[test/helpers/diff-engines.js](test/helpers/diff-engines.js), which also feeds the 42 250 list-state
+transitions in `test/diff.transitions.test.js`. The three snippets above are run as printed by
+`test/authoring.test.jsx`, and [docs/ADAPTERS.md](docs/ADAPTERS.md) ends with the checklist every shipped
+preset has to pass.
 
 ## Which one should I use?
 
@@ -758,6 +973,42 @@ built-in marker walk is the right answer for most apps; swap one in when you hav
 Short version: keep the **built-in** walk; reach for **swapdom** / **udomdiff** / **domdiff** for long keyed
 lists, **morphdom** / **nanomorph** when you must preserve DOM state (focus, media, CSS transitions).
 
+## Best practices
+
+- **Install one signal preset (and at most one diff preset), once, at startup.** `api` is a single shared
+  object, so a second preset of the same kind simply overwrites the first - `wire` clears every hook it does
+  not set. Install it **before** you render: a thunk that was rendered with the default `api.effect` runs once
+  and never updates.
+- **Replace, do not mutate.** A cell only notifies on a write:
+
+  ```js
+  todos.value = [...todos.value, todo]; // one write, one paint
+  todos.value.push(todo); // silent: nothing repaints
+  ```
+
+- **Return the undo.** `r()` and `sub()` hand back an unsubscribe function. Keep it and call it when the
+  subtree goes away - see [Cleanup Support](#cleanup-support).
+- **Key a list when the row is not the item.** The default key is the item's identity, which is perfect for
+  primitives and wrong for objects you replace: pass `key={(item) => item.id}` (and give the content its own
+  signals if the row depends on the index).
+- **Render, do not act.** A function child re-runs on every change of what it reads, so anything with a side
+  effect - appending to the document, starting a timer, subscribing - repeats on every update. Do that in an
+  event handler, in `ref`, or in an effect you own and dispose.
+- **Write utilities against `uele/reactive`.** `signal`/`computed`/`read`/`write`/`effect` work on every
+  preset, and `canEffect()`/`canCompute()` tell you when a library cannot do something (the subscribe-only
+  ones have no effect runner) - ask, do not assume. That is how `uele/ui`, `uele/flow` and `uele/router` stay
+  preset-agnostic.
+- **Handle errors where you subscribe.** A rejected promise or a failed observable never throws into the
+  render: the previous content stays. `r(source, next, error)` is the form that sees the error.
+- **Keep the built-in diff engine** unless you have a concrete reason (long keyed lists, or DOM state you
+  must preserve). It has no dependencies, and it is the engine the conformance suite is written around.
+- **Unwrap values in a custom prop.** A `props` handler is handed the raw value; `r(value, (v) => …)` is what
+  makes a cell, a thunk or a plain value all work.
+- **Use `uele/lite` for a widget, the full build for an app.** `lite` is ~2.4 kB, has its own `api` instance
+  (so it can run a different preset than the page) and no control flow components.
+- **Detach deliberately.** uele replaces a region's content on every update, and usub releases a subscription
+  once its source is unreachable - but a manual subscription to a long-lived store keeps running until you
+  call the unsubscribe. [Cleanup Support](#cleanup-support) walks through the options.
 
 ## Cleanup Support
 
@@ -856,13 +1107,19 @@ which keeps `<my-icon>`/`<m-button>` in the HTML namespace. For the few ambiguou
 ### Testing, types and size
 
 ```sh
-npm test               # vitest, 1308 tests: src, lite, jsx runtimes, presets, ui, flow, router and every example app
+npm test               # vitest, 1322 tests: src, lite, jsx runtimes, presets, ui, flow, router and every example app
 npm run test:coverage  # 100% statements/branches/functions/lines are enforced
 npm run test:bundles   # re-runs the suites against the built ESM and CJS output
 npm run test:types     # type-checks the public api and jsx usage
 npm run test:pack      # packs, installs in a clean project, checks exports/files/types
 npm run size           # fails when a bundle exceeds its byte budget
 ```
+
+Every published entry point ships its own `.d.ts` — `uele`, `uele/lite`, `uele/ui`, `uele/flow`, `uele/router`,
+`uele/reactive`, `uele/adapters/*` and `uele/diffs/*` — so `tsc` is happy without a `@types` package. The
+package is `sideEffects: false` (bundlers tree-shake it) and needs **Node 18+**. Every signal and diff library
+behind a preset is an **optional peer dependency**: `npm i uele` installs two packages, and you add only the
+library you actually use.
 
 The runtime has no dependencies except [`usub`](https://github.com/kethan/usub) and stays inside these budgets
 (raw / gzip):
