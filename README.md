@@ -817,6 +817,14 @@ whole catalogue composed into one themed admin screen lives in
 searchable DataTable, Dialog, CommandPalette) and is driven by
 `test/ui.advanced.test.jsx`.
 
+Seven complete sample pages written **once** against the unified layer —
+login, dashboard, tables, website, settings, shop, chat — live in
+[`examples/pages/`](examples/pages): no page imports a signal library, so any
+effect-capable preset runs them unchanged. `test/pages.test.jsx` drives every
+page's flows through the DOM on all eight of those presets (and first paint on
+the subscribe-only three), so "write once, run on any signals" is enforced,
+not asserted.
+
 State components follow the Radix controlled/uncontrolled pattern: pass
 `model` (or `value`/`checked`/`open`/`page`) to control them, `defaultValue` /
 `defaultOpen` / `defaultPage` to seed them, and `onChange` to listen. `model`
@@ -1407,7 +1415,7 @@ which keeps `<my-icon>`/`<m-button>` in the HTML namespace. For the few ambiguou
 ### Testing, types and size
 
 ```sh
-npm test               # vitest, 1460 tests: src, lite, jsx runtimes, presets, ui, hooks, themes, flow, router and every example app
+npm test               # vitest, 1526 tests: src, lite, jsx runtimes, presets, ui, hooks, themes, flow, router and every example app
 npm run test:coverage  # 100% statements/branches/functions/lines are enforced
 npm run test:bundles   # re-runs the suites against the built ESM and CJS output
 npm run test:types     # type-checks the public api and jsx usage

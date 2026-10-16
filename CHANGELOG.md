@@ -4,6 +4,16 @@ All notable changes to `uele` are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/) and the project uses
 [semver](https://semver.org/): minor releases add features, patches fix bugs.
 
+## Unreleased
+
+### Added
+- `examples/pages/` — seven self-contained sample pages (login, dashboard, tables, website,
+  settings, shop, chat) written once against the unified layer (`uele/reactive` + `uele/hooks`
+  + `uele/ui` + `uele/themes`); no page imports a signal library, so any effect-capable preset
+  runs them unchanged. Covered by `test/pages.test.jsx` (66 tests): a source guard enforces the
+  unified imports, and every page's interactive flows are driven through the DOM on all eight
+  effect-capable presets, plus first paint on the three subscribe-only presets.
+
 ## 0.11.0 — 2026-10-16
 
 The UI release: `uele/ui` grows from a dozen wrappers into a full
