@@ -32,6 +32,32 @@ Read any two side by side: only the imports, the cell creation and the actions d
 identical, because `uele/ui`, `For` and the renderer only ever talk to the `api` hooks the preset
 installed.
 
+## pages — sample pages on the unified signal layer
+
+[`pages/`](pages) holds seven complete, self-contained sample pages. Every page is written **once**
+against the unified layer — imports are only `uele/reactive`, `uele/hooks`, `uele/ui` and `uele/themes`;
+**no page imports a signal library**. Install **any** effect-capable preset before mounting and the
+same page code runs unchanged:
+
+```js
+import { useUlive } from 'uele/reactive';
+// any preset works: useVue(), useSolid(), useMobx(), ... (see the todos table above)
+
+useUlive(); // install BEFORE importing/mounting the page
+const { mountDashboard } = await import('./pages/dashboard.jsx');
+mountDashboard(document.querySelector('#app'));
+```
+
+| page | file | highlights |
+| --- | --- | --- |
+| Login | [`pages/login.jsx`](pages/login.jsx) | validation, wrong-password error, demo account → welcome state |
+| Dashboard | [`pages/dashboard.jsx`](pages/dashboard.jsx) | period tabs, stats, goal progress, activity timeline, recent orders |
+| Tables | [`pages/tables.jsx`](pages/tables.jsx) | search + status filter + sort + pagination over 10 people |
+| Website | [`pages/website.jsx`](pages/website.jsx) | navbar, hero, monthly/yearly pricing toggle, FAQ accordion |
+| Settings | [`pages/settings.jsx`](pages/settings.jsx) | tabs, notification switches, live theme picker, danger-zone dialog |
+| Shop | [`pages/shop.jsx`](pages/shop.jsx) | product grid, cart drawer with steppers, totals, checkout |
+| Chat | [`pages/chat.jsx`](pages/chat.jsx) | presence list, message thread, composer, optional auto-reply |
+
 ## dashboard — the component catalogue composed
 
 [`dashboard.jsx`](dashboard.jsx) is one themed admin screen built from the extended
