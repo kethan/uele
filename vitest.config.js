@@ -45,6 +45,8 @@ export default defineConfig({
 			{ find: /^uele\/flow$/, replacement: src('./flow/index.js') },
 			{ find: /^uele\/reactive$/, replacement: src('./reactive/index.js') },
 			{ find: /^uele\/ui$/, replacement: src('./ui/index.js') },
+			{ find: /^uele\/hooks$/, replacement: src('./hooks/index.js') },
+			{ find: /^uele\/themes$/, replacement: src('./themes/index.js') },
 			{ find: /^uele\/adapters\/(.*)$/, replacement: src('./adapters/$1.js') },
 			{ find: /^uele\/diffs\/(.*)$/, replacement: src('./diffs/$1.js') },
 		]

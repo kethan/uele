@@ -76,6 +76,16 @@
       "types": "./router/index.d.ts",
       "import": "./router/index.js",
       "require": "./router/index.cjs"
+    },
+    "./hooks": {
+      "types": "./hooks/index.d.ts",
+      "import": "./hooks/index.js",
+      "require": "./hooks/index.cjs"
+    },
+    "./themes": {
+      "types": "./themes/index.d.ts",
+      "import": "./themes/index.js",
+      "require": "./themes/index.cjs"
     }
   },
   "scripts": {
@@ -99,7 +109,9 @@
     "ui",
     "reactive",
     "flow",
-    "router"
+    "router",
+    "hooks",
+    "themes"
   ],
   "devDependencies": {
     "@preact/signals-core": "^1.14.4",

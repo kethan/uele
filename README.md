@@ -61,23 +61,26 @@ api.get = (v) => v.value;
 9. [Control Flow Components](#control-flow-components) — [If and Show](#if-and-show), [For](#for),
    [Switch and Match](#switch-and-match), [Dynamic](#dynamic)
 10. [30-second todos app](#30-second-todos-app)
-11. [UI primitives](#ui-primitives)
-12. [Presets: one-call interop](#presets-one-call-interop)
-13. [Write once, run on any preset (`uele/reactive`)](#write-once-run-on-any-preset-uelereactive)
-14. [Flow components (`uele/flow`)](#flow-components-ueleflow)
-15. [Routing (`uele/router`)](#routing-uelerouter)
-16. [How it works](#how-it-works)
-17. [Authoring guides](#authoring-guides) — [a plugin](#write-a-plugin),
+11. [UI primitives](#ui-primitives) — 45+ headless components: forms, layout, navigation,
+    disclosure, overlays
+12. [Hooks (`uele/hooks`)](#hooks-uelehooks)
+13. [Themes (`uele/themes`)](#themes-uelethemes)
+14. [Presets: one-call interop](#presets-one-call-interop)
+15. [Write once, run on any preset (`uele/reactive`)](#write-once-run-on-any-preset-uelereactive)
+16. [Flow components (`uele/flow`)](#flow-components-ueleflow)
+17. [Routing (`uele/router`)](#routing-uelerouter)
+18. [How it works](#how-it-works)
+19. [Authoring guides](#authoring-guides) — [a plugin](#write-a-plugin),
     [a signal adapter](#write-a-signal-adapter), [a diff engine](#write-a-diff-engine)
-18. [Which one should I use?](#which-one-should-i-use)
-19. [Best practices](#best-practices)
-20. [Cleanup Support](#cleanup-support)
-21. [Other Settings](#other-settings) — [any other reactive library](#for-any-other-reactive-library),
+20. [Which one should I use?](#which-one-should-i-use)
+21. [Best practices](#best-practices)
+22. [Cleanup Support](#cleanup-support)
+23. [Other Settings](#other-settings) — [any other reactive library](#for-any-other-reactive-library),
     [SVG and MathML](#svg-and-mathml)
-22. [Testing, types and size](#testing-types-and-size)
-23. [Errors](#errors)
-24. [Thanks and Inspiration](#thanks-and-inspiration)
-25. [License](#license)
+24. [Testing, types and size](#testing-types-and-size)
+25. [Errors](#errors)
+26. [Thanks and Inspiration](#thanks-and-inspiration)
+27. [License](#license)
 
 ### Counter
 
@@ -745,22 +748,16 @@ independent instances.
 
 ## UI primitives
 
-`uele/ui` is a dozen thin wrappers over `h()` so the common tags read like components. Every prop is live —
-pass a signal anywhere a value is expected:
+`uele/ui` is a Radix-style catalogue of **45+ headless primitives** (85 exports
+with aliases) over `h()`. They are accessible by default (roles, `aria-*`,
+keyboard where it matters), carry `data-state`/`data-*` styling hooks, read the
+`--uele-*` theme variables from [`uele/themes`](#themes-uelethemes) with
+light-theme fallbacks, and every prop is live — pass a signal from **any**
+library anywhere a value is expected:
 
 ```jsx
 import {
-	Form,
-	Field,
-	Button,
-	Input,
-	Textarea,
-	Checkbox,
-	Select,
-	Card,
-	Stack,
-	Row,
-	Label,
+	Form, Field, Button, Input, Textarea, Checkbox, Select, Card, Stack, Row, Label,
 } from "uele/ui";
 
 <>
@@ -771,15 +768,157 @@ import {
 	<Field label="Name">
 		<Input model={name} />
 	</Field>
-	<Card>…</Card> <Stack>…</Stack> <Row>…</Row> {/* minimal layout defaults */}
-	<Form onSubmit={save}>…</Form> {/* preventDefault, then onSubmit */}
+	<Card>content</Card> <Stack>content</Stack> <Row>content</Row>
+	<Form onSubmit={save}>content</Form> {/* preventDefault, then onSubmit */}
 </>;
 ```
 
-They are plain functions, so the call form (`Card({ children: "…" })`) works too — JSX is just nicer.
+They are plain functions, so the call form (`Card({ children: "hi" })`) works
+too — JSX is just nicer.
 
-`model` accepts any writable cell our presets produce (`.value`, `.set()`, `.next()`, `.setState()`) or a
-plain setter function. Pass the cell as `value`/`checked` instead and it becomes the model automatically.
+**Forms** — `Form` `Field` `Label` `FieldHint` `FieldError` `Button` `Input`
+`Textarea` `Checkbox` `Radio` `RadioGroup` `Switch` `Slider` `Select` `Option`
+`Combobox` `Rating` `NumberInput` `SearchInput` `OTPInput` (aliases `PinInput`,
+`OTP`) `TagInput` `FileInput` `Dropzone`
+
+**Layout** — `Card` `Stack` `Row` `Grid` `Container` `Center` `Spacer`
+`Separator` (`Divider`) `AspectRatio` `ScrollArea`
+
+**Typography** — `Heading` `Text` `Link` `Kbd` `Code` `Blockquote` `List`
+`ListItem`
+
+**Data display** — `Badge` `Avatar` `Skeleton` `Spinner` `Alert` `Progress`
+`Stat` `Empty` `Table` `TableHead` `TableBody` `TableRow` `TableHeader`
+`TableCell` (aliases `Thead` `Tbody` `Th` `Td`)
+
+**Navigation & disclosure** — `Breadcrumb` (+ `BreadcrumbItem` `BreadcrumbLink`
+`BreadcrumbSeparator`) `Pagination` (+ the pure `paginationRange` helper)
+`Tabs` `TabList` `Tab` `TabPanel` `Accordion` `AccordionItem` `Collapsible`
+`Stepper` `Carousel`
+
+**Overlays & feedback** — `Dialog` `Drawer` `Popover` `Tooltip` `Menu`
+(`DropdownMenu`) `MenuItem` `Toast` `Toaster`
+
+State components follow the Radix controlled/uncontrolled pattern: pass
+`model` (or `value`/`checked`/`open`/`page`) to control them, `defaultValue` /
+`defaultOpen` / `defaultPage` to seed them, and `onChange` to listen. `model`
+accepts any writable cell our presets produce (`.value`, `.set()`, `.next()`,
+`.setState()`) or a plain setter function; pass the cell as `value`/`checked`
+instead and it becomes the model automatically:
+
+```jsx
+import { Tabs, Pagination, OTPInput, Switch, Dialog, Rating } from "uele/ui";
+import { signal } from "@preact/signals-core";
+
+const tab = signal("a");
+const page = signal(1);
+const code = signal("");
+const wifi = signal(true);
+const rating = signal(0);
+
+<>
+	<Tabs
+		model={tab}
+		items={[
+			{ value: "a", label: "Alpha", content: <p>panel A</p> },
+			{ value: "b", label: "Beta", content: <p>panel B</p> },
+		]}
+	/>
+	<Pagination page={page} total={95} pageSize={10} />
+	<OTPInput length={6} model={code} onComplete={(c) => console.log(c)} />
+	<Switch model={wifi} label="Wi-Fi" />
+	<Rating model={rating} />
+	<Dialog trigger="Delete" title="Are you sure?" model={openDialog}>
+		<p>This cannot be undone.</p>
+	</Dialog>
+</>;
+```
+
+(`openDialog` above is a boolean cell like `wifi`.) Compositional forms exist
+where Radix has them — `Tab`/`TabPanel` sharing a `selected` cell, `Radio`
+inside `RadioGroup`, `MenuItem` inside `Menu`, your own `Toast` stack or the
+batteries-included `Toaster` over a toasts cell. Everything is driven end to
+end by `test/ui.primitives.test.jsx`, `test/ui.test.js` and `test/ui.test.jsx`
+— including a run on alien-signals to prove nothing is preset-specific.
+
+## Hooks (`uele/hooks`)
+
+Thirty-plus useful hooks, written once against `uele/reactive`, so they run on
+every preset (the DOM/timer ones need no effect runner at all):
+
+```js
+import {
+	useToggle, useCounter, useLocalStorage, usePagination, useOTP, useForm,
+} from "uele/hooks";
+
+const [on, toggle] = useToggle(false);
+const { count, inc } = useCounter(0, { min: 0, max: 10 });
+const [name, setName] = useLocalStorage("name", "Ada");
+const pager = usePagination({ total: 95, pageSize: 10 });
+const otp = useOTP(6, { onComplete: (code) => submit(code) });
+```
+
+**State** — `useSignal` `useComputed` `useEffect` `useToggle` (`useBoolean`)
+`useDisclosure` `useCounter` `useControllable` `usePrevious` `useList`
+(`useArray`) `useHistory` (undo/redo) `useAsync` `useId`
+**Timers & debounce** — `useDebounce` `useDebounceFn` `useInterval`
+`useTimeout` `useCountdown`
+**Browser & DOM** — `useLocalStorage` `useSessionStorage` `useMediaQuery`
+`useOnline` `useWindowSize` `useEventListener` `useKeyPress` `useHotkey`
+`useClickOutside` `useHover` `useFocus` `useClipboard`
+`useIntersectionObserver` `useResizeObserver`
+**Composite logic** — `usePagination` (+ pure `paginationRange`) `useOTP`
+(`usePinInput`) `useForm` (per-field cells, validation, submit)
+
+Hooks return cells you can render directly (`{count}`), teardown functions, or
+small objects of both; observers and storage degrade gracefully when the
+browser API is absent. Covered by `test/hooks.test.js`.
+
+## Themes (`uele/themes`)
+
+Radix-Themes-style design tokens for the primitives above: every `uele/ui`
+component reads `--uele-*` CSS variables, so one reactive write re-skins the
+whole tree — no re-render, no class juggling:
+
+```jsx
+import { ThemeProvider, createTheme, themes, stylesheet } from "uele/themes";
+import { signal } from "@preact/signals-core";
+
+const theme = signal(themes.light);
+document.body.append(
+	<ThemeProvider theme={theme}>
+		<App />
+	</ThemeProvider>,
+);
+theme.value = themes.dark; // everything restyles, live
+
+const brand = createTheme({ appearance: "dark", accent: "rose", radius: "small" });
+const css = stylesheet(brand); // ":root { --uele-accent: #e11d48; … }" for SSR
+```
+
+`createTheme({ appearance, accent, radius, colors })` builds a theme from six
+shipped presets (`light`, `dark`, `midnight`, `forest`, `sunset`, `ocean`) and
+eight accent scales (`blue`, `emerald`, `rose`, `amber`, `violet`, `cyan`,
+`slate`, `neutral`) — or pass a raw CSS color. `cssVars(theme)` gives the
+`--uele-*` map, `ThemeStyle` renders it as a reactive `<style>` element, and
+`useTheme()` is the state hook (`toggle()` flips light/dark). The same module
+ships the class helpers Radix apps pair with themes — `cx(...)` for joining
+maybe-reactive class values and a `cva`-style `variants()` / `styled()`:
+
+```js
+import { variants, styled } from "uele/themes";
+
+const badge = variants({
+	base: "badge",
+	variants: { tone: { brand: "badge-brand", danger: "badge-danger" } },
+	defaultVariants: { tone: "brand" },
+});
+badge({ tone: "danger" }); // "badge badge-danger" — values may be cells too
+
+const BrandButton = styled("button", { base: "btn", variants: { tone: { brand: "btn-brand" } } });
+```
+
+Covered by `test/themes.test.jsx`.
 
 ## Presets: one-call interop
 
@@ -1229,7 +1368,7 @@ which keeps `<my-icon>`/`<m-button>` in the HTML namespace. For the few ambiguou
 ### Testing, types and size
 
 ```sh
-npm test               # vitest, 1322 tests: src, lite, jsx runtimes, presets, ui, flow, router and every example app
+npm test               # vitest, 1399 tests: src, lite, jsx runtimes, presets, ui, hooks, themes, flow, router and every example app
 npm run test:coverage  # 100% statements/branches/functions/lines are enforced
 npm run test:bundles   # re-runs the suites against the built ESM and CJS output
 npm run test:types     # type-checks the public api and jsx usage
@@ -1237,7 +1376,7 @@ npm run test:pack      # packs, installs in a clean project, checks exports/file
 npm run size           # fails when a bundle exceeds its byte budget
 ```
 
-Every published entry point ships its own `.d.ts` — `uele`, `uele/lite`, `uele/ui`, `uele/flow`, `uele/router`,
+Every published entry point ships its own `.d.ts` — `uele`, `uele/lite`, `uele/ui`, `uele/hooks`, `uele/themes`, `uele/flow`, `uele/router`,
 `uele/reactive`, `uele/adapters/*` and `uele/diffs/*` — so `tsc` is happy without a `@types` package. The
 package is `sideEffects: false` (bundlers tree-shake it) and needs **Node 18+**. Every signal and diff library
 behind a preset is an **optional peer dependency**: `npm i uele` installs two packages, and you add only the

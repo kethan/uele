@@ -42,7 +42,7 @@ const tarball = runNpm(['pack', '--pack-destination', work], root).trim().split(
 
 	writeFileSync(
 		join(work, 'check.mjs'),
-		`const specs = ['uele', 'uele/lite', 'uele/jsx-runtime', 'uele/jsx-dev-runtime', 'uele/adapters/preact', 'uele/diffs/swapdom', 'uele/ui', 'uele/reactive', 'uele/flow', 'uele/router'];
+		`const specs = ['uele', 'uele/lite', 'uele/jsx-runtime', 'uele/jsx-dev-runtime', 'uele/adapters/preact', 'uele/diffs/swapdom', 'uele/ui', 'uele/reactive', 'uele/flow', 'uele/router', 'uele/hooks', 'uele/themes'];
 for (const spec of specs) {
 	const mod = await import(spec);
 	const keys = Object.keys(mod).sort();
@@ -74,7 +74,7 @@ console.log('ok shared module instance, Fragment is the main h');
 		join(work, 'check.cjs'),
 		`// plain CommonJS consumers must get the full surface (a '.js' CJS build inside a
 // \"type\": \"module\" package resolves as ESM and yields an empty module - caught here)
-const specs = ['uele', 'uele/lite', 'uele/jsx-runtime', 'uele/jsx-dev-runtime', 'uele/adapters/preact', 'uele/diffs/swapdom', 'uele/ui', 'uele/reactive', 'uele/flow', 'uele/router'];
+const specs = ['uele', 'uele/lite', 'uele/jsx-runtime', 'uele/jsx-dev-runtime', 'uele/adapters/preact', 'uele/diffs/swapdom', 'uele/ui', 'uele/reactive', 'uele/flow', 'uele/router', 'uele/hooks', 'uele/themes'];
 for (const spec of specs) {
 	const mod = require(spec);
 	const keys = Object.keys(mod).filter((k) => k !== 'default' && k !== '__esModule').sort();
