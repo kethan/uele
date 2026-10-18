@@ -17,7 +17,8 @@ const APPS = [
 	['rxjs', 'rxjs'],
 	['nanostores', 'nanostores'],
 	['tanstack', '@tanstack/store'],
-	['solid', 'solid-js']
+	['solid', 'solid-js'],
+	['signals', '@webreflection/signals']
 ];
 
 // ---- tiny dom driver ----

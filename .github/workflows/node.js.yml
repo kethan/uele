@@ -26,7 +26,7 @@ jobs:
                   cache: "npm"
             - run: npm ci
             - run: npm run build
-            # 100% statement/branch/function/line thresholds are enforced by vitest
+            # vitest enforces 100% coverage (statements/branches/functions/lines) on every shipped module
             - run: npm run test:coverage
             # the same behavioural suites against the built ESM and CJS output
             - run: npm run test:bundles
@@ -35,3 +35,7 @@ jobs:
             - run: npm run size
             # packs the tarball, installs it in a clean project, checks exports and published types
             - run: npm run test:pack
+            # Chromium (binary pinned via @sparticuz/chromium) links libnspr4/libnss3 at launch
+            - run: sudo apt-get update && sudo apt-get install -y libnspr4 libnss3
+            # real-browser pass: boots the built bundles in Chromium, axe-checked
+            - run: npm run test:browser

@@ -1,7 +1,7 @@
 {
   "name": "uele",
   "description": "uele reactive frontend library",
-  "version": "0.11.0",
+  "version": "0.11.1",
   "type": "module",
   "source": "./src/index.js",
   "main": "./dist/index.cjs",
@@ -99,7 +99,9 @@
     "size": "node scripts/check-size.mjs",
     "build": "npm run clean && rollup --config rollup.config.js",
     "clean": "node -e \"const fs=require('fs');['dist','lite/dist','jsx-runtime/dist','jsx-dev-runtime/dist'].forEach((x)=>fs.rmSync(x,{recursive:true,force:true}));['adapters','diffs'].forEach((x)=>fs.readdirSync(x).filter((f)=>f.endsWith('.cjs')).forEach((f)=>fs.rmSync(x+'/'+f)));fs.readdirSync('.').filter((f)=>/^util-.*\\.js$/.test(f)).forEach((f)=>fs.rmSync(f))\"",
-    "test:bundles": "npm run build && vitest run --config vitest.bundles.esm.config.js && vitest run --config vitest.bundles.cjs.config.js"
+    "test:bundles": "npm run build && vitest run --config vitest.bundles.esm.config.js && vitest run --config vitest.bundles.cjs.config.js",
+    "pretest:browser": "node scripts/ensure-browser.mjs",
+    "test:browser": "playwright test"
   },
   "files": [
     "dist",
@@ -116,15 +118,19 @@
     "themes"
   ],
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@preact/signals-core": "^1.14.4",
     "@rollup/plugin-commonjs": "^28.0.1",
     "@rollup/plugin-node-resolve": "^15.3.0",
     "@rollup/plugin-terser": "^1.0.0",
+    "@sparticuz/chromium": "^153.0.0",
     "@tanstack/store": "^0.11.2",
     "@thi.ng/diff": "^5.1.129",
     "@vitest/coverage-v8": "^5.0.5",
     "@vue/reactivity": "^3.5.44",
+    "@webreflection/signals": "^0.2.8",
     "alien-signals": "^3.2.1",
+    "axe-core": "^4.14.0",
     "domdiff": "^2.2.2",
     "fast-array-diff": "^1.1.0",
     "jsdom": "^25.0.1",
@@ -210,6 +216,7 @@
     "rxjs": "^7.8.2",
     "s-js": "^0.4.9",
     "solid-js": "^1.9.17",
+    "@webreflection/signals": "^0.2.8",
     "swapdom": "^1.2.1",
     "udomdiff": "^1.1.2",
     "ulive": "^1.0.7",
@@ -223,6 +230,9 @@
       "optional": true
     },
     "@vue/reactivity": {
+      "optional": true
+    },
+    "@webreflection/signals": {
       "optional": true
     },
     "usignal": {

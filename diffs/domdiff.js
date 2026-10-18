@@ -8,6 +8,7 @@ import { api } from 'uele';
 import domdiff from 'domdiff';
 
 export const useDomdiff = (target = api) => {
+	/* istanbul ignore next -- CJS interop: the .default side only exists under require() */
 	const diff = typeof domdiff === 'function' ? domdiff : domdiff.default;
 	target.diff = (parent, oldNodes, newNodes, end) => diff(parent, oldNodes, newNodes, { before: end || null });
 	target.udom = undefined;

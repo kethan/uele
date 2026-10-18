@@ -9,6 +9,7 @@ import nanomorph from 'nanomorph';
 import { morphAdapter } from './util.js';
 
 export const useNanomorph = (target = api) => {
+	/* istanbul ignore next -- CJS interop: the .default side only exists under require() */
 	const morph = typeof nanomorph === 'function' ? nanomorph : nanomorph.default;
 	target.diff = morphAdapter(morph);
 	target.udom = undefined;

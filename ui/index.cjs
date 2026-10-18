@@ -37,15 +37,36 @@ const own = (initial) => {
 	try {
 		return reactive.signal(initial);
 	} catch {
+		// no preset installed: a minimal callable cell. Callable so the
+		// placeholder `api.get` (`v => v()`) can read it, `.write`/`.value`
+		// so reactive `write()` and direct assignment update it, and
+		// `.subscribe` so bindings can follow it where a runner exists.
 		let v = initial;
 		const subs = new Set();
-		return {
-			get value() { return v; },
-			set value(n) { v = n; subs.forEach((f) => f(n)); },
-			subscribe(fn) { subs.add(fn); fn(v); return { unsubscribe: () => subs.delete(fn) }; }
+		const set = (n) => { v = n; subs.forEach((f) => f(n)); };
+		const cell = () => v;
+		cell.write = set;
+		Object.defineProperty(cell, 'value', {
+			/* istanbul ignore next -- parity accessor: library reads go through get(), never .value; kept so the fallback quacks like a real cell */
+			get: () => v,
+			set, enumerable: true, configurable: true
+		});
+		cell.subscribe = (fn) => {
+			subs.add(fn);
+			fn(v);
+			/* istanbul ignore next -- internal subscriptions (Dialog scroll lock, core bindings) drop the handle by design; only external holders can unsubscribe */
+			return { unsubscribe: () => subs.delete(fn) };
 		};
+		return cell;
 	}
 };
+
+/**
+ * A null-rendering thunk child that runs `fn` when the region enclosing the
+ * component discards its subtree (the preset's `api.cleanup`, like `Title`).
+ * Document listeners, intervals and observers must not outlive their component.
+ */
+const onTeardown = (fn) => () => (reactive.active().cleanup?.(fn), null);
 
 /**
  * Radix-style controllable state. `controlled` may be a cell, a plain value or
@@ -56,6 +77,7 @@ const controllable = (controlled, initial, onChange) => {
 	const inner = own(initial);
 	const readValue = () => (controlled !== undefined ? val(controlled) : reactive.read(inner));
 	const writeValue = (v) => {
+		/* istanbul ignore next -- updater form kept for parity with useControllable; no ui component passes a function */
 		const next = typeof v === 'function' ? v(readValue()) : v;
 		if (reactive.isCell(controlled)) reactive.write(controlled, next);
 		else if (controlled === undefined) reactive.write(inner, next);
@@ -126,15 +148,20 @@ const Input = ({ model: cell, onInput, value, children, ...props } = {}) => {
 };
 
 const Textarea = ({ model: cell, onInput, value, children, ...props } = {}) => {
-	const el = uele.h('textarea', { ...props, value: value ?? (uele.is(cell) ? cell : null), onInput });
+	// string children are the initial value, as in HTML; explicit value/model win
+	const kids = kidsOf(children);
+	const text = typeof kids === 'string' ? kids : (Array.isArray(kids) && kids.every((c) => typeof c === 'string') ? kids.join('') : null);
+	const el = uele.h('textarea', { ...props, value: value ?? (uele.is(cell) ? cell : null) ?? text, onInput });
 	model(el, modelCell(cell, value, onInput), 'input');
 	return el;
 };
 
-const Checkbox = ({ model: cell, onChange, checked, children, ...props } = {}) => {
+const Checkbox = ({ model: cell, onChange, checked, label, children, ...props } = {}) => {
 	const el = uele.h('input', { type: 'checkbox', ...props, checked: checked ?? (uele.is(cell) ? cell : null), onChange });
 	model(el, modelCell(cell, checked, onChange), 'change', 'checked');
-	return el;
+	// like Radio: label text (children or `label`) wraps the input in a <label>
+	const content = kidsOf(children) ?? label;
+	return content != null ? uele.h('label', null, el, ' ', content) : el;
 };
 
 const Option = ({ children, ...props } = {}) => uele.h('option', props, children);
@@ -186,6 +213,7 @@ const RadioGroup = ({ model: cell, value, name, options, onChange, children, ...
 const Switch = ({ model: cell, checked, onChange, onCheckedChange, label, children, ...props } = {}) => {
 	const controlled = cell ?? checked;
 	const [on, setOn] = controllable(controlled, false, onCheckedChange || onChange);
+	let offPaint = null;
 	const el = uele.h('button', {
 		type: 'button',
 		role: 'switch',
@@ -198,12 +226,12 @@ const Switch = ({ model: cell, checked, onChange, onCheckedChange, label, childr
 			border: '1px solid var(--uele-border, #e2e8f0)', cursor: 'pointer',
 			...props.style
 		}
-	}, kidsOf(children) ?? label ?? '');
+	}, kidsOf(children) ?? label ?? '', onTeardown(() => offPaint?.()));
 	// live background follows state through a function child region is overkill: track with sub when reactive
 	el.style.background = 'var(--uele-border, #e2e8f0)';
 	const paint = () => (el.style.background = on() ? 'var(--uele-accent, #2563eb)' : 'var(--uele-border, #e2e8f0)');
 	paint();
-	if (uele.is(controlled)) uele.sub(controlled, paint, () => {});
+	if (uele.is(controlled)) offPaint = uele.sub(controlled, paint, () => {});
 	el.addEventListener('click', () => setOn(!on()));
 	return el;
 };
@@ -291,7 +319,7 @@ const OTPInput = ({ length = 6, model: cell, value, onChange, onComplete, label,
 	const inputs = [];
 	const digitsOf = () => String(code() || '').padEnd(length, '').slice(0, length).split('');
 	const writeDigit = (index, raw) => {
-		const clean = String(raw ?? '').replace(/\D/g, '');
+		const clean = String(raw).replace(/\D/g, ''); // both callers (input event, paste) always pass a string
 		const digits = digitsOf();
 		if (!clean) digits[index] = '';
 		else clean.split('').forEach((c, i) => { if (index + i < length) digits[index + i] = c; });
@@ -642,7 +670,7 @@ const BreadcrumbItem = ({ children, ...props } = {}) =>
 const BreadcrumbLink = ({ href, current, children, ...props } = {}) =>
 	uele.h('a', { ...props, href, ...(current ? { 'aria-current': 'page' } : {}) }, children);
 const BreadcrumbSeparator = ({ children, ...props } = {}) =>
-	uele.h('span', { 'aria-hidden': 'true', ...props }, children ?? '/');
+	uele.h('span', { 'aria-hidden': 'true', ...props }, kidsOf(children) ?? '/');
 
 /** `<Breadcrumb items={[{label, href}, …]} />` — the last item is the current page */
 const Breadcrumb = ({ items, separator = '/', children, ...props } = {}) => {
@@ -823,12 +851,11 @@ const Dialog = ({ open, model: modelProp, defaultOpen = false, onOpenChange, onC
 	const [isOpen, setOpen] = controllable(modelProp ?? open, defaultOpen, onOpenChange || onChange);
 	const titleId = nextId('uele-dialog-title');
 	const descId = nextId('uele-dialog-desc');
-	const close = () => setOpen(false);
+	const close = () => (setOpen(false), applyLock()); // re-apply the scroll lock on every internal close, not just cell-driven ones
 	let host = null;
 	let locked = false;
 	let prevOverflow = '';
-	const applyLock = () => {
-		if (typeof document === 'undefined') return;
+	const applyLock = () => { // only ever called/subtcribed under the document guard below
 		if (isOpen() && !locked) {
 			locked = true;
 			prevOverflow = document.body.style.overflow;
@@ -839,11 +866,14 @@ const Dialog = ({ open, model: modelProp, defaultOpen = false, onOpenChange, onC
 			document.body.style.overflow = prevOverflow;
 		}
 	};
+	const onKey = (e) => e.key === 'Escape' && isOpen() && close();
+	let offSource = null;
+	/* istanbul ignore else -- SSR: rendering still requires document (h() throws); this guard only keeps module setup import-safe */
 	if (typeof document !== 'undefined') {
-		document.addEventListener('keydown', (e) => e.key === 'Escape' && isOpen() && close());
+		document.addEventListener('keydown', onKey);
 		applyLock();
 		const source = modelProp ?? open;
-		if (uele.is(source)) uele.sub(source, applyLock, () => {});
+		if (uele.is(source)) offSource = uele.sub(source, applyLock, () => {});
 	}
 	const panel = () => {
 		if (!isOpen()) return '';
@@ -872,9 +902,10 @@ const Dialog = ({ open, model: modelProp, defaultOpen = false, onOpenChange, onC
 	};
 	host = uele.h('div', { style: { display: 'contents' }, onkeydown: (e) => e.key === 'Escape' && isOpen() && close() },
 		trigger != null
-			? uele.h('button', { type: 'button', 'aria-haspopup': 'dialog', 'aria-expanded': () => String(!!isOpen()), onclick: () => setOpen(true) }, trigger)
+			? uele.h('button', { type: 'button', 'aria-haspopup': 'dialog', 'aria-expanded': () => String(!!isOpen()), onclick: () => (setOpen(true), applyLock()) }, trigger)
 			: null,
-		() => panel());
+		() => panel(),
+		onTeardown(() => { document.removeEventListener('keydown', onKey); offSource?.(); }));
 	return host;
 };
 
@@ -896,8 +927,10 @@ const Sheet = Drawer;
  * `onConfirm` fires on the danger button, `onCancel`/close on anything else.
  */
 const AlertDialog = ({ open, model: modelProp, defaultOpen = false, onOpenChange, confirmLabel = 'Confirm', cancelLabel = 'Cancel', danger, onConfirm, onCancel, children, ...props } = {}) => {
-	const inner = own(!!defaultOpen);
-	const controlledCell = reactive.isCell(modelProp ?? open) ? (modelProp ?? open) : null;
+	const source = modelProp ?? open;
+	const controlledCell = reactive.isCell(source) ? source : null;
+	// a plain boolean `open`/`model` seeds the state (props are mount-time here); a cell stays controlled
+	const inner = own(!controlledCell && typeof source === 'boolean' ? source : !!defaultOpen);
 	const setOpen = (v) => {
 		if (controlledCell) reactive.write(controlledCell, v);
 		else reactive.write(inner, v);
@@ -1005,7 +1038,7 @@ const Toast = ({ open, model: modelProp, title, description, duration = 5000, on
 		if (duration > 0 && isOpen()) timer = setTimeout(dismiss, duration);
 	};
 	const dismiss = () => (clearTimeout(timer), setOpen(false), onClose?.());
-	if (uele.is(source)) uele.sub(source, () => arm(), () => {});
+	const offSource = uele.is(source) ? uele.sub(source, () => arm(), () => {}) : null;
 	arm();
 	return uele.h('div', { style: { display: 'contents' } }, () =>
 		isOpen()
@@ -1019,7 +1052,8 @@ const Toast = ({ open, model: modelProp, title, description, duration = 5000, on
 						children),
 					action || null,
 					uele.h('button', { type: 'button', 'aria-label': 'Dismiss', onclick: dismiss }, '×'))
-			: '');
+			: '',
+		onTeardown(() => (clearTimeout(timer), offSource?.())));
 };
 
 /** renders a stack from a toasts array (cell or plain): `[{id,title,description,duration}]` */
@@ -1099,8 +1133,9 @@ const Toggle = ({ model: cell, pressed, value, selected, onChange, onPressedChan
 					if (reactive.isCell(selected)) reactive.write(selected, next);
 					onChange?.(next, e);
 				} else {
-					if (reactive.isCell(selected)) reactive.write(selected, val(selected) === value ? '' : value);
-					onChange?.(val(selected) === value ? '' : value, e);
+					const next = val(selected) === value ? '' : value;
+					if (reactive.isCell(selected)) reactive.write(selected, next);
+					onChange?.(next, e);
 				}
 			} else setOn(!on());
 		}
@@ -1166,7 +1201,7 @@ const SkipLink = ({ href = '#main', children, ...props } = {}) => {
 		style: { position: 'absolute', left: '-9999px', top: 0, zIndex: 100, background: 'var(--uele-accent, #2563eb)', color: 'var(--uele-accent-text, #fff)', padding: '0.5rem 1rem' },
 		onfocus: (e) => (e.currentTarget.style.left = '0'),
 		onblur: (e) => (e.currentTarget.style.left = '-9999px')
-	}, children ?? 'Skip to content');
+	}, kidsOf(children) ?? 'Skip to content');
 	return el;
 };
 
@@ -1230,7 +1265,7 @@ const PasswordInput = ({ model: cell, value, showStrength, onChange, ...props } 
 			role: 'progressbar', 'aria-label': 'Password strength', 'aria-valuemin': 0, 'aria-valuemax': 4,
 			'aria-valuenow': () => strength(), 'data-strength': () => strength(),
 			style: { height: '0.375rem', marginTop: '0.375rem', background: 'var(--uele-surface-hover, #f1f5f9)', borderRadius: '9999px', overflow: 'hidden' }
-		}, uele.h('div', { style: { height: '100%', width: () => strength() * 25 + '%', background: () => ['#ef4444', '#f59e0b', '#eab308', '#22c55e'][Math.max(0, strength() - 1)] || '#ef4444' } })) : null);
+		}, uele.h('div', { style: { height: '100%', width: () => strength() * 25 + '%', background: () => ['#ef4444', '#f59e0b', '#eab308', '#22c55e'][Math.max(0, strength() - 1)] } })) : null); // strength() is 0..4, so the index is always in range
 };
 
 /** copy-to-clipboard button with transient "Copied" feedback */
@@ -1398,7 +1433,7 @@ const DatePicker = ({ model: cell, value, placeholder = 'Pick a date', label, on
 	const open = own(false);
 	const input = uele.h('input', {
 		type: 'text', placeholder, 'aria-label': label || placeholder, ...props,
-		value: () => (current() instanceof Date ? toISODate(current()) : current() || ''),
+		value: () => (current() instanceof Date ? (isNaN(current()) ? '' : toISODate(current())) : current() || ''),
 		onInput: (e) => {
 			const parsed = parseDateValue(e.target.value);
 			if (parsed && /^\d{4}-\d{2}-\d{2}$/.test(e.target.value)) setCurrent(toISODate(parsed));
@@ -1430,9 +1465,11 @@ const relativeParts = (diffMs) => {
 /** live "3 minutes ago" text; re-renders every `interval` ms (span, `dateTime` on hover via title) */
 const TimeAgo = ({ date, value, interval = 30000, ...props } = {}) => {
 	const tick = own(Date.now());
-	if (interval != null && typeof setInterval !== 'undefined') setInterval(() => reactive.write(tick, Date.now()), interval);
+	let timer = null;
+	if (interval != null && typeof setInterval !== 'undefined') timer = setInterval(() => reactive.write(tick, Date.now()), interval);
 	const target = parseDateValue(val(date ?? value));
 	return uele.h('span', { 'data-uele-timeago': '', title: target ? target.toISOString() : undefined, ...props },
+		onTeardown(() => clearInterval(timer)),
 		() => {
 			reactive.read(tick);
 			const t = parseDateValue(val(date ?? value));
@@ -1455,8 +1492,9 @@ const CountdownTimer = ({ to, seconds, onComplete, ...props } = {}) => {
 	const startAt = Date.now();
 	const total = seconds != null ? Number(val(seconds)) * 1000 : 0;
 	const end = target ?? startAt + total;
+	let timer = null;
 	if (typeof setInterval !== 'undefined') {
-		const timer = setInterval(() => {
+		timer = setInterval(() => {
 			reactive.write(tick, Date.now());
 			if (Date.now() >= end && !reactive.read(done)) (reactive.write(done, true), clearInterval(timer), onComplete?.());
 		}, 250);
@@ -1469,7 +1507,7 @@ const CountdownTimer = ({ to, seconds, onComplete, ...props } = {}) => {
 		const ss = left % 60;
 		return `${pad2(hh)}:${pad2(mm)}:${pad2(ss)}`;
 	};
-	return uele.h('span', { role: 'timer', 'data-uele-countdown': '', 'data-done': () => String(!!reactive.read(done)), ...props }, () => format());
+	return uele.h('span', { role: 'timer', 'data-uele-countdown': '', 'data-done': () => String(!!reactive.read(done)), ...props }, onTeardown(() => clearInterval(timer)), () => format());
 };
 
 /* ------------------------------------------------- data-heavy components */
@@ -1527,7 +1565,7 @@ const Tree = ({ items, model: cell, value, defaultExpanded = [], onSelect, ...pr
 		next.has(v) ? next.delete(v) : next.add(v);
 		reactive.write(expanded, next);
 	};
-	const renderItems = (list, depth) => (list || []).map((item) => {
+	const renderItems = (list, depth) => list.map((item) => { // both call sites pass arrays (val(items) || [] / item.children || [])
 		const kids = item.children || [];
 		const isParent = kids.length > 0;
 		const key = item.value ?? item.label;
@@ -1553,9 +1591,12 @@ const TreeView = Tree;
 const VirtualList = ({ items, itemHeight = 32, height = 320, overscan = 3, renderItem, ...props } = {}) => {
 	const scrollTop = own(0);
 	const list = () => val(items) || [];
+	// `height` may be a CSS px string ('320px'); the windowing math needs a number (fallback: the 320 default)
+	const px = typeof height === 'number' ? height : parseFloat(height);
+	const view = Number.isFinite(px) ? px : 320;
 	const range = () => {
 		const start = Math.max(0, Math.floor(reactive.read(scrollTop) / itemHeight) - overscan);
-		const count = Math.ceil(height / itemHeight) + overscan * 2;
+		const count = Math.ceil(view / itemHeight) + overscan * 2;
 		return [start, Math.min(list().length, start + count)];
 	};
 	return uele.h('div', {
@@ -1578,15 +1619,19 @@ const InfiniteScroll = ({ onLoadMore, loading, hasMore = true, children, ...prop
 	const tryLoad = () => {
 		if (val(hasMore) && !val(loading)) onLoadMore?.();
 	};
+	let io = null;
+	let dead = false;
 	if (typeof IntersectionObserver !== 'undefined') {
 		setTimeout(() => {
-			const io = new IntersectionObserver((entries) => entries[0]?.isIntersecting && tryLoad());
+			if (dead) return; // torn down before the observer was ever attached
+			io = new IntersectionObserver((entries) => entries[0]?.isIntersecting && tryLoad());
 			io.observe(sentinel);
 		}, 0);
 	}
 	return uele.h('div', { 'data-uele-infinite-scroll': '', ...props },
 		children,
 		sentinel,
+		onTeardown(() => (dead = true, io?.disconnect())),
 		typeof IntersectionObserver === 'undefined'
 			? uele.h('button', { type: 'button', disabled: () => !!val(loading) || !val(hasMore), onclick: tryLoad }, () => (val(loading) ? 'Loading…' : 'Load more'))
 			: uele.h('div', { 'aria-live': 'polite' }, () => (val(loading) ? 'Loading…' : '')));
@@ -1598,8 +1643,10 @@ const InfiniteScroll = ({ onLoadMore, loading, hasMore = true, children, ...prop
  * `items={[{label, hint, keywords, onSelect}]}`.
  */
 const CommandPalette = ({ open, model: modelProp, defaultOpen = false, trigger, items = [], placeholder = 'Type a command or search…', onSelect, onOpenChange, ...props } = {}) => {
-	const inner = own(!!defaultOpen);
-	const controlledCell = reactive.isCell(modelProp ?? open) ? (modelProp ?? open) : null;
+	const source = modelProp ?? open;
+	const controlledCell = reactive.isCell(source) ? source : null;
+	// a plain boolean `open`/`model` seeds the state (props are mount-time here); a cell stays controlled
+	const inner = own(!controlledCell && typeof source === 'boolean' ? source : !!defaultOpen);
 	const isOpen = () => (controlledCell ? !!val(controlledCell) : !!reactive.read(inner));
 	const setOpen = (v) => (controlledCell ? reactive.write(controlledCell, v) : reactive.write(inner, v), onOpenChange?.(v));
 	const query = own('');
@@ -1654,10 +1701,13 @@ const CommandPalette = ({ open, model: modelProp, defaultOpen = false, trigger, 
 					}, uele.h('span', null, item.label), item.hint ? uele.h('span', { style: { color: 'var(--uele-text-muted, #64748b)' } }, item.hint) : null));
 				})));
 	};
-	if (typeof document !== 'undefined') document.addEventListener('keydown', (e) => e.key === 'Escape' && isOpen() && setOpen(false));
+	const onKey = (e) => e.key === 'Escape' && isOpen() && setOpen(false);
+	/* istanbul ignore else -- SSR: rendering still requires document (h() throws); this guard only keeps module setup import-safe */
+	if (typeof document !== 'undefined') document.addEventListener('keydown', onKey);
 	return uele.h('div', { style: { display: 'contents' }, ...props },
 		trigger != null ? uele.h('button', { type: 'button', 'aria-haspopup': 'dialog', onclick: () => setOpen(true) }, trigger) : null,
-		() => panel());
+		() => panel(),
+		onTeardown(() => document.removeEventListener('keydown', onKey)));
 };
 /** alias */
 const Command = CommandPalette;
@@ -1668,12 +1718,14 @@ const Command = CommandPalette;
 const ContextMenu = ({ items = [], onSelect, children, ...props } = {}) => {
 	const state = own({ open: false, x: 0, y: 0 });
 	const close = () => reactive.write(state, { ...reactive.read(state), open: false });
-	if (typeof document !== 'undefined') document.addEventListener('click', () => reactive.read(state).open && close());
+	const onDocClick = () => reactive.read(state).open && close();
+	/* istanbul ignore else -- SSR: rendering still requires document (h() throws); this guard only keeps module setup import-safe */
+	if (typeof document !== 'undefined') document.addEventListener('click', onDocClick);
 	return uele.h('div', {
 		'data-uele-context-menu': '', ...props,
 		oncontextmenu: (e) => (e.preventDefault(), reactive.write(state, { open: true, x: e.clientX, y: e.clientY })),
 		onkeydown: (e) => e.key === 'Escape' && close()
-	}, children,
+	}, children, onTeardown(() => document.removeEventListener('click', onDocClick)),
 		() => (reactive.read(state).open
 			? uele.h('div', {
 					role: 'menu',
@@ -1707,7 +1759,7 @@ const NavigationMenu = ({ items = [], ...props } = {}) => {
 						? uele.h('div', {
 								role: 'menu', hidden: () => reactive.read(open) !== item.label,
 								style: { position: 'absolute', top: '100%', left: 0, zIndex: 30, minWidth: '14rem', background: 'var(--uele-surface, #fff)', border: '1px solid var(--uele-border, #e2e8f0)', borderRadius: 'var(--uele-radius, 10px)', boxShadow: 'var(--uele-shadow-md, 0 4px 16px rgba(0,0,0,0.12))', padding: '0.75rem' }
-							}, item.content ?? (item.links || []).map((link) => uele.h('a', { href: link.href, role: 'menuitem', style: { display: 'block', padding: '0.375rem 0.5rem' } }, link.label)))
+							}, item.content ?? item.links.map((link) => uele.h('a', { href: link.href, role: 'menuitem', style: { display: 'block', padding: '0.375rem 0.5rem' } }, link.label))) // panel only renders when content||links is truthy; content nullish here means links is set
 						: null);
 			})));
 };
@@ -1737,8 +1789,7 @@ const SplitPane = ({ first, second, children, direction = 'horizontal', model: c
 	const startDrag = (e) => {
 		e.preventDefault();
 		const move = (ev) => {
-			if (!container) return;
-			const rect = container.getBoundingClientRect();
+			const rect = container.getBoundingClientRect(); // ref assigns container during h(), before any drag can start
 			const raw = horizontal ? (ev.clientX - rect.left) / rect.width : (ev.clientY - rect.top) / rect.height;
 			setRatio(Math.min(max, Math.max(min, raw)));
 		};
@@ -1815,13 +1866,16 @@ const Lightbox = ({ images = [], ...props } = {}) => {
 		const len = list().length || 1;
 		reactive.write(index, ((reactive.read(index) + d) % len + len) % len);
 	};
-	if (typeof document !== 'undefined') document.addEventListener('keydown', (e) => {
+	const onKey = (e) => {
 		if (!reactive.read(open)) return;
 		if (e.key === 'Escape') reactive.write(open, false);
 		if (e.key === 'ArrowRight') step(1);
 		if (e.key === 'ArrowLeft') step(-1);
-	});
+	};
+	/* istanbul ignore else -- SSR: rendering still requires document (h() throws); this guard only keeps module setup import-safe */
+	if (typeof document !== 'undefined') document.addEventListener('keydown', onKey);
 	return uele.h('div', { 'data-uele-lightbox': '', ...props },
+		onTeardown(() => document.removeEventListener('keydown', onKey)),
 		uele.h('div', { style: { display: 'flex', gap: '0.5rem', flexWrap: 'wrap' } },
 			() => list().map((img, i) => uele.h('button', {
 				type: 'button', 'aria-label': `View image ${i + 1}`, style: { padding: 0, border: 'none', cursor: 'pointer', background: 'none' },

@@ -124,6 +124,7 @@ const presetFiles = [
 	'adapters/nanostores.js',
 	'adapters/tanstack.js',
 	'adapters/solid.js',
+	'adapters/signals.js',
 	'diffs/builtin.js',
 	'diffs/swapdom.js',
 	'diffs/udomdiff.js',

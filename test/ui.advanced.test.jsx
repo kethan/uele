@@ -293,6 +293,25 @@ describe('data-heavy components', () => {
 		expect(el.textContent).toContain('row 50');
 	});
 
+	it('VirtualList windows correctly for a CSS px string height', () => {
+		const items = Array.from({ length: 500 }, (_, i) => 'row ' + i);
+		const el = <VirtualList items={items} itemHeight={20} height="100px" renderItem={(item) => item} />;
+		document.body.append(el);
+		expect(el.querySelectorAll('[data-index]').length).toBe(11); // ceil(100/20) + 2*3 overscan
+		expect(el.textContent).toContain('row 0');
+		el.scrollTop = 1000;
+		el.dispatchEvent(new Event('scroll'));
+		expect(el.textContent).toContain('row 50');
+	});
+
+	it('VirtualList falls back to the default height for an unparseable string', () => {
+		const items = Array.from({ length: 500 }, (_, i) => 'row ' + i);
+		const el = <VirtualList items={items} itemHeight={20} height="tall" renderItem={(item) => item} />;
+		document.body.append(el);
+		expect(el.querySelectorAll('[data-index]').length).toBe(22); // ceil(320/20) + 2*3 overscan
+		expect(el.textContent).toContain('row 0');
+	});
+
 	it('InfiniteScroll falls back to a button without IntersectionObserver', () => {
 		const load = vi.fn();
 		const el = (

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Harness</title>
+		<script>
+			// Collect every uncaught error / rejection / console.error so the
+			// specs can assert a clean boot and clean interactions.
+			window.__errors = [];
+			window.addEventListener('error', (e) => window.__errors.push(String(e.message || e.error)));
+			window.addEventListener('unhandledrejection', (e) => window.__errors.push(String(e.reason)));
+			const origError = console.error.bind(console);
+			console.error = (...args) => {
+				window.__errors.push(args.map(String).join(' '));
+				origError(...args);
+			};
+		</script>
+		<script type="importmap">
+			{
+				"imports": {
+					"uele": "/dist/index.es.js",
+					"uele/ui": "/ui/index.js",
+					"uele/hooks": "/hooks/index.js",
+					"uele/flow": "/flow/index.js",
+					"uele/router": "/router/index.js",
+					"uele/reactive": "/reactive/index.js",
+					"uele/adapters/preact": "/adapters/preact.js",
+					"@preact/signals-core": "/node_modules/@preact/signals-core/dist/signals-core.module.js"
+				}
+			}
+		</script>
+	</head>
+	<body>
+		<div id="app"></div>
+		<script type="module" src="./harness.js"></script>
+	</body>
+</html>

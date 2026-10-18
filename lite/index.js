@@ -15,6 +15,8 @@ const Live = (sm = document.createTextNode(""), em = document.createTextNode("")
     set: (o) => oldNodes = o,
     replace: (...newNodes) => {
         if (sm.parentNode && em.parentNode) {
+            // dispose what is being discarded (moved/reused nodes keep theirs)
+            oldNodes.forEach((n) => newNodes.includes(n) || kill(n));
             // a differ owns the region when configured, otherwise wipe the span between
             // the markers (a nested region holds nodes oldNodes does not know about)
             if (api.diff) api.diff(sm.parentNode, oldNodes, newNodes, api.udom || em, api.udom && em)
@@ -27,15 +29,21 @@ const Live = (sm = document.createTextNode(""), em = document.createTextNode("")
     }
 });
 
+// teardown registry: node -> disposers (`sub` returns) for its region/attrs,
+// run when a region discards the node so removed content stops reacting
+const gone = new WeakMap()
+const kill = (n) => { const list = gone.get(n); gone.delete(n); list?.forEach((f) => f()); [...n.childNodes].forEach(kill) }
+const track = (n, f) => { if (f?.call) (gone.get(n) || gone.set(n, []).get(n)).push(f) }
+
 const add = (...children) =>
     children.flat(Infinity).flatMap((child) => {
         if (!is(child)) return toNode(child);
         let live = Live(), prev = "", done = false;
         // errors from promises/observables/async iterables are ignored - subscribe with r() to handle them
-        sub(child, (value) => {
+        track(live.sm, sub(child, (value) => {
             if (done && prev !== value) live.replace(...add(value));
             prev = value;
-        }, noop);
+        }, noop));
         done = true;
         return [live.sm, ...live.set(add(prev)), live.em];
     })
@@ -68,26 +76,26 @@ const h = (tag, attrs, ...children) => {
                 if (name.startsWith("on")) (name = name.toLowerCase()) in tag ? tag[name] = value : isFunction(value) && tag.addEventListener(name.slice(2), value)
                 else if (name === 'style' && isObject(value) && !is(value))
                     Object.entries(value).forEach(([prop, val]) =>
-                        r(val, v =>
+                        track(tag, r(val, v =>
                             (prop in tag.style)
                                 ? tag.style[prop] = v == null ? '' : v
                                 : v == null
                                     ? tag.style.removeProperty(prop)
                                     : tag.style.setProperty(prop, v)
-                        )
+                        ))
                     )
                 else if (name === 'class' && isObject(value) && !is(value))
                     Object.entries(value).forEach(([prop, val]) =>
-                        r(val, v => tag.classList.toggle(prop, !!v))
+                        track(tag, r(val, v => tag.classList.toggle(prop, !!v)))
                     );
                 else if (name === 'ref' && isFunction(value)) value(tag, attrs)
                 else if (props.has(name)) props.get(name)(tag, value, name, attrs);
-                else if (name in tag && !ns) r(value, v => tag[name] = v == null ? '' : v);
-                else r(value, v =>
+                else if (name in tag && !ns) track(tag, r(value, v => tag[name] = v == null ? '' : v));
+                else track(tag, r(value, v =>
                     v == null || v === false
                         ? tag.removeAttribute(name)
                         : tag.setAttribute(name, v === true ? '' : v)
-                );
+                ));
 
             })
         }

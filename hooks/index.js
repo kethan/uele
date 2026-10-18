@@ -18,7 +18,6 @@ import { signal, computed, read, write, effect, batch, untracked, isCell, canEff
 /* --------------------------------------------------------------- helpers */
 
 const val = (x) => (x == null || (typeof x !== 'object' && typeof x !== 'function') ? x : get(x));
-const set = (cell, v) => write(cell, typeof v === 'function' ? v(val(cell)) : v);
 const targetOf = (t) => {
 	if (t == null) return typeof window !== 'undefined' ? window : null;
 	if (typeof t === 'function') return t();
@@ -608,18 +607,28 @@ export const useThrottle = (source, interval = 300) => {
 	return [throttled, () => (timer && clearTimeout(timer), off())];
 };
 
-/** throttle any function (leading edge); the wrapper also has `.cancel()` */
+/** throttle any function (leading edge; one trailing edge fires with the latest args); the wrapper also has `.cancel()` */
 export const useThrottleFn = (fn, interval = 300) => {
 	let last = 0;
 	let timer = null;
+	let pending = null; // args of the most recent throttled call, used by the trailing edge
 	const wrapped = (...args) => {
 		const wait = interval - (Date.now() - last);
 		if (wait <= 0) {
 			last = Date.now();
 			fn(...args);
-		} else if (!timer) timer = setTimeout(() => ((timer = null), (last = Date.now()), fn(...args)), wait);
+		} else {
+			pending = args; // trailing edge must fire with the LATEST args, not the first delayed ones
+			if (!timer) timer = setTimeout(() => {
+				timer = null;
+				last = Date.now();
+				const latest = pending;
+				pending = null;
+				fn(...latest);
+			}, wait);
+		}
 	};
-	wrapped.cancel = () => (timer && clearTimeout(timer), (timer = null));
+	wrapped.cancel = () => (timer && clearTimeout(timer), (timer = null), (pending = null));
 	return wrapped;
 };
 
@@ -719,7 +728,7 @@ export const useBroadcastChannel = (name, { onMessage } = {}) => {
 /** fetch JSON with loading/error state and aborts: `{ data, error, loading, run, abort }` */
 export const useFetch = (url, options) => {
 	const base = useAsync(async (target, opts) => {
-		const res = await fetch(target ?? val(url), opts ?? options);
+		const res = await fetch(target ?? val(url), opts);
 		if (!res.ok) throw new Error(`fetch failed: ${res.status}`);
 		const type = res.headers?.get?.('content-type') || '';
 		return type.includes('json') ? res.json() : res.text();
@@ -728,7 +737,7 @@ export const useFetch = (url, options) => {
 	const run = (target, opts) => {
 		controller?.abort?.();
 		controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-		return base.run(target, { ...opts, signal: controller?.signal });
+		return base.run(target, { ...options, ...opts, signal: controller?.signal }); // hook-level options are the defaults every run starts from
 	};
 	return { ...base, run, abort: () => controller?.abort?.() };
 };
@@ -881,10 +890,12 @@ export const useColorScheme = ({ persist = true, key = 'uele-scheme', initial } 
 		write(dark, next === 'dark');
 		try { persist && localStorage.setItem(key, next); } catch { /* private mode */ }
 	};
-	if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
-		const mql = window.matchMedia('(prefers-color-scheme: dark)');
-		on(mql, 'change', () => !stored() && setScheme(media()));
-	}
+	try {
+		if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+			const mql = window.matchMedia('(prefers-color-scheme: dark)');
+			on(mql, 'change', () => !stored() && setScheme(media()));
+		}
+	} catch { /* a throwing matchMedia must not break the hook (media() already degrades) */ }
 	return { scheme, dark, setScheme, toggle: () => setScheme(read(scheme) === 'dark' ? 'light' : 'dark') };
 };
 /** alias */

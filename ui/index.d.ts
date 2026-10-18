@@ -14,7 +14,7 @@ export declare const FieldError: Factory<AnyProps>;
 export declare const Button: Factory<AnyProps & { variant?: 'solid' | 'outline' | 'ghost' | string; size?: 'sm' | 'md' | 'lg' | string }>;
 export declare const Input: Factory<ModelProps & { onInput?: (event: Event) => void }>;
 export declare const Textarea: Factory<ModelProps & { onInput?: (event: Event) => void }>;
-export declare const Checkbox: Factory<ModelProps & { checked?: unknown; onChange?: (event: Event) => void }>;
+export declare const Checkbox: Factory<ModelProps & { checked?: unknown; label?: unknown; onChange?: (event: Event) => void }>;
 export declare const Option: Factory<AnyProps>;
 export declare const Select: Factory<ModelProps & { options?: Array<unknown> }>;
 export declare const Radio: Factory<ModelProps & { label?: unknown; name?: string }>;

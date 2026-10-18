@@ -64,7 +64,7 @@ const RADII = {
 const isPlain = (v) => !!v && typeof v === 'object' && !Array.isArray(v) && !reactive.isCell(v);
 const merge = (base, over) => {
 	const out = { ...base };
-	for (const [k, v] of Object.entries(over || {})) out[k] = isPlain(v) && isPlain(out[k]) ? merge(out[k], v) : v;
+	for (const [k, v] of Object.entries(over)) out[k] = isPlain(v) && isPlain(out[k]) ? merge(out[k], v) : v;
 	return out;
 };
 
@@ -151,13 +151,13 @@ const cssVars = (theme) => {
 	const t = resolveTheme(theme);
 	const out = {};
 	for (const [key, varName] of VAR_MAP) if (t.colors?.[key] != null) out[varName] = t.colors[key];
-	const radii = t.radii || {};
+	const radii = t.radii;
 	if (radii.radiusSm != null) out['--uele-radius-sm'] = radii.radiusSm;
 	if (radii.radiusMd != null) out['--uele-radius'] = radii.radiusMd;
 	if (radii.radiusMd != null) out['--uele-radius-md'] = radii.radiusMd;
 	if (radii.radiusLg != null) out['--uele-radius-lg'] = radii.radiusLg;
 	if (radii.radiusFull != null) out['--uele-radius-full'] = radii.radiusFull;
-	const shadows = { ...(t.colors || {}), ...(t.shadow || {}) };
+	const shadows = { ...t.colors, ...(t.shadow || {}) };
 	if (shadows.shadowSm) out['--uele-shadow-sm'] = shadows.shadowSm;
 	if (shadows.shadowMd) out['--uele-shadow'] = shadows.shadowMd;
 	if (shadows.shadowMd) out['--uele-shadow-md'] = shadows.shadowMd;

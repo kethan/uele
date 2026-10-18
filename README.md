@@ -741,7 +741,7 @@ const TodoApp = () => {
 document.body.append(TodoApp());
 ```
 
-The same app, written for each of the eleven signal libraries, lives in [`examples/todos/`](examples/todos) —
+The same app, written for each of the twelve signal libraries, lives in [`examples/todos/`](examples/todos) —
 each one is a complete runnable file (`mountTodos(document.body)`) and is driven end to end by
 `test/examples.test.js`: add, toggle, delete, filter (all/active/completed), clear-completed and
 independent instances.
@@ -989,7 +989,7 @@ runnable examples in [docs/PRESETS.md](docs/PRESETS.md) and driven end to end by
 
 Utilities and primitives should not care which signal library is installed. `uele/reactive` is nine
 functions that delegate to the hooks the active preset published, so this counter runs unchanged on ulive,
-preact, vue, usignal, alien-signals, s-js, mobx and solid — and, for the parts that need no effect runner,
+preact, vue, usignal, alien-signals, s-js, mobx, solid and signals — and, for the parts that need no effect runner,
 on rxjs, nanostores and `@tanstack/store`:
 
 ```jsx
@@ -1048,7 +1048,7 @@ never overwrites a newer one). `Suspense` shows its fallback until the async chi
 `ErrorBoundary` catches a synchronous throw _and_ a rejected promise, keeps rendering the fallback and
 calls `onError`. `Portal` moves its children into another container and leaves a comment marker where it
 was. Every one of them is signal-agnostic: the reactive parts are function children, so uele re-runs and
-disposes them — and they work on all eleven presets, not just the ones with an effect runner.
+disposes them — and they work on all twelve presets, not just the ones with an effect runner.
 
 ## Routing (`uele/router`)
 
@@ -1113,7 +1113,7 @@ writes — `usignal` does — paints on the next tick). Use your preset's `batch
 uele has no plugin registry and no build step: the extension points are plain values you assign — the `api`
 object (reactivity and diffing), the `props` Map (custom attributes) and `h` itself. So a plugin, a signal
 adapter and a diff engine are all the same thing: **a function that installs something, and optionally returns
-its own undo**. The eleven signal presets and eight diff presets that ship are written exactly that way — copy
+its own undo**. The twelve signal presets and eight diff presets that ship are written exactly that way — copy
 [adapters/preact.js](adapters/preact.js) or [diffs/swapdom.js](diffs/swapdom.js) as a starting point, and read
 [docs/ADAPTERS.md](docs/ADAPTERS.md) for the pitfalls we hit writing them.
 
@@ -1255,6 +1255,7 @@ Install the library you want, call one function. Every preset is driven by the s
 | `uele/adapters/nanostores`    | `nanostores`           | 54 kB   | 348 B  | `cell.get()` | `cell.set(v)`      | no              | yes            | subscribe-only atoms; tiny and framework-neutral                                                                                                             |
 | `uele/adapters/tanstack`      | `@tanstack/store`      | 121 kB  | 437 B  | `cell.state` | `cell.setState(v)` | no              | yes            | `Store.subscribe()` is not synchronous, so a bare `Store` paints on its first change - `new Cell(v)` (or `api.signal(v)`) from the preset paints immediately |
 | `uele/adapters/solid`         | `solid-js`             | 1051 kB | 471 B  | `cell()`     | `cell.write(v)`    | yes             | no             | client build (`solid-js/dist/solid.js`)                                                                                                                      |
+| `uele/adapters/signals`       | `@webreflection/signals` | 25 kB   | 482 B  | `cell.value` | `cell.value = v`   | yes             | no             | Preact-like API in miniature (by the `usignal` author); the library calls any effect return value as a cleanup, so the preset swallows returns            |
 
 - **reactive thunks** — functions and components that re-run when their signals change (needs an effect runner).
 - **subscribe path** — driven through `.subscribe()`: works without an effect runner, but reactive
@@ -1415,9 +1416,10 @@ which keeps `<my-icon>`/`<m-button>` in the HTML namespace. For the few ambiguou
 ### Testing, types and size
 
 ```sh
-npm test               # vitest, 1526 tests: src, lite, jsx runtimes, presets, ui, hooks, themes, flow, router and every example app
+npm test               # vitest, 1844 tests: src, lite, jsx runtimes, presets, ui, hooks, themes, flow, router, every example app and an axe-core a11y suite
 npm run test:coverage  # 100% statements/branches/functions/lines are enforced
 npm run test:bundles   # re-runs the suites against the built ESM and CJS output
+npm run test:browser   # playwright + axe: boots the built bundles in real chromium (needs libnspr4/libnss3)
 npm run test:types     # type-checks the public api and jsx usage
 npm run test:pack      # packs, installs in a clean project, checks exports/files/types
 npm run size           # fails when a bundle exceeds its byte budget
@@ -1434,23 +1436,25 @@ The runtime has no dependencies except [`usub`](https://github.com/kethan/usub) 
 
 | bundle                         | budget             | notes                               |
 | ------------------------------ | ------------------ | ----------------------------------- |
-| `dist/index.min.js`            | ~3.7 kB / ~1.85 kB | full library, iife                  |
-| `lite/dist/index.min.js`       | ~2.4 kB / ~1.3 kB  | `h`, `add`, `useLive`, `props`, `r` |
+| `dist/index.min.js`            | ~3.7 kB / ~1.9 kB  | full library, iife                  |
+| `lite/dist/index.min.js`       | ~2.5 kB / ~1.3 kB  | `h`, `add`, `useLive`, `props`, `r` |
 | `jsx-runtime/dist/index.es.js` | ~0.4 kB / ~0.3 kB  | re-exports the shared `h`           |
 
 `lite` uses `usub/tiny`, so it supports functions/signals, promises and async iterables, but not `subscribe`
 based observables, and it ships no control flow components (`If`, `For`, `Switch`, `Dynamic`, `lazy`, `map`).
 
-The suite is deliberately conformance heavy: the whole runtime is driven against **eleven signal libraries**
+The suite is deliberately conformance heavy: the whole runtime is driven against **twelve signal libraries**
 (`ulive`, `@preact/signals-core`, `@vue/reactivity`, `usignal`, `alien-signals`, `s-js`, `mobx`, `rxjs`,
-`nanostores`, `@tanstack/store`, `solid-js`) through the `api` adapter, and `map`/`For`/`useLive`/`add` are
+`nanostores`, `@tanstack/store`, `solid-js`, `@webreflection/signals`) through the `api` adapter, and `map`/`For`/`useLive`/`add` are
 exercised against **ten diff engines** (`swapdom`, `udomdiff`, `domdiff`, `morphdom`, `nanomorph`,
 `fast-array-diff`, `@thi.ng/diff`, `list-diff2`, a rebuild engine and the built-in marker walk) - including
 42 250 exhaustive list-state transitions (`test/diff.transitions.test.js`). `test/dom.cleanup.test.js` pins
 what is detached after every kind of update, and `test/memory.test.js` measures reachability with a
 `FinalizationRegistry` oracle under `--expose-gc`. `npm run test:bundles` re-runs the behavioural suites
 against the built ESM **and** CJS output, and `npm run test:pack` installs the tarball in a clean project and
-exercises both `import` and `require` consumers.
+exercises both `import` and `require` consumers. `npm run test:browser` goes one step further: Playwright
+drives the built bundles in a real Chromium (binary pinned via `@sparticuz/chromium`, so local and CI runs
+match) and requires the rendered components to be axe-clean under wcag2a/wcag2aa.
 
 ### Errors
 

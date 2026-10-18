@@ -19,6 +19,7 @@ const PRESETS = [
 	['s-js', 'uele/adapters/sjs', 'useSjs', true],
 	['mobx', 'uele/adapters/mobx', 'useMobx', true],
 	['solid', 'uele/adapters/solid', 'useSolid', true],
+	['signals', 'uele/adapters/signals', 'useSignals', true],
 	// subscribe-only: signals work, effects/derived do not
 	['rxjs', 'uele/adapters/rxjs', 'useRxjs', false],
 	['nanostores', 'uele/adapters/nanostores', 'useNanostores', false],

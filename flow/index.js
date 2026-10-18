@@ -113,11 +113,14 @@ export const Portal = ({ mount = document.body, children } = {}) => {
  */
 export const Title = ({ children } = {}) => {
 	const previous = document.title;
+	let applied;
 	const apply = () => {
-		cleanup(() => (document.title = previous));
+		// restore on teardown, but only if no newer Title has taken over since
+		cleanup(() => { if (document.title === applied) document.title = previous; });
 		const child = one(children);
-	const value = typeof child === 'function' ? child() : isCell(child) ? read(child) : child;
-		document.title = value == null ? '' : String(value);
+		const value = typeof child === 'function' ? child() : isCell(child) ? read(child) : child;
+		applied = value == null ? '' : String(value);
+		document.title = applied;
 		return null;
 	};
 	return h('div', { style: { display: 'contents' } }, thunk(apply));

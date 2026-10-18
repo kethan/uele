@@ -157,6 +157,18 @@ describe('signal adapter presets', () => {
 		expect(root.textContent).toBe('b');
 	});
 
+	test('adapters/signals: useSignals()', async () => {
+		const { useSignals } = await import('../adapters/signals.js');
+		const { signal } = await import('@webreflection/signals');
+		useSignals();
+		const s = signal('a');
+		const root = host();
+		root.append(...add(h('p', null, s)));
+		expect(root.textContent).toBe('a');
+		s.value = 'b';
+		expect(root.textContent).toBe('b');
+	});
+
 	test('presets accept a target (lite) and clear stale hooks when switching', async () => {
 		const { usePreactSignals } = await import('../adapters/preact.js');
 		const { useRxjs } = await import('../adapters/rxjs.js');

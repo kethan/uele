@@ -516,3 +516,75 @@ describe('cleanup under every differ', () => {
 		});
 	}
 });
+
+describe('effect disposal on region teardown', () => {
+	test('discarding a subtree disposes the effects created inside it', () => {
+		const show = signal(true);
+		const name = signal('a');
+		let runs = 0;
+		// an outer thunk region; the span's text binding is an effect of its own
+		root.append(...add(() => (show.value ? h('span', {}, () => (runs++, name.value)) : 'off')));
+		expect(root.textContent).toBe('a');
+		expect(runs).toBe(1);
+		name.value = 'b'; // inner effect re-runs while mounted
+		expect(root.textContent).toBe('b');
+		expect(runs).toBe(2);
+		show.value = false; // the region discards the span subtree
+		expect(root.textContent).toBe('off');
+		name.value = 'c'; // the discarded binding must not react any more
+		expect(runs).toBe(2);
+		expect(root.textContent).toBe('off');
+	});
+
+	test('rows removed from a keyed list stop reacting, kept rows keep theirs', () => {		const items = signal([1, 2]);
+		const shared = signal(0);
+		const runs = { 1: 0, 2: 0 };
+		const list = For({
+			each: items,
+			key: (id) => id,
+			children: (id) => h('span', {}, () => (runs[id]++, shared.value, id))
+		});
+		root.append(...add(list));
+		expect(root.textContent).toBe('12');
+		expect(runs).toEqual({ 1: 1, 2: 1 }); // the mount run
+		shared.value = 1; // both rows react while mounted
+		expect(runs).toEqual({ 1: 2, 2: 2 });
+		items.value = [2]; // row 1 is discarded by the list region
+		expect(root.textContent).toBe('2');
+		shared.value = 2; // only the kept row may react now
+		expect(runs).toEqual({ 1: 2, 2: 3 });
+	});
+
+	test('attribute, property, style and class bindings of a discarded element are disposed', () => {
+		const show = signal(true);
+		const prop = signal('a'), attr = signal('a'), width = signal('10px'), on = signal(true);
+		let el = null;
+		root.append(...add(() => (show.value ? (el = h('div', { title: prop, 'data-x': attr, style: { width }, class: { on } }, 'x')) : 'gone')));
+		expect(el.title).toBe('a');
+		expect(el.getAttribute('data-x')).toBe('a');
+		expect(el.style.width).toBe('10px');
+		expect(el.classList.contains('on')).toBe(true);
+		show.value = false; // the region discards the element and every binding on it
+		expect(root.textContent).toBe('gone');
+		prop.value = 'b'; attr.value = 'b'; width.value = '20px'; on.value = false;
+		expect(el.title).toBe('a'); // frozen at the values it was discarded with
+		expect(el.getAttribute('data-x')).toBe('a');
+		expect(el.style.width).toBe('10px');
+		expect(el.classList.contains('on')).toBe(true);
+	});
+
+	test('a discarded list unsubscribes from its source instead of rebuilding', () => {
+		const items = signal([1]);
+		let builds = 0;
+		const list = For({ each: items, children: [(v) => (builds++, h('i', null, v))] });
+		const view = signal(list); // the list subtree lives inside a cell region
+		root.append(...add(view));
+		expect(root.textContent).toBe('1');
+		items.value = [1, 2];
+		expect(builds).toBe(2); // row 2 built, row 1 reused
+		view.value = 'gone'; // discard the whole list
+		expect(root.textContent).toBe('gone');
+		items.value = [1, 2, 3]; // no rebuild may happen any more
+		expect(builds).toBe(2);
+	});
+});

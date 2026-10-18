@@ -1,6 +1,6 @@
 # Examples
 
-## todos — one app, eleven signal libraries
+## todos — one app, twelve signal libraries
 
 [`todos/`](todos) holds the same complete todos app written for every signal preset: add, toggle with
 strike-through, delete, filter (all/active/completed), clear completed, and a live "N left" counter.
@@ -24,6 +24,7 @@ const app = TodoApp();              // or build one and place it yourself
 | [`todos/s-js.jsx`](todos/s-js.jsx) | `s-js` | `useSjs()` |
 | [`todos/mobx.jsx`](todos/mobx.jsx) | `mobx` | `useMobx()` |
 | [`todos/solid.jsx`](todos/solid.jsx) | `solid-js` | `useSolid()` |
+| [`todos/signals.jsx`](todos/signals.jsx) | `@webreflection/signals` | `useSignals()` |
 | [`todos/rxjs.jsx`](todos/rxjs.jsx) | `rxjs` | `useRxjs()` |
 | [`todos/nanostores.jsx`](todos/nanostores.jsx) | `nanostores` | `useNanostores()` |
 | [`todos/tanstack.jsx`](todos/tanstack.jsx) | `@tanstack/store` | `useTanstackStore()` |
@@ -107,5 +108,5 @@ npm i uele @preact/signals-core      # the preset's library is a peer dependency
 npx vite                              # then import ./examples/todos/preact.jsx
 ```
 
-The suite runs all eleven through the same scenarios (`test/examples.test.js`), so the examples cannot
+The suite runs all twelve through the same scenarios (`test/examples.test.js`), so the examples cannot
 rot: add, toggle, delete, filter, clear-completed and independent instances are asserted for each one.

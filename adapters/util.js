@@ -30,6 +30,7 @@ export const scoped = (run) => {
 			}
 			return () => {
 				typeof off === 'function' ? off() : off?.unsubscribe?.();
+				/* istanbul ignore next -- defensive: a disposer cannot exist while its own scope is current (effect bodies run before effect() returns), this only guards exotic runners that dispose synchronously inside run() */
 				if (current === cleanups) current = null;
 				cleanups.forEach((f) => typeof f === 'function' && f());
 				cleanups.length = 0;

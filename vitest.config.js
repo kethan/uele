@@ -65,14 +65,32 @@ export default defineConfig({
 		...gcArgv,
 		coverage: {
 			provider: 'v8',
-			include: ['src/**/*.js', 'lite/index.js', 'jsx-runtime/index.ts', 'jsx-dev-runtime/index.ts'],
+			include: [
+				'src/**/*.js', 'lite/index.js', 'jsx-runtime/index.ts', 'jsx-dev-runtime/index.ts',
+				'ui/index.js', 'hooks/index.js', 'themes/index.js', 'reactive/index.js',
+				'flow/index.js', 'router/index.js', 'adapters/*.js', 'diffs/*.js'
+			],
 			exclude: ['**/dist/**'],
 			reporter: ['text'],
+			// every shipped module is held at 100% statements/branches/functions/
+			// lines (reached Oct 2026); new code ships with tests or the gate fails
 			thresholds: {
 				statements: 100,
 				branches: 100,
 				functions: 100,
-				lines: 100
+				lines: 100,
+				'src/**/*.js': { statements: 100, branches: 100, functions: 100, lines: 100 },
+				'lite/index.js': { statements: 100, branches: 100, functions: 100, lines: 100 },
+				'jsx-runtime/index.ts': { statements: 100, branches: 100, functions: 100, lines: 100 },
+				'jsx-dev-runtime/index.ts': { statements: 100, branches: 100, functions: 100, lines: 100 },
+				'ui/index.js': { statements: 100, branches: 100, functions: 100, lines: 100 },
+				'hooks/index.js': { statements: 100, branches: 100, functions: 100, lines: 100 },
+				'themes/index.js': { statements: 100, branches: 100, functions: 100, lines: 100 },
+				'reactive/index.js': { statements: 100, branches: 100, functions: 100, lines: 100 },
+				'flow/index.js': { statements: 100, branches: 100, functions: 100, lines: 100 },
+				'router/index.js': { statements: 100, branches: 100, functions: 100, lines: 100 },
+				'adapters/*.js': { statements: 100, branches: 100, functions: 100, lines: 100 },
+				'diffs/*.js': { statements: 100, branches: 100, functions: 100, lines: 100 }
 			}
 		}
 	}

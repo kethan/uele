@@ -214,3 +214,15 @@ test('lite does not subscribe to subscribe() observables (tiny usub)', () => {
 	const root = mount(h('div', null, { subscribe: () => {} }));
 	expect(root.textContent).toBe('[object Object]');
 });
+
+test('lite disposes bindings of discarded elements', () => {
+	const cell = signal('a');
+	const show = signal(true);
+	let el = null;
+	const root = mount(() => (show.value ? (el = h('div', { title: cell, 'data-x': cell, style: { width: cell } }, 'x')) : 'gone'));
+	expect(el.title).toBe('a');
+	show.value = false; // the region discards the element and its bindings
+	cell.value = 'b';
+	expect(el.title).toBe('a');
+	expect(el.getAttribute('data-x')).toBe('a');
+});

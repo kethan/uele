@@ -4,7 +4,7 @@
  * unified authoring layer — `uele/reactive` cells, `uele/hooks` and
  * `uele/ui` primitives; no page imports a signal library. This suite proves
  * it: every page is mounted and driven end-to-end (fill, click, submit,
- * sort, buy, chat) on eight different presets, asserting only DOM outcomes.
+ * sort, buy, chat) on nine different presets, asserting only DOM outcomes.
  *
  * @vitest-environment jsdom
  */
@@ -27,7 +27,8 @@ const PRESETS = [
 	['alien-signals', 'uele/adapters/alien-signals', 'useAlienSignals'],
 	['s-js', 'uele/adapters/sjs', 'useSjs'],
 	['mobx', 'uele/adapters/mobx', 'useMobx'],
-	['solid', 'uele/adapters/solid', 'useSolid']
+	['solid', 'uele/adapters/solid', 'useSolid'],
+	['signals', 'uele/adapters/signals', 'useSignals']
 ];
 
 const settle = () => new Promise((r) => setTimeout(r, 0)); // usignal paints on the next tick; everyone else is sync
