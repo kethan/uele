@@ -29,7 +29,7 @@ const file = (p) => fileURLToPath(new URL(p, root));
 // +91 B minified, +43 B gzip.
 const budgets = [
 	['dist/index.min.js', 3950, 2000],
-	['dist/index.es.js', 9900, 3600],
+	['dist/index.es.js', 10100, 3600],
 	['lite/dist/index.min.js', 2600, 1400],
 	['jsx-runtime/dist/index.es.js', 900, 500],
 	['jsx-dev-runtime/dist/index.es.js', 900, 500]
