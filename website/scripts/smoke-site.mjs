@@ -4,6 +4,7 @@
  * checks nav integrity, headings, code fences and playground instantiation.
  */
 import { parseHTML } from "linkedom";
+import { build } from "esbuild";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
@@ -98,6 +99,117 @@ const installHost = dom.document.createElement("div");
 installHost.append(renderMarkdown(PAGES.installation.markdown));
 check(installHost.querySelectorAll(".code-block").length >= 3, "installation page has static code blocks");
 check(!installHost.querySelector(".playground"), "installation page has no playgrounds");
+
+// 7. the docs site is itself a uele app: bundle src/app.jsx exactly like Vite
+//    would (bare uele* specifiers -> repository source, CSS stubbed) and boot
+//    it under a fresh linkedom, then exercise routing and the filter region.
+{
+  const repo = resolve(here, "..", "..");
+  const ALIAS = {
+    uele: resolve(repo, "src", "index.js"),
+    "uele/jsx-runtime": resolve(repo, "jsx-runtime", "index.ts"),
+    "uele/jsx-dev-runtime": resolve(repo, "jsx-runtime", "index.ts"),
+    "uele/reactive": resolve(repo, "reactive", "index.js"),
+    "uele/hooks": resolve(repo, "hooks", "index.js"),
+    "uele/ui": resolve(repo, "ui", "index.js"),
+    "uele/themes": resolve(repo, "themes", "index.js"),
+    "uele/adapters/preact": resolve(repo, "adapters", "preact.js"),
+  };
+  const bundled = await build({
+    stdin: {
+      contents: `import "./src/styles.css"; import "./src/app.jsx";`,
+      loader: "jsx",
+      resolveDir: resolve(here, ".."),
+    },
+    bundle: true,
+    write: false,
+    format: "esm",
+    platform: "browser",
+    target: ["es2020"],
+    jsx: "automatic",
+    jsxImportSource: "uele",
+    plugins: [
+      {
+        name: "smoke-alias-and-css",
+        setup(b) {
+          b.onResolve({ filter: /^uele(?:\/[\w-]+)*$/ }, (a) =>
+            ALIAS[a.path] ? { path: ALIAS[a.path] } : undefined
+          );
+          b.onResolve({ filter: /\.css$/ }, (a) => ({ path: a.path, namespace: "css" }));
+          b.onLoad({ filter: /.*/, namespace: "css" }, () => ({ contents: "", loader: "js" }));
+        },
+      },
+    ],
+  });
+  const url =
+    "data:text/javascript;base64," +
+    Buffer.from(bundled.outputFiles[0].text, "utf8").toString("base64");
+
+  const appDom = parseHTML("<!doctype html><html><body><div id='app'></div></body></html>");
+  const location = { hash: "" };
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const saved = {};
+  for (const k of ["window", "document", "Node", "Event", "location"])
+    saved[k] = globalThis[k];
+  Object.assign(globalThis, {
+    window: appDom.window,
+    document: appDom.document,
+    Node: appDom.Node,
+    Event: appDom.Event,
+    CustomEvent: appDom.CustomEvent || appDom.Event,
+    alert: () => {},
+    location,
+  });
+  appDom.window.location = location;
+  appDom.window.scrollTo = () => {};
+  // linkedom has no history; uele/router pushes state on in-app navigation
+  appDom.window.history = {
+    state: null,
+    pushState: () => {},
+    replaceState: () => {},
+    go: () => {},
+    back: () => {},
+    forward: () => {},
+  };
+
+  let bootError = null;
+  try {
+    await import(url);
+    await sleep(120); // preact effect-driven regions flush on a microtask
+  } catch (err) {
+    bootError = err;
+  }
+  const q = (s) => appDom.document.querySelector(s);
+  const qa = (s) => [...appDom.document.querySelectorAll(s)];
+  check(!bootError, `app.jsx boots without errors${bootError ? ": " + bootError.message : ""}`);
+  check(!!q(".site-header") && !!q(".sidebar"), "app shell renders header and sidebar");
+  check(q("#content")?.textContent.includes("Build user interfaces"), "home route renders the hero");
+  check(qa(".nav-item").some((a) => a.textContent.includes("129 components")), "sidebar links the UI Kit page");
+  check(!appDom.document.body.innerHTML.includes("[object"), "app never stringifies a node array");
+
+  appDom.window.location.hash = "#/ui-kit";
+  appDom.window.dispatchEvent(new appDom.Event("hashchange"));
+  await sleep(120);
+  check(q("#content")?.textContent.includes("Complete component index"), "hash route opens the UI Kit page");
+  check(qa(".playground").length === 14, "UI Kit page mounts all 14 playgrounds");
+  check(q("#content")?.textContent.includes("CommandPalette"), "UI Kit catalog lists every export");
+
+  appDom.window.location.hash = "#/nope";
+  appDom.window.dispatchEvent(new appDom.Event("hashchange"));
+  await sleep(60);
+  check(q("#content")?.textContent.includes("Page not found"), "unknown route renders the not-found view");
+
+  const filter = q(".nav-filter");
+  filter.value = "state";
+  filter.dispatchEvent(new appDom.Event("input", { bubbles: true }));
+  await sleep(60);
+  const visible = qa(".nav-item").filter(
+    (a) => a.closest(".nav-group")?.style.display !== "none"
+  );
+  check(visible.length === 1 && visible[0].textContent.includes("State"), "sidebar filter narrows the nav reactively");
+
+  Object.assign(globalThis, saved);
+}
 
 console.log(`\n${failures ? "FAILED" : "OK"} — ${failures} failure(s)`);
 process.exit(failures ? 1 : 0);

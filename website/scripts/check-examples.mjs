@@ -42,6 +42,9 @@ const ALIAS = {
   "uele/jsx-runtime": resolve(repo, "jsx-runtime", "index.ts"),
   "uele/reactive": resolve(repo, "reactive", "index.js"),
   "uele/hooks": resolve(repo, "hooks", "index.js"),
+  "uele/ui": resolve(repo, "ui", "index.js"),
+  "uele/themes": resolve(repo, "themes", "index.js"),
+  "uele/router": resolve(repo, "router", "index.js"),
   "uele/adapters/preact": resolve(repo, "adapters", "preact.js"),
   "uele/adapters/ulive": resolve(repo, "adapters", "ulive.js"),
   "uele/diffs/rebuild": resolve(repo, "diffs", "rebuild.js"),
@@ -96,6 +99,62 @@ async function runCase({ name, code }) {
     CustomEvent: dom.CustomEvent || Event,
     alert: () => {},
   });
+
+  // Fixture gaps: linkedom omits DOM APIs every real browser ships. The
+  // interaction sweep below clicks every button (including CopyButton, whose
+  // clipboard fallback creates a textarea and calls select/execCommand), so
+  // give the fixture spec-shaped no-ops instead of crashing the process.
+  const noop = () => {};
+  const ensure = (ctor, method, impl = noop) => {
+    const proto = window[ctor]?.prototype;
+    if (proto && typeof proto[method] !== "function") proto[method] = impl;
+  };
+  ensure("HTMLTextAreaElement", "select");
+  ensure("HTMLInputElement", "select");
+  ensure("HTMLElement", "scrollIntoView");
+  ensure("HTMLElement", "setPointerCapture");
+  ensure("HTMLElement", "releasePointerCapture");
+  // linkedom's HTMLSelectElement.value is getter-only; strict module code
+  // assigning it (uele's reactive value binding) would throw. Browsers always
+  // ship a setter, so bridge value onto selectedIndex for the fixture.
+  const selectProto = window.HTMLSelectElement?.prototype;
+  if (selectProto && !Object.getOwnPropertyDescriptor(selectProto, "value")?.set) {
+    Object.defineProperty(selectProto, "value", {
+      configurable: true,
+      get() {
+        const option = this.options && this.options[this.selectedIndex];
+        return option ? option.value : "";
+      },
+      set(next) {
+        const idx = Array.from(this.options || []).findIndex(
+          (o) => o.value === String(next)
+        );
+        if (idx >= 0) this.selectedIndex = idx;
+      },
+    });
+  }
+  if (typeof document.execCommand !== "function")
+    document.execCommand = () => false;
+  if (typeof window.matchMedia !== "function")
+    window.matchMedia = () => ({
+      matches: false,
+      addEventListener: noop,
+      removeEventListener: noop,
+      addListener: noop,
+      removeListener: noop,
+    });
+  // linkedom omits location/history; uele/router reads pathname on mount and
+  // calls history.pushState on in-app navigation. Browsers always have both.
+  if (!window.location) window.location = new URL("http://localhost/");
+  if (!window.history)
+    window.history = {
+      state: null,
+      pushState: noop,
+      replaceState: noop,
+      go: noop,
+      back: noop,
+      forward: noop,
+    };
 
   const bundled = await bundleExample(code);
   const url = "data:text/javascript;base64," + Buffer.from(bundled, "utf8").toString("base64");

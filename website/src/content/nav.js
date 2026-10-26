@@ -22,6 +22,10 @@ export const NAV = [
     ],
   },
   {
+    group: "UI Kit",
+    items: [{ slug: "ui-kit", title: "UI Kit (129 components)", wide: true }],
+  },
+  {
     group: "Reference",
     items: [
       { slug: "examples", title: "Examples Gallery", wide: true },

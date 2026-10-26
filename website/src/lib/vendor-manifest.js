@@ -8,6 +8,9 @@ export const VENDOR_MODULES = {
   // uele subpaths (bare imports inside are resolved via this same map)
   "uele/reactive": "/vendor/reactive.js",
   "uele/hooks": "/vendor/hooks.js",
+  "uele/ui": "/vendor/ui.js",
+  "uele/themes": "/vendor/themes.js",
+  "uele/router": "/vendor/router.js",
   "uele/adapters/preact": "/vendor/adapter-preact.js",
   "uele/adapters/ulive": "/vendor/adapter-ulive.js",
   "uele/diffs/rebuild": "/vendor/diff-rebuild.js",

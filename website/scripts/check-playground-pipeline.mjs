@@ -87,6 +87,38 @@ const runInDom = async (code) => {
   if (unmapped.length) throw new Error(`unmapped imports: ${unmapped.map((m) => m[1]).join(", ")}`);
 
   const dom = parseHTML("<!doctype html><html><body></body></html>");
+  // linkedom ships HTMLSelectElement.value as a getter-only accessor; in strict
+  // module code assigning it (uele's reactive value binding does exactly this)
+  // throws "only a getter". Real browsers always have a setter, so give the
+  // fixture a spec-shaped value/selectedIndex bridge before examples run.
+  const selectProto = dom.window.HTMLSelectElement?.prototype;
+  if (selectProto && !Object.getOwnPropertyDescriptor(selectProto, "value")?.set) {
+    Object.defineProperty(selectProto, "value", {
+      configurable: true,
+      get() {
+        const option = this.options && this.options[this.selectedIndex];
+        return option ? option.value : "";
+      },
+      set(next) {
+        const idx = Array.from(this.options || []).findIndex(
+          (o) => o.value === String(next)
+        );
+        if (idx >= 0) this.selectedIndex = idx;
+      },
+    });
+  }
+  // linkedom omits location/history; uele/router reads pathname on mount and
+  // calls history.pushState on in-app navigation. Browsers always have both.
+  if (!dom.window.location) dom.window.location = new URL("http://localhost/");
+  if (!dom.window.history)
+    dom.window.history = {
+      state: null,
+      pushState: () => {},
+      replaceState: () => {},
+      go: () => {},
+      back: () => {},
+      forward: () => {},
+    };
   Object.assign(globalThis, {
     window: dom.window,
     document: dom.document,
@@ -401,6 +433,127 @@ for (const c of asyncContracts) {
   }
 }
 
-const totalChecks = cases.length + contracts.length + behavioral.length + asyncContracts.length;
+// --- UI Kit fences: every uele/ui family must render its content on mount --
+// Contracts run the ACTUAL fences shipped on the UI Kit page (no copied code),
+// so a rewrite of an example can never silently drift from what is asserted.
+const uiFences = [
+  ...PAGES["ui-kit"].markdown.matchAll(/```jsx live[^\n]*\n([\s\S]*?)```/g),
+].map((m) => m[1]);
+const uiContracts = [
+  {
+    name: "ui kit: buttons, badges and indicators render",
+    text: ["Solid", "Active", "Saving your changes…", "Selected view: grid"],
+  },
+  {
+    name: "ui kit: form controls bind cells on mount",
+    text: ["Sign up", "Volume", "How do you rate uele?"],
+    check: (dom) =>
+      dom.document.querySelector("input")?.value === "Ada Lovelace" &&
+      dom.document.querySelectorAll("select option").length === 3,
+  },
+  {
+    name: "ui kit: advanced inputs render with empty state",
+    text: ["Drop files here, or click to browse", "Picked 0 file(s)"],
+  },
+  {
+    name: "ui kit: pickers, calendar and editable render",
+    text: ["Listbox", "Svelte", "Date picker", "Untitled document"],
+  },
+  {
+    name: "ui kit: layout and typography primitives render",
+    text: [
+      "Typography & layout",
+      "16:9 media slot",
+      "Scroll row 1",
+      "Skip to content",
+      "Real DOM nodes, no virtual DOM",
+    ],
+  },
+  {
+    name: "ui kit: feedback components render",
+    text: ["All systems operational", "No notifications", "129"],
+  },
+  {
+    name: "ui kit: data table, plain table and virtual list render",
+    text: ["Tokyo", "uele/ui", "Row 1"],
+  },
+  {
+    name: "ui kit: tree, timeline, countdown and carousel render",
+    text: ["Release history", "ui-kit.js", "Slide one", "nothing yet"],
+  },
+  {
+    name: "ui kit: navigation components render their initial state",
+    text: ["Overview panel", "Current step: 1 of 3", "Page 1"],
+  },
+  {
+    name: "ui kit: accordion, collapsible and wizard render",
+    text: [
+      "Frequently asked questions",
+      "Do playgrounds work offline?",
+      "Show advanced details",
+      "Step one: create your profile.",
+    ],
+  },
+  {
+    name: "ui kit: overlay triggers render while panels stay closed",
+    text: [
+      "Open dialog",
+      "Open drawer",
+      "Delete account",
+      "Account menu",
+      "Open palette (⌘K)",
+      "Last action: none yet",
+    ],
+    check: (dom) =>
+      dom.document.querySelectorAll('[data-uele-overlay]').length === 0,
+  },
+  {
+    name: "ui kit: toaster renders empty until a toast is pushed",
+    text: ["Show toast", "Show error toast"],
+    check: (dom) =>
+      dom.document.querySelectorAll("[data-uele-toast]").length === 0,
+  },
+  {
+    name: "ui kit: app shell renders with light theme",
+    text: ["Dashboard", "Acme", "Switch to dark", "Appearance: light"],
+    check: (dom) =>
+      dom.document.querySelector("[data-uele-app-shell]") &&
+      dom.document.querySelector('[data-theme="light"]'),
+  },
+  {
+    name: "ui kit: router resolves the home path on mount",
+    text: [],
+    // the initial cell is transient; useRouter() resolves "/" on a microtask
+    check: async (dom) => {
+      await sleep(80);
+      const text = dom.document.body.textContent;
+      return (
+        text.includes("Home route") &&
+        !!dom.document.querySelector('a[href="/about"]')
+      );
+    },
+  },
+];
+for (let i = 0; i < uiContracts.length; i++) {
+  const c = uiContracts[i];
+  try {
+    const dom = await runInDom(uiFences[i]);
+    const text = dom.document.body.textContent;
+    const missing = c.text.filter((needle) => !text.includes(needle));
+    if (missing.length) throw new Error(`missing text: ${missing.join(", ")}`);
+    if (c.check && !(await c.check(dom))) throw new Error("custom check failed");
+    console.log(`  ✓ contract: ${c.name}`);
+  } catch (err) {
+    failures++;
+    console.error(`  ✗ contract: ${c.name}\n    ${err.message.split("\n")[0]}`);
+  }
+}
+
+const totalChecks =
+  cases.length +
+  contracts.length +
+  behavioral.length +
+  asyncContracts.length +
+  uiContracts.length;
 console.log(`\n${failures ? "FAILED" : "OK"} — ${failures} failure(s) across ${totalChecks} checks`);
 process.exit(failures ? 1 : 0);

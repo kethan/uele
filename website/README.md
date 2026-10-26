@@ -4,6 +4,13 @@ Documentation site and live-code playground for the [uele](../README.md)
 reactive frontend library — a ReactJS.org-style docs experience with editable,
 in-browser examples.
 
+The site is itself **built with uele**: `src/app.jsx` is a JSX uele app
+(hash router, signal-driven sidebar filter and route region, real DOM nodes),
+and `vite.config.js` maps every bare `uele*` import to the library source in
+the repository above — the docs dogfood the exact modules the playgrounds
+bundle. The UI Kit page additionally exercises the full `uele/ui` component
+library and the `uele/themes` theming package.
+
 ## Quick start
 
 ```bash
@@ -25,6 +32,9 @@ website/
 │   └── vendor/            # generated — playground modules (gitignored)
 │       ├── reactive.js          # uele/reactive
 │       ├── hooks.js             # uele/hooks
+│       ├── ui.js                # uele/ui (the 129-export component library)
+│       ├── themes.js            # uele/themes (ThemeProvider, presets, useTheme)
+│       ├── router.js            # uele/router (createRouter, useRouter, Link)
 │       ├── adapter-preact.js    # uele/adapters/preact
 │       ├── adapter-ulive.js     # uele/adapters/ulive
 │       ├── diff-rebuild.js      # uele/diffs/rebuild (zero-dependency differ)
@@ -39,11 +49,13 @@ website/
 │   ├── check-signals.mjs             # behavioral assertions for presets, hooks, diffs
 │   └── smoke-site.mjs                # markdown/nav rendering smoke test
 └── src/
-    ├── main.js             # app shell: hash router, header, sidebar, pages
+    ├── app.jsx             # the docs app itself: uele JSX shell, router, regions
     ├── styles.css
     ├── lib/
-    │   ├── dom.js              # tiny hyperscript helper for the site chrome
-    │   ├── markdown.js         # markdown → DOM, `jsx live` fences become playgrounds
+    │   ├── uele.js             # barrel onto ../src (works in Vite and in Node tests)
+    │   ├── uele-setup.js       # registers the `html`/`dataset` element props via uele
+    │   ├── utils.js            # shared slug helper
+    │   ├── markdown.js         # markdown → uele nodes, `jsx live` fences become playgrounds
     │   ├── highlight.js        # dependency-free syntax highlighter
     │   ├── vendor-manifest.js  # specifier → vendor file map shared by iframe + tests
     │   └── playground.js       # Babel transform + sandboxed iframe runner + console
@@ -51,8 +63,10 @@ website/
         ├── nav.js
         ├── home.js
         ├── examples.js     # examples gallery (core, signals, hooks and diffs)
-        └── pages/          # one markdown module per docs page, incl. signals.js
-                             # and diffing.js
+        ├── ui-catalog.js   # all 129 uele/ui exports, grouped and described
+        └── pages/          # one markdown module per docs page, incl. ui-kit.js
+                            # (live example of every component family), signals.js
+                            # and diffing.js
 ```
 
 ## How the live playground works
@@ -64,10 +78,10 @@ website/
    - `uele.js` — the local library (`../src/index.js`) with `usub` inlined;
      the iframe appends a small JSX-runtime footer so the same data URL
      satisfies both `"uele"` and `"uele/jsx-runtime"`.
-   - `vendor/*.js` — uele subpaths (`reactive`, `hooks`, adapters, diffs)
-     built with their bare imports **externalized**, alongside the npm
-     signal/diff packages (`@preact/signals-core`, `ulive`, `udomdiff`)
-     bundled whole.
+   - `vendor/*.js` — uele subpaths (`reactive`, `hooks`, `ui`, `themes`,
+     adapters, diffs) built with their bare imports **externalized**,
+     alongside the npm signal/diff packages (`@preact/signals-core`,
+     `ulive`, `udomdiff`) bundled whole.
 3. Each file is fetched once and inlined as a base64 **data-URL module**. The
    sandboxed `<iframe>` (`allow-scripts` only, opaque origin) gets an import
    map resolving every bare specifier to those data URLs — including the
@@ -93,8 +107,8 @@ dependencies) and real signal presets — `usePreactSignals()` with
 | `npm run preview` | Serve the production build |
 | `npm run bundle` | Rebuild `public/uele.js` and `public/vendor/*` from `../src` + npm packages |
 | `npm test` | All four validation suites |
-| `npm run check-examples` | Bundle and execute all 62 live examples under linkedom |
-| `npm run check-pipeline` | Babel + data-URL module graph: 83 checks incl. mount-time content contracts |
+| `npm run check-examples` | Bundle and execute all 76 live examples under linkedom (button/field/form sweep) |
+| `npm run check-pipeline` | Babel + data-URL module graph: 111 checks incl. mount-time content, UI Kit and router contracts |
 | `npm run check-signals` | Behavioral assertions for presets, reactive/hooks cells and diff engines |
 | `npm run smoke` | Render every docs page through the markdown pipeline |
 

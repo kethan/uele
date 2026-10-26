@@ -4,7 +4,7 @@
 // map instead of a network fetch — no CORS, no server requirements. Console
 // output and errors are forwarded to the parent and rendered in a console panel.
 
-import { h } from "./dom.js";
+import { h } from "./uele.js";
 import { VENDOR_MODULES, CORE_SPECS } from "./vendor-manifest.js";
 
 // Mirror of public/jsx-runtime.js: Babel's automatic runtime imports

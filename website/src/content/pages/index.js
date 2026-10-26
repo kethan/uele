@@ -11,6 +11,7 @@ import { title as asyncPage, markdown as asyncMd } from "./async.js";
 import { title as signals, markdown as signalsMd } from "./signals.js";
 import { title as diffing, markdown as diffingMd } from "./diffing.js";
 import { title as api, markdown as apiMd } from "./api.js";
+import { title as uiKit, markdown as uiKitMd } from "./ui-kit.js";
 
 export const PAGES = {
   introduction: { title: introduction, markdown: introductionMd },
@@ -26,4 +27,5 @@ export const PAGES = {
   signals: { title: signals, markdown: signalsMd },
   diffing: { title: diffing, markdown: diffingMd },
   api: { title: api, markdown: apiMd },
+  "ui-kit": { title: uiKit, markdown: uiKitMd },
 };
