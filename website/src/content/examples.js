@@ -399,4 +399,207 @@ document.body.append(
   </main>
 );`,
   },
+  {
+    id: "signals-counter",
+    title: "Preact signals counter",
+    description: "A preset in one call; cells drive both text and the disabled attribute.",
+    code: `import { h } from "uele";
+import { usePreactSignals } from "uele/adapters/preact";
+import { signal, computed } from "@preact/signals-core";
+
+usePreactSignals();
+
+const count = signal(0);
+const isZero = computed(() => count.value === 0);
+const doubled = computed(() => count.value * 2);
+
+document.body.append(
+  <main>
+    <h2 style={{ fontVariantNumeric: "tabular-nums" }}>{count}</h2>
+    <p>doubled: <strong>{doubled}</strong></p>
+    <button disabled={isZero} onClick={() => (count.value -= 1)}>−1</button>
+    <button className="primary" onClick={() => (count.value += 1)}>+1</button>
+    <button disabled={isZero} onClick={() => (count.value = 0)}>Reset</button>
+  </main>
+);`,
+  },
+  {
+    id: "reactive-todos",
+    title: "Todos on uele/reactive",
+    description: "Preset-agnostic state: signal cells, a computed remaining count and a keyed For.",
+    tall: true,
+    code: `import { h, For } from "uele";
+import { usePreactSignals } from "uele/adapters/preact";
+import { signal, computed, read, write } from "uele/reactive";
+
+usePreactSignals();
+
+let seq = 3;
+const todos = signal([
+  { id: 1, text: "learn signals", done: true },
+  { id: 2, text: "wire a preset", done: false },
+  { id: 3, text: "ship it", done: false },
+]);
+const draft = signal("");
+const remaining = computed(() => read(todos).filter((t) => !t.done).length);
+
+const addTodo = (form) => {
+  const text = read(draft).trim();
+  if (!text) return;
+  write(todos, [...read(todos), { id: ++seq, text, done: false }]);
+  write(draft, "");
+  form.querySelector("input").value = "";
+};
+
+document.body.append(
+  <main style={{ maxWidth: 420 }}>
+    <h2>Reactive todos</h2>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        addTodo(e.currentTarget);
+      }}
+    >
+      <input placeholder="New todo" onInput={(e) => write(draft, e.target.value)} />
+      <button type="submit">Add</button>
+    </form>
+    <For each={todos} fallback={<p>Nothing to do</p>}>
+      {(todo) => (
+        <li
+          key={todo.id}
+          style={{ display: "flex", gap: 8, alignItems: "center", margin: "6px 0" }}
+        >
+          <input
+            type="checkbox"
+            checked={todo.done}
+            onChange={() =>
+              write(
+                todos,
+                read(todos).map((t) =>
+                  t.id === todo.id ? { ...t, done: !t.done } : t
+                )
+              )
+            }
+          />
+          <span
+            style={{
+              flex: 1,
+              textDecoration: todo.done ? "line-through" : "none",
+              color: todo.done ? "#9aa0b4" : "#1b1c22",
+            }}
+          >
+            {todo.text}
+          </span>
+          <button onClick={() => write(todos, read(todos).filter((t) => t.id !== todo.id))}>
+            ×
+          </button>
+        </li>
+      )}
+    </For>
+    <p style={{ color: "#6b6f7c" }}>{remaining} remaining</p>
+  </main>
+);`,
+  },
+  {
+    id: "ulive-counter",
+    title: "Same app, ulive preset",
+    description: "Swap usePreactSignals for useUlive — the JSX component code is unchanged.",
+    code: `import { h } from "uele";
+import { useUlive } from "uele/adapters/ulive";
+import { signal, computed } from "ulive";
+
+useUlive();
+
+const count = signal(0);
+const squared = computed(() => count.value * count.value);
+
+document.body.append(
+  <main>
+    <h2 style={{ fontVariantNumeric: "tabular-nums" }}>{count}</h2>
+    <p>squared: <strong>{squared}</strong></p>
+    <button className="primary" onClick={() => (count.value = count.value + 1)}>
+      +1 with ulive
+    </button>
+    <button onClick={() => (count.value = 0)}>Reset</button>
+  </main>
+);`,
+  },
+  {
+    id: "hooks-demo",
+    title: "Portable hooks",
+    description: "useToggle, useCounter and useDebounce from uele/hooks, all running on one preset.",
+    code: `import { h, If } from "uele";
+import { usePreactSignals } from "uele/adapters/preact";
+import { useToggle, useCounter, useDebounce } from "uele/hooks";
+import { signal, computed, read } from "uele/reactive";
+
+usePreactSignals();
+
+const [on, toggle] = useToggle(true);
+const onLabel = computed(() => (read(on) ? "Pause" : "Resume"));
+const counter = useCounter(10, { min: 0, max: 50, step: 10 });
+const query = signal("");
+const [delayed] = useDebounce(query, 400);
+const echo = computed(() => read(delayed) || "(type something)");
+
+document.body.append(
+  <main>
+    <p>
+      <button onClick={toggle}>{onLabel}</button>
+    </p>
+    <If when={on}>
+      <section style={{ padding: 12, border: "1px solid #d8dae5", borderRadius: 10 }}>
+        <h3 style={{ marginTop: 0 }}>useCounter — clamped 0–50, step 10</h3>
+        <p style={{ fontSize: 18, fontWeight: 700 }}>{counter.count}</p>
+        <button onClick={() => counter.dec()}>−10</button>
+        <button className="primary" onClick={() => counter.inc()}>+10</button>
+      </section>
+    </If>
+    <h3>useDebounce (400ms)</h3>
+    <input placeholder="Type…" onInput={(e) => (query.value = e.target.value)} />
+    <p>Echo: <strong>{echo}</strong></p>
+  </main>
+);`,
+  },
+  {
+    id: "diff-shuffle",
+    title: "Keyed diff on shuffle",
+    description: "useUdomdiff installs a real DOM differ behind every live-region swap.",
+    code: `import { h, useLive, For } from "uele";
+import { useUdomdiff } from "uele/diffs/udomdiff";
+
+useUdomdiff();
+
+let cards = [1, 2, 3, 4, 5, 6].map((n) => ({ id: n }));
+const [region, setRegion] = useLive("");
+
+const render = () =>
+  setRegion(
+    <For each={cards} key={(card) => card.id} fallback={<p>empty</p>}>
+      {(card) => <li key={card.id}>card {card.id}</li>}
+    </For>
+  );
+render();
+
+document.body.append(
+  <main>
+    <h3>udomdiff live region</h3>
+    <ul>{region}</ul>
+    <button onClick={() => { cards = [...cards].reverse(); render(); }}>
+      Reverse
+    </button>
+    <button
+      onClick={() => {
+        cards = [...cards].sort(() => Math.random() - 0.5);
+        render();
+      }}
+    >
+      Shuffle
+    </button>
+    <button onClick={() => { cards = cards.slice(1); render(); }}>
+      Remove first
+    </button>
+  </main>
+);`,
+  },
 ];

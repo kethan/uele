@@ -5,10 +5,11 @@
 // output and errors are forwarded to the parent and rendered in a console panel.
 
 import { h } from "./dom.js";
+import { VENDOR_MODULES, CORE_SPECS } from "./vendor-manifest.js";
 
 // Mirror of public/jsx-runtime.js: Babel's automatic runtime imports
 // { jsx, jsxs, Fragment } from "uele/jsx-runtime". Appended to the inlined
-// uele bundle so a single data-URL module satisfies both import specifiers.
+// uele bundle so a single data-URL module satisfies both core specifiers.
 const RUNTIME_FOOTER = `
 const jsx = (tag, props = {}) => {
   const { children, key, ...attrs } = props || {};
@@ -27,16 +28,33 @@ const toBase64 = (source) => {
   return btoa(binary);
 };
 
-// fetch the locally bundled uele once, then expose it as a self-contained
-// data: URL module containing the JSX runtime exports as well
-let runtimeUrlPromise;
-const loadRuntimeUrl = () =>
-  (runtimeUrlPromise ||= fetch("/uele.js")
-    .then((r) => {
-      if (!r.ok) throw new Error(`could not load /uele.js (${r.status})`);
-      return r.text();
-    })
-    .then((bundle) => "data:text/javascript;base64," + toBase64(bundle + RUNTIME_FOOTER)));
+// Fetch every playground module once and turn it into a data: URL. The core
+// uele module also carries the JSX runtime footer; every other vendor file
+// keeps its bare imports, which the iframe import map resolves back into the
+// URLs below — so adapters, uele/reactive and the renderer share one `api`.
+let importMapPromise;
+const loadImportMap = () =>
+  (importMapPromise ||= (async () => {
+    const urls = {};
+    const fetched = new Map();
+    const urlFor = async (path, core = false) => {
+      if (!fetched.has(path)) {
+        const res = await fetch(path);
+        if (!res.ok) throw new Error(`could not load ${path} (${res.status})`);
+        const source = await res.text();
+        fetched.set(
+          path,
+          "data:text/javascript;base64," + toBase64(core ? source + RUNTIME_FOOTER : source)
+        );
+      }
+      return fetched.get(path);
+    };
+    for (const [spec, path] of Object.entries(VENDOR_MODULES)) {
+      // both core specifiers resolve to the SAME url → one module instance
+      urls[spec] = await urlFor(path, CORE_SPECS.has(spec));
+    }
+    return { imports: urls };
+  })());
 
 // Babel standalone is large (~3 MB), so it is only fetched the first time a
 // playground actually compiles — doc pages themselves stay light.
@@ -128,13 +146,7 @@ const CONSOLE_HOOK = `
 <\/script>`;
 
 async function buildSrcdoc(transformed) {
-  const runtimeUrl = await loadRuntimeUrl();
-  const importMap = JSON.stringify({
-    imports: {
-      uele: runtimeUrl,
-      "uele/jsx-runtime": runtimeUrl,
-    },
-  });
+  const importMap = JSON.stringify(await loadImportMap());
   return `<!doctype html>
 <html>
   <head>

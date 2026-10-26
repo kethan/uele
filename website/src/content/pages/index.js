@@ -8,6 +8,8 @@ import { title as events, markdown as eventsMd } from "./events.js";
 import { title as conditional, markdown as conditionalMd } from "./conditional.js";
 import { title as lists, markdown as listsMd } from "./lists.js";
 import { title as asyncPage, markdown as asyncMd } from "./async.js";
+import { title as signals, markdown as signalsMd } from "./signals.js";
+import { title as diffing, markdown as diffingMd } from "./diffing.js";
 import { title as api, markdown as apiMd } from "./api.js";
 
 export const PAGES = {
@@ -21,5 +23,7 @@ export const PAGES = {
   conditional: { title: conditional, markdown: conditionalMd },
   lists: { title: lists, markdown: listsMd },
   async: { title: asyncPage, markdown: asyncMd },
+  signals: { title: signals, markdown: signalsMd },
+  diffing: { title: diffing, markdown: diffingMd },
   api: { title: api, markdown: apiMd },
 };

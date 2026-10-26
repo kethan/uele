@@ -1,28 +1,31 @@
 /**
  * Validates every live example in the docs (doc-page `jsx live` fences, the
- * gallery and the home hero) the same way the browser playground does:
+ * gallery and the home hero) by compiling and running the SAME module graph
+ * the iframe import map assembles:
  *
- *   1. Babel compiles the JSX with uele's automatic runtime
- *   2. import declarations are rewritten against the locally bundled uele
- *   3. the code executes inside a linkedom DOM with the real uele bundle
- *   4. every button is clicked and every field exercised to flush out
- *      runtime errors in handlers
+ *   1. esbuild bundles each example with uele's automatic JSX runtime
+ *   2. an alias plugin resolves every "uele*" specifier to the real repo
+ *      source; signal packages resolve from website/node_modules — so the
+ *      bundled module shares one uele `api`, exactly like the iframe
+ *   3. the self-contained bundle executes under linkedom
+ *   4. buttons are clicked, fields filled and forms submitted to exercise
+ *      signal writes, hook actions and diff presets
  *
  * Exits non-zero on the first failure.
  */
-import Babel from "@babel/standalone";
+import { build } from "esbuild";
 import { parseHTML } from "linkedom";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
 const here = dirname(fileURLToPath(import.meta.url));
+const root = resolve(here, "..");
+const repo = resolve(root, "..");
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const ueleNS = await import(resolve(here, "..", "public", "uele.js"));
-const rtNS = await import(resolve(here, "..", "public", "jsx-runtime.js"));
-const { PAGES } = await import(resolve(here, "..", "src", "content", "pages", "index.js"));
-const { EXAMPLES } = await import(resolve(here, "..", "src", "content", "examples.js"));
-const home = await import(resolve(here, "..", "src", "content", "home.js"));
+const { PAGES } = await import(resolve(root, "src", "content", "pages", "index.js"));
+const { EXAMPLES } = await import(resolve(root, "src", "content", "examples.js"));
+const home = await import(resolve(root, "src", "content", "home.js"));
 
 const cases = [];
 for (const [slug, page] of Object.entries(PAGES)) {
@@ -33,74 +36,93 @@ for (const [slug, page] of Object.entries(PAGES)) {
 for (const ex of EXAMPLES) cases.push({ name: `example:${ex.id}`, code: ex.code });
 cases.push({ name: "home:hero", code: home.HERO_CODE });
 
-function compile(code) {
-  const transformed = Babel.transform(code, {
-    presets: [["react", { runtime: "automatic", importSource: "uele" }]],
-    filename: "playground.jsx",
-    babelrc: false,
-    configFile: false,
-    sourceType: "module",
-  }).code;
+// playground specifier -> real source in this repository
+const ALIAS = {
+  uele: resolve(repo, "src", "index.js"),
+  "uele/jsx-runtime": resolve(repo, "jsx-runtime", "index.ts"),
+  "uele/reactive": resolve(repo, "reactive", "index.js"),
+  "uele/hooks": resolve(repo, "hooks", "index.js"),
+  "uele/adapters/preact": resolve(repo, "adapters", "preact.js"),
+  "uele/adapters/ulive": resolve(repo, "adapters", "ulive.js"),
+  "uele/diffs/rebuild": resolve(repo, "diffs", "rebuild.js"),
+  "uele/diffs/udomdiff": resolve(repo, "diffs", "udomdiff.js"),
+};
 
-  // rewrite ESM imports into destructuring from the pre-imported namespaces
-  return transformed.replace(
-    /import\s*\{([^}]+)\}\s*from\s*"(uele(?:\/jsx-runtime)?)";?/g,
-    (_, names, spec) =>
-      `const {${names.replace(/\s+as\s+/g, ": ")}} = ${
-        spec === "uele" ? "ueleNS" : "rtNS"
-      };`
-  );
+const aliasPlugin = (code) => ({
+  name: "uele-playground-alias",
+  setup(build) {
+    build.onResolve({ filter: /^uele(?:\/[\w-]+)*$/ }, (args) =>
+      ALIAS[args.path] ? { path: ALIAS[args.path] } : undefined
+    );
+    build.onResolve({ filter: /^entry\.jsx$/ }, () => ({
+      path: "entry.jsx",
+      namespace: "virt",
+    }));
+    build.onLoad({ filter: /.*/, namespace: "virt" }, () => ({
+      contents: code,
+      loader: "jsx",
+      resolveDir: root,
+    }));
+  },
+});
+
+async function bundleExample(code) {
+  const result = await build({
+    entryPoints: ["entry.jsx"],
+    bundle: true,
+    write: false,
+    format: "esm",
+    platform: "browser",
+    target: ["es2020"],
+    jsx: "automatic",
+    jsxImportSource: "uele",
+    plugins: [aliasPlugin(code)],
+    nodePaths: [resolve(root, "node_modules")],
+    logLevel: "silent",
+  });
+  return result.outputFiles[0].text;
 }
 
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 
 async function runCase({ name, code }) {
   const dom = parseHTML("<!doctype html><html><body></body></html>");
-  const { window, document, Node, Event, CustomEvent, MouseEvent } = dom;
-  // the uele bundle reads DOM APIs as ambient globals
-  globalThis.window = window;
-  globalThis.document = document;
-  globalThis.Node = Node;
-  globalThis.Event = Event;
-  globalThis.CustomEvent = CustomEvent || Event;
-  globalThis.MouseEvent = MouseEvent || Event;
-  globalThis.alert = () => {};
-  const compiled = compile(code);
+  const { window, document, Node, Event } = dom;
+  Object.assign(globalThis, {
+    window,
+    document,
+    Node,
+    Event,
+    CustomEvent: dom.CustomEvent || Event,
+    alert: () => {},
+  });
 
-  const fn = new AsyncFunction(
-    "window", "document", "Node", "Event", "ueleNS", "rtNS",
-    "alert", "setTimeout", "setInterval", "clearTimeout", "clearInterval",
-    compiled
-  );
+  const bundled = await bundleExample(code);
+  const url = "data:text/javascript;base64," + Buffer.from(bundled, "utf8").toString("base64");
+  await import(url);
 
-  await fn(
-    window, document, Node, Event, ueleNS, rtNS,
-    globalThis.alert, setTimeout, setInterval, clearTimeout, clearInterval
-  );
-
-  // let promises / async iterables / lazy components settle
-  await sleep(2000);
+  // let promises, debounces, async iterables and lazy components settle
+  await sleep(1800);
 
   // exercise every interactive element once
   for (const btn of document.querySelectorAll("button")) {
     btn.click();
-    await sleep(5);
+    await sleep(4);
   }
   for (const field of document.querySelectorAll("input, textarea")) {
     if (field.type === "checkbox") field.checked = !field.checked;
     else if (field.type !== "color" && field.type !== "range") field.value = "test input";
     field.dispatchEvent(new Event("input", { bubbles: true }));
     field.dispatchEvent(new Event("change", { bubbles: true }));
-    await sleep(5);
+    await sleep(4);
   }
   for (const form of document.querySelectorAll("form")) {
     form.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
-    await sleep(5);
+    await sleep(4);
   }
+  await sleep(500); // debounced effects (e.g. useDebounce) get a chance to flush
 
-  if (!document.body.children.length) {
-    throw new Error("rendered an empty <body>");
-  }
+  if (!document.body.children.length) throw new Error("rendered an empty <body>");
   if (document.body.innerHTML.includes("[object")) {
     throw new Error("a node array was stringified — wrap useLive regions in JSX instead of appending them raw");
   }

@@ -17,6 +17,8 @@ export const NAV = [
       { slug: "conditional", title: "Conditional Rendering" },
       { slug: "lists", title: "Lists & Keys" },
       { slug: "async", title: "Async & Lazy" },
+      { slug: "signals", title: "Signals & Presets" },
+      { slug: "diffing", title: "List Diffing" },
     ],
   },
   {
