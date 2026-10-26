@@ -14,7 +14,7 @@ import { build } from "esbuild";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync, existsSync } from "node:fs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "..");
@@ -25,6 +25,27 @@ mkdirSync(vendorDir, { recursive: true });
 
 const require = createRequire(import.meta.url);
 const npm = (spec) => require.resolve(spec);
+
+// Resolve a package's real ESM entry: the CJS `main` only yields a default
+// export, which breaks named imports in the browser's import map.
+const esmEntry = (spec) => {
+  let dir = dirname(require.resolve(spec));
+  let pkg;
+  while (dir !== dirname(dir)) {
+    const candidate = resolve(dir, "package.json");
+    if (existsSync(candidate)) {
+      pkg = JSON.parse(readFileSync(candidate, "utf8"));
+      break;
+    }
+    dir = dirname(dir);
+  }
+  const exp = pkg.exports?.["."];
+  const entry =
+    (typeof exp === "object" && (exp.import || exp.browser?.import || exp.browser)) ||
+    pkg.module ||
+    pkg.main;
+  return resolve(dir, typeof entry === "object" ? entry.import : entry);
+};
 
 // bare specifiers the iframe import map knows how to resolve
 const external = [
@@ -73,12 +94,14 @@ await build({
   nodePaths: [resolve(root, "node_modules")],
 });
 
-// 3. npm signal / diff libraries: bundled whole so they have no bare imports
+// 3. npm libraries, bundled whole so they have no bare imports.
+//    Signals use their ESM entries so named exports survive; udomdiff is
+//    CJS-only and only ever default-imported, so its interop wrapper is fine.
 await build({
   ...shared,
   entryPoints: [
-    { in: npm("@preact/signals-core"), out: "vendor/signals-core" },
-    { in: npm("ulive"), out: "vendor/ulive" },
+    { in: esmEntry("@preact/signals-core"), out: "vendor/signals-core" },
+    { in: esmEntry("ulive"), out: "vendor/ulive" },
     { in: npm("udomdiff"), out: "vendor/udomdiff" },
   ],
   outdir: outDir,

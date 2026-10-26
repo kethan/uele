@@ -35,22 +35,19 @@ import { useRebuild } from "uele/diffs/rebuild";
 useRebuild();
 
 let items = [1, 2, 3, 4, 5];
-const [region, setRegion] = useLive("");
 
-const render = () =>
-  setRegion(
-    map(
-      items,
-      (n) => <li key={n}>item {n}</li>,
-      <li>empty</li>,
-      (n) => n
-    )
+const build = () =>
+  map(
+    items,
+    (n) => <li key={n}>item {n}</li>,
+    <li>empty</li>,
+    (n) => n
   );
-render();
+const [region, setRegion] = useLive(build());
 
 const mutate = (fn) => {
   fn();
-  render();
+  setRegion(build());
 };
 
 document.body.append(
@@ -95,23 +92,20 @@ let rows = [
   { id: 3, label: "three" },
   { id: 4, label: "four" },
 ];
-const [region, setRegion] = useLive("");
-
-const render = () =>
-  setRegion(
-    <For each={rows} key={(row) => row.id} fallback={<p>no rows</p>}>
-      {(row) => (
-        <li key={row.id}>
-          {row.id}: {row.label}
-        </li>
-      )}
-    </For>
-  );
-render();
+const build = () => (
+  <For each={rows} key={(row) => row.id} fallback={<p>no rows</p>}>
+    {(row) => (
+      <li key={row.id}>
+        {row.id}: {row.label}
+      </li>
+    )}
+  </For>
+);
+const [region, setRegion] = useLive(build());
 
 const mutate = (fn) => {
   fn();
-  render();
+  setRegion(build());
 };
 
 document.body.append(

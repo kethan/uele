@@ -125,33 +125,30 @@ let tasks = [
   { id: 2, text: "Write some JSX" },
 ];
 
-const [list, setList] = useLive("");
-
-const render = () =>
-  setList(
-    <div>
-      <h3>Tasks ({tasks.length})</h3>
-      <ul style={{ listStyle: "none", padding: 0 }}>
-        {tasks.map((task) => (
-          <li
-            key={task.id}
-            style={{ display: "flex", gap: 8, alignItems: "center", margin: "6px 0" }}
+const build = () => (
+  <div>
+    <h3>Tasks ({tasks.length})</h3>
+    <ul style={{ listStyle: "none", padding: 0 }}>
+      {tasks.map((task) => (
+        <li
+          key={task.id}
+          style={{ display: "flex", gap: 8, alignItems: "center", margin: "6px 0" }}
+        >
+          <span style={{ flex: 1 }}>{task.text}</span>
+          <button
+            onClick={() => {
+              tasks = tasks.filter((t) => t.id !== task.id);
+              setList(build());
+            }}
           >
-            <span style={{ flex: 1 }}>{task.text}</span>
-            <button
-              onClick={() => {
-                tasks = tasks.filter((t) => t.id !== task.id);
-                render();
-              }}
-            >
-              Delete
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-render();
+            Delete
+          </button>
+        </li>
+      ))}
+    </ul>
+  </div>
+);
+const [list, setList] = useLive(build());
 
 document.body.append(
   <main>
@@ -160,7 +157,7 @@ document.body.append(
       className="primary"
       onClick={() => {
         tasks = [...tasks, { id: ++nextId, text: "Task " + nextId }];
-        render();
+        setList(build());
       }}
     >
       Add task

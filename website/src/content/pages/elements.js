@@ -44,15 +44,13 @@ used as children — see **State with useLive**):
 import { h, useLive } from "uele";
 
 let disabled = false;
-const [view, setView] = useLive("");
 
-const render = () =>
-  setView(
-    <button disabled={disabled}>
-      {disabled ? "Disabled" : "Enabled"} button
-    </button>
-  );
-render();
+// pass the FIRST render as the region's initial value so it exists at mount;
+// a setter only swaps region contents while the markers are already attached
+const build = () => (
+  <button disabled={disabled}>{disabled ? "Disabled" : "Enabled"} button</button>
+);
+const [view, setView] = useLive(build());
 
 document.body.append(
   <main>
@@ -61,7 +59,7 @@ document.body.append(
       className="primary"
       onClick={() => {
         disabled = !disabled;
-        render();
+        setView(build());
       }}
     >
       Toggle disabled
@@ -80,34 +78,33 @@ kebab-case or CSS custom-property keys.
 import { h, useLive } from "uele";
 
 let featured = false;
-const [card, setCard] = useLive("");
 
-const render = () =>
-  setCard(
-    <section
-      className={{ card: true, featured }}
-      style={{
-        padding: "20px",
-        borderRadius: "12px",
-        background: featured ? "#eeedff" : "#f5f5f8",
-        border: "1px solid #d8dae5",
-        transition: "background 200ms ease",
+const build = () => (
+  <section
+    className={{ card: true, featured }}
+    style={{
+      padding: "20px",
+      borderRadius: "12px",
+      background: featured ? "#eeedff" : "#f5f5f8",
+      border: "1px solid #d8dae5",
+      transition: "background 200ms ease",
+    }}
+  >
+    <h3 style={{ marginTop: 0 }}>Class + style maps</h3>
+    <p>The \`featured\` class is {featured ? "on" : "off"}.</p>
+    <button
+      onClick={() => {
+        featured = !featured;
+        setCard(build());
       }}
     >
-      <h3 style={{ marginTop: 0 }}>Class + style maps</h3>
-      <p>The \`featured\` class is {featured ? "on" : "off"}.</p>
-      <button
-        onClick={() => {
-          featured = !featured;
-          render();
-        }}
-      >
-        Toggle featured
-      </button>
-    </section>
-  );
+      Toggle featured
+    </button>
+  </section>
+);
+// initial content is built at construction, so it renders on first mount
+const [card, setCard] = useLive(build());
 
-render();
 // a useLive region is an array of marker nodes — drop it into JSX so it is
 // flattened, rather than handing the raw array to a native DOM append()
 document.body.append(<main>{card}</main>);
@@ -146,10 +143,22 @@ created — the place for focus, measurement and third-party libraries.
 \`\`\`jsx live
 import { h } from "uele";
 
+// a node created up front lets the ref callback report back through plain DOM
+const status = <p>waiting for ref…</p>;
+
 document.body.append(
   <main>
-    <input ref={(el) => el.focus()} placeholder="Focused on mount" />
-    <p>The ref callback runs after the element is attached.</p>
+    <input
+      ref={(el) => {
+        // the finished element: focus it AND make the effect observable
+        el.value = "filled by the ref";
+        el.style.outline = "2px solid #635bff";
+        el.focus();
+        status.textContent = "ref ran: value set, outline added and focus() called";
+      }}
+      placeholder="Focused on mount"
+    />
+    {status}
   </main>
 );
 \`\`\`

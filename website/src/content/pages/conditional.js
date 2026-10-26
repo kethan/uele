@@ -16,18 +16,13 @@ JSX-friendly name.
 import { h, useLive, If } from "uele";
 
 let loggedIn = false;
-const [panel, setPanel] = useLive("");
 
-const render = () =>
-  setPanel(
-    <If
-      when={loggedIn}
-      fallback={<p>Please sign in to continue.</p>}
-    >
-      <p>Welcome back! 👋</p>
-    </If>
-  );
-render();
+const build = () => (
+  <If when={loggedIn} fallback={<p>Please sign in to continue.</p>}>
+    <p>Welcome back! 👋</p>
+  </If>
+);
+const [panel, setPanel] = useLive(build());
 
 document.body.append(
   <main>
@@ -36,7 +31,7 @@ document.body.append(
       className="primary"
       onClick={() => {
         loggedIn = !loggedIn;
-        render();
+        setPanel(build());
       }}
     >
       {loggedIn ? "Sign out" : "Sign in"}
@@ -60,15 +55,12 @@ variable and rebuild the region when it changes:
 import { h, useLive } from "uele";
 
 let unread = 3;
-const [inbox, setInbox] = useLive("");
 
-const render = () =>
-  setInbox(
-    unread > 0
-      ? <strong>You have {unread} new messages</strong>
-      : <span>Inbox zero 🎉</span>
-  );
-render();
+const build = () =>
+  unread > 0
+    ? <strong>You have {unread} new messages</strong>
+    : <span>Inbox zero 🎉</span>;
+const [inbox, setInbox] = useLive(build());
 
 document.body.append(
   <main>
@@ -76,7 +68,7 @@ document.body.append(
     <button
       onClick={() => {
         unread = Math.max(0, unread - 1);
-        render();
+        setInbox(build());
       }}
     >
       Read one
@@ -85,7 +77,7 @@ document.body.append(
       className="primary"
       onClick={() => {
         unread += 1;
-        render();
+        setInbox(build());
       }}
     >
       Receive one
@@ -103,23 +95,21 @@ its own \`fallback\` when none match. \`Match\` is an alias of \`If\`.
 import { h, useLive, Switch, Match } from "uele";
 
 let route = "home";
-const [view, setView] = useLive("");
 
-const render = () =>
-  setView(
-    <Switch fallback={<p>404 — page not found</p>}>
-      <Match when={route === "home"}>
-        <p>🏠 Home page</p>
-      </Match>
-      <Match when={route === "about"}>
-        <p>ℹ️ About page</p>
-      </Match>
-      <Match when={route === "contact"}>
-        <p>✉️ Contact page</p>
-      </Match>
-    </Switch>
-  );
-render();
+const build = () => (
+  <Switch fallback={<p>404 — page not found</p>}>
+    <Match when={route === "home"}>
+      <p>🏠 Home page</p>
+    </Match>
+    <Match when={route === "about"}>
+      <p>ℹ️ About page</p>
+    </Match>
+    <Match when={route === "contact"}>
+      <p>✉️ Contact page</p>
+    </Match>
+  </Switch>
+);
+const [view, setView] = useLive(build());
 
 document.body.append(
   <main>
@@ -129,7 +119,7 @@ document.body.append(
           key={r}
           onClick={() => {
             route = r;
-            render();
+            setView(build());
           }}
           style={{ marginRight: 6 }}
         >
@@ -154,10 +144,11 @@ const Red = ({ label }) => <p style={{ color: "#e5484d", fontWeight: 700 }}>{lab
 const Blue = ({ label }) => <p style={{ color: "#635bff", fontWeight: 700 }}>{label}</p>;
 
 let useRed = true;
-const [slot, setSlot] = useLive("");
-const render = () =>
-  setSlot(<Dynamic component={useRed ? Red : Blue} label="Swapped at runtime" />);
-render();
+
+const build = () => (
+  <Dynamic component={useRed ? Red : Blue} label="Swapped at runtime" />
+);
+const [slot, setSlot] = useLive(build());
 
 document.body.append(
   <main>
@@ -165,7 +156,7 @@ document.body.append(
     <button
       onClick={() => {
         useRed = !useRed;
-        render();
+        setSlot(build());
       }}
     >
       Swap component

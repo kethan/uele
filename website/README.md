@@ -93,8 +93,8 @@ dependencies) and real signal presets — `usePreactSignals()` with
 | `npm run preview` | Serve the production build |
 | `npm run bundle` | Rebuild `public/uele.js` and `public/vendor/*` from `../src` + npm packages |
 | `npm test` | All four validation suites |
-| `npm run check-examples` | Bundle and execute all 60+ live examples under linkedom |
-| `npm run check-pipeline` | Verify Babel output and the iframe import-map coverage |
+| `npm run check-examples` | Bundle and execute all 62 live examples under linkedom |
+| `npm run check-pipeline` | Babel + data-URL module graph: 83 checks incl. mount-time content contracts |
 | `npm run check-signals` | Behavioral assertions for presets, reactive/hooks cells and diff engines |
 | `npm run smoke` | Render every docs page through the markdown pipeline |
 

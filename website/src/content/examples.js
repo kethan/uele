@@ -33,10 +33,7 @@ let todos = [
 let seq = 2;
 let draft = "";
 
-const [view, setView] = useLive("");
-
-const render = () =>
-  setView(
+const build = () => (
     <div>
       <ul style={{ listStyle: "none", padding: 0, margin: "10px 0" }}>
         {todos.map((todo) => (
@@ -51,7 +48,7 @@ const render = () =>
                 todos = todos.map((t) =>
                   t.id === todo.id ? { ...t, done: !t.done } : t
                 );
-                render();
+                setView(build());
               }}
             />
             <span
@@ -66,7 +63,7 @@ const render = () =>
             <button
               onClick={() => {
                 todos = todos.filter((t) => t.id !== todo.id);
-                render();
+                setView(build());
               }}
             >
               Delete
@@ -79,7 +76,7 @@ const render = () =>
       </p>
     </div>
   );
-render();
+const [view, setView] = useLive(build());
 
 document.body.append(
   <main style={{ maxWidth: 400 }}>
@@ -92,7 +89,7 @@ document.body.append(
         todos = [...todos, { id: ++seq, text, done: false }];
         draft = "";
         e.target.querySelector("input").value = "";
-        render();
+        setView(build());
       }}
     >
       <input placeholder="What needs doing?" onInput={(e) => (draft = e.target.value)} />
@@ -202,10 +199,8 @@ document.body.append(
     code: `import { h, useLive, Switch, Match } from "uele";
 
 let tab = "one";
-const [panel, setPanel] = useLive("");
 
-const render = () =>
-  setPanel(
+const build = () => (
     <Switch fallback={<p>Not found</p>}>
       <Match when={tab === "one"}>
         <p>📄 Content of the first tab</p>
@@ -218,7 +213,7 @@ const render = () =>
       </Match>
     </Switch>
   );
-render();
+const [panel, setPanel] = useLive(build());
 
 document.body.append(
   <main>
@@ -229,7 +224,7 @@ document.body.append(
           style={{ marginRight: 6 }}
           onClick={() => {
             tab = t;
-            render();
+            setPanel(build());
           }}
         >
           {t}
@@ -247,10 +242,8 @@ document.body.append(
     code: `import { h, useLive } from "uele";
 
 let hex = "#635bff";
-const [swatch, setSwatch] = useLive("");
 
-const render = () =>
-  setSwatch(
+const build = () => (
     <div>
       <div
         style={{
@@ -265,7 +258,7 @@ const render = () =>
       <code>{hex}</code>
     </div>
   );
-render();
+const [swatch, setSwatch] = useLive(build());
 
 document.body.append(
   <main>
@@ -275,7 +268,7 @@ document.body.append(
       value={hex}
       onInput={(e) => {
         hex = e.target.value;
-        render();
+        setSwatch(build());
       }}
     />
     {swatch}
@@ -571,32 +564,30 @@ import { useUdomdiff } from "uele/diffs/udomdiff";
 useUdomdiff();
 
 let cards = [1, 2, 3, 4, 5, 6].map((n) => ({ id: n }));
-const [region, setRegion] = useLive("");
 
-const render = () =>
-  setRegion(
+const build = () => (
     <For each={cards} key={(card) => card.id} fallback={<p>empty</p>}>
       {(card) => <li key={card.id}>card {card.id}</li>}
     </For>
   );
-render();
+const [region, setRegion] = useLive(build());
 
 document.body.append(
   <main>
     <h3>udomdiff live region</h3>
     <ul>{region}</ul>
-    <button onClick={() => { cards = [...cards].reverse(); render(); }}>
+    <button onClick={() => { cards = [...cards].reverse(); setRegion(build()); }}>
       Reverse
     </button>
     <button
       onClick={() => {
         cards = [...cards].sort(() => Math.random() - 0.5);
-        render();
+        setRegion(build());
       }}
     >
       Shuffle
     </button>
-    <button onClick={() => { cards = cards.slice(1); render(); }}>
+    <button onClick={() => { cards = cards.slice(1); setRegion(build()); }}>
       Remove first
     </button>
   </main>

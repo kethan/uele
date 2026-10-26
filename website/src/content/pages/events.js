@@ -41,7 +41,7 @@ as it does in plain DOM code.
 \`\`\`jsx live
 import { h, useLive } from "uele";
 
-const [submitted, setSubmitted] = useLive("");
+const [submitted, setSubmitted] = useLive("—");
 let draft = "";
 
 document.body.append(
@@ -49,7 +49,7 @@ document.body.append(
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        setSubmitted(draft);
+        setSubmitted(draft || "—");
       }}
     >
       <input
@@ -58,7 +58,7 @@ document.body.append(
       />
       <button type="submit">Send</button>
     </form>
-    <p>Last message: <strong>{submitted || "—"}</strong></p>
+    <p>Last message: <strong>{submitted}</strong></p>
   </main>
 );
 \`\`\`
@@ -66,20 +66,23 @@ document.body.append(
 ## Checkboxes, selects and inputs
 
 Property-backed attributes like \`checked\`, \`value\` and \`selected\` are
-written as properties and accept live regions:
+written as properties. With a signal preset installed (see **Signals &
+Presets**) they accept reactive cells directly; with core \`useLive\`, keep
+the value in a variable and rebuild the element through the region:
 
 \`\`\`jsx live
 import { h, useLive } from "uele";
 
 const [picked, setPicked] = useLive("vanilla");
-const [agreed, setAgreed] = useLive(false);
+// booleans render as empty comment nodes, so display the state as text
+const [agreed, setAgreed] = useLive("no");
 
 document.body.append(
   <main>
     <label>
       <input
         type="checkbox"
-        onChange={(e) => setAgreed(e.target.checked)}
+        onChange={(e) => setAgreed(e.target.checked ? "yes" : "no")}
       />
       I agree
     </label>
@@ -108,29 +111,27 @@ When a style value must change, rebuild the styled element through a region:
 import { h, useLive } from "uele";
 
 let size = 16;
-const [demo, setDemo] = useLive("");
 
-const render = () =>
-  setDemo(
-    <div>
-      <label>
-        Font size: {size}px{" "}
-        <input
-          type="range" min="12" max="40"
-          value={size}
-          onInput={(e) => {
-            size = Number(e.target.value);
-            render();
-          }}
-        />
-      </label>
-      <p style={{ fontSize: size, fontWeight: 700, color: "#635bff" }}>
-        Resize me with the slider
-      </p>
-    </div>
-  );
+const build = () => (
+  <div>
+    <label>
+      Font size: {size}px{" "}
+      <input
+        type="range" min="12" max="40"
+        value={size}
+        onInput={(e) => {
+          size = Number(e.target.value);
+          setDemo(build());
+        }}
+      />
+    </label>
+    <p style={{ fontSize: size, fontWeight: 700, color: "#635bff" }}>
+      Resize me with the slider
+    </p>
+  </div>
+);
+const [demo, setDemo] = useLive(build());
 
-render();
 document.body.append(<main>{demo}</main>);
 \`\`\`
 

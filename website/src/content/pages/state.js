@@ -17,6 +17,17 @@ const [region, setRegion] = useLive(initialValue);
 - Values can be primitives, nodes, arrays, promises or thunks — the same rules
   as any child.
 
+> **Warning:** a setter only swaps content while its marker nodes are attached
+> to the document. Calling \`setRegion(...)\` **before** the region is mounted
+> is a no-op, so the first render must be passed as the \`useLive\` initial
+> value — build it, then update from event handlers that run after mount:
+>
+> \`\`\`js
+> const build = () => <section>{/* current state */}</section>;
+> const [region, setRegion] = useLive(build());   // present on first paint
+> // later, from a handler: setRegion(build());
+> \`\`\`
+
 ## A counter
 
 \`\`\`jsx live
@@ -70,33 +81,32 @@ is the pattern for class toggles, styles and any value used as a **prop**:
 import { h, useLive } from "uele";
 
 let liked = false;
-const [card, setCard] = useLive("");
 
-const render = () =>
-  setCard(
-    <article
-      style={{
-        padding: "18px",
-        borderRadius: "12px",
-        border: "1px solid #d8dae5",
-        background: liked ? "#fff4ed" : "#ffffff",
+const build = () => (
+  <article
+    style={{
+      padding: "18px",
+      borderRadius: "12px",
+      border: "1px solid #d8dae5",
+      background: liked ? "#fff4ed" : "#ffffff",
+    }}
+  >
+    <h3 style={{ marginTop: 0 }}>Like this post</h3>
+    <p>{liked ? "You liked this ❤️" : "Not liked yet"}</p>
+    <button
+      className="primary"
+      onClick={() => {
+        liked = !liked;
+        setCard(build());
       }}
     >
-      <h3 style={{ marginTop: 0 }}>Like this post</h3>
-      <p>{liked ? "You liked this ❤️" : "Not liked yet"}</p>
-      <button
-        className="primary"
-        onClick={() => {
-          liked = !liked;
-          render();
-        }}
-      >
-        {liked ? "Unlike" : "Like"}
-      </button>
-    </article>
-  );
+      {liked ? "Unlike" : "Like"}
+    </button>
+  </article>
+);
+// first render is the region's initial value — present immediately on mount
+const [card, setCard] = useLive(build());
 
-render();
 document.body.append(<main>{card}</main>);
 \`\`\`
 

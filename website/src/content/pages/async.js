@@ -17,8 +17,8 @@ import { h } from "uele";
 
 const delayed = new Promise((resolve) =>
   setTimeout(
-    () => resolve(<p style={{ fontWeight: 700, color: "#17a673" }}>Loaded after 1.5 seconds 🎉</p>),
-    1500
+    () => resolve(<p style={{ fontWeight: 700, color: "#17a673" }}>Loaded after a moment 🎉</p>),
+    700
   )
 );
 
@@ -43,7 +43,7 @@ const loadUser = (id) =>
   new Promise((resolve) =>
     setTimeout(
       () => resolve({ id, name: "Ada Lovelace", email: "ada@example.dev" }),
-      1000
+      600
     )
   );
 
@@ -80,8 +80,8 @@ const ticker = {
       next: () =>
         new Promise((done) =>
           setTimeout(
-            () => done({ value: <p>Tick {i} of 5</p>, done: i++ > 5 }),
-            600
+            () => done({ value: <p>Tick {i} of 5</p>, done: i++ >= 5 }),
+            400
           )
         ),
     };
@@ -112,7 +112,7 @@ const clock = {
     const id = setInterval(() => {
       emit(n++);
       if (n > 4) clearInterval(id);
-    }, 500);
+    }, 400);
     return () => clearInterval(id);
   },
 };
