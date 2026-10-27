@@ -36,31 +36,27 @@ otherwise. The falsy rules are predictable:
 - \`true\` sets it to an empty string
 - numbers are stringified
 
-When an attribute must change over time, keep the flag in a variable and
-rebuild the element through a live region (regions are DOM nodes, so they are
-used as children — see **State with useLive**):
+When an attribute must change over time, hand it a reactive cell from a
+signal preset — uele flips the property in place, no rebuild (see **Signals &
+Presets**):
 
 \`\`\`jsx live
-import { h, useLive } from "uele";
+import { h } from "uele";
+import { useUlive } from "uele/adapters/ulive";
+import { signal } from "ulive";
 
-let disabled = false;
+useUlive();
 
-// pass the FIRST render as the region's initial value so it exists at mount;
-// a setter only swaps region contents while the markers are already attached
-const build = () => (
-  <button disabled={disabled}>{disabled ? "Disabled" : "Enabled"} button</button>
-);
-const [view, setView] = useLive(build());
+const disabled = signal(false);
 
 document.body.append(
   <main>
-    {view}
+    <button disabled={disabled}>
+      {() => (disabled.value ? "Disabled" : "Enabled")} button
+    </button>
     <button
       className="primary"
-      onClick={() => {
-        disabled = !disabled;
-        setView(build());
-      }}
+      onClick={() => (disabled.value = !disabled.value)}
     >
       Toggle disabled
     </button>
@@ -75,44 +71,41 @@ individual class names, and styles accept a plain object with camelCase,
 kebab-case or CSS custom-property keys.
 
 \`\`\`jsx live
-import { h, useLive } from "uele";
+import { h } from "uele";
+import { useUlive } from "uele/adapters/ulive";
+import { signal } from "ulive";
 
-let featured = false;
+useUlive();
 
-const build = () => (
-  <section
-    className={{ card: true, featured }}
-    style={{
-      padding: "20px",
-      borderRadius: "12px",
-      background: featured ? "#eeedff" : "#f5f5f8",
-      border: "1px solid #d8dae5",
-      transition: "background 200ms ease",
-    }}
-  >
-    <h3 style={{ marginTop: 0 }}>Class + style maps</h3>
-    <p>The \`featured\` class is {featured ? "on" : "off"}.</p>
-    <button
-      onClick={() => {
-        featured = !featured;
-        setCard(build());
+const featured = signal(false);
+
+document.body.append(
+  <main>
+    <section
+      className={{ card: true, featured }}
+      style={{
+        padding: "20px",
+        borderRadius: "12px",
+        background: () => (featured.value ? "#eeedff" : "#f5f5f8"),
+        border: "1px solid #d8dae5",
+        transition: "background 200ms ease",
       }}
     >
-      Toggle featured
-    </button>
-  </section>
+      <h3 style={{ marginTop: 0 }}>Class + style maps</h3>
+      <p>
+        The \`featured\` class is {() => (featured.value ? "on" : "off")}.
+      </p>
+      <button onClick={() => (featured.value = !featured.value)}>
+        Toggle featured
+      </button>
+    </section>
+  </main>
 );
-// initial content is built at construction, so it renders on first mount
-const [card, setCard] = useLive(build());
-
-// a useLive region is an array of marker nodes — drop it into JSX so it is
-// flattened, rather than handing the raw array to a native DOM append()
-document.body.append(<main>{card}</main>);
 \`\`\`
 
-> **Tip:** class objects and style objects also accept reactive cells from a
-> signal preset (ulive, Solid, Preact signals…). With core-only \`useLive\`,
-> rebuild the element as above — regions are children, not values.
+> **Tip:** class objects and style objects accept reactive cells (or thunks)
+> from any signal preset (ulive, Solid, Preact signals…), so a single class
+> name or CSS property updates without touching the rest of the element.
 
 ## SVG and MathML
 

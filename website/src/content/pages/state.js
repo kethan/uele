@@ -19,14 +19,18 @@ const [region, setRegion] = useLive(initialValue);
 
 > **Warning:** a setter only swaps content while its marker nodes are attached
 > to the document. Calling \`setRegion(...)\` **before** the region is mounted
-> is a no-op, so the first render must be passed as the \`useLive\` initial
-> value — build it, then update from event handlers that run after mount:
+> is a no-op, so the first render is simply the value you pass to
+> \`useLive\` — update it later from event handlers that run after mount:
 >
 > \`\`\`js
-> const build = () => <section>{/* current state */}</section>;
-> const [region, setRegion] = useLive(build());   // present on first paint
-> // later, from a handler: setRegion(build());
+> const [region, setRegion] = useLive(<section>{/* initial state */}</section>);
+> // later, from a handler: setRegion(<section>{/* next state */}</section>);
 > \`\`\`
+>
+> With a signal preset (see **Signals & Presets**) the manual swap disappears:
+> hold the state in a \`signal(defaultValue)\` and bind the cell directly —
+> \`<section class={cell}>\`, \`<For each={cell}>\` — and uele patches only the
+> DOM that changed.
 
 ## A counter
 
@@ -73,41 +77,39 @@ document.body.append(
 
 ## Re-rendering a subtree
 
-A region can hold elements too. Keep the source of truth in plain variables,
-then rebuild the subtree through the setter whenever something changes. This
-is the pattern for class toggles, styles and any value used as a **prop**:
+A region can hold elements too. With core-only \`useLive\`, pass the first
+render as the initial value and swap the subtree through the setter whenever
+something changes. With a signal preset you do not rebuild anything: hold the
+state in a \`signal(defaultValue)\` and bind it as a prop, class or style cell —
+uele patches just that attribute or text node:
 
 \`\`\`jsx live
-import { h, useLive } from "uele";
+import { h } from "uele";
+import { useUlive } from "uele/adapters/ulive";
+import { signal } from "ulive";
 
-let liked = false;
+useUlive();
 
-const build = () => (
-  <article
-    style={{
-      padding: "18px",
-      borderRadius: "12px",
-      border: "1px solid #d8dae5",
-      background: liked ? "#fff4ed" : "#ffffff",
-    }}
-  >
-    <h3 style={{ marginTop: 0 }}>Like this post</h3>
-    <p>{liked ? "You liked this ❤️" : "Not liked yet"}</p>
-    <button
-      className="primary"
-      onClick={() => {
-        liked = !liked;
-        setCard(build());
+const liked = signal(false);
+
+document.body.append(
+  <main>
+    <article
+      style={{
+        padding: "18px",
+        borderRadius: "12px",
+        border: "1px solid #d8dae5",
+        background: () => (liked.value ? "#fff4ed" : "#ffffff"),
       }}
     >
-      {liked ? "Unlike" : "Like"}
-    </button>
-  </article>
+      <h3 style={{ marginTop: 0 }}>Like this post</h3>
+      <p>{() => (liked.value ? "You liked this ❤️" : "Not liked yet")}</p>
+      <button className="primary" onClick={() => (liked.value = !liked.value)}>
+        {() => (liked.value ? "Unlike" : "Like")}
+      </button>
+    </article>
+  </main>
 );
-// first render is the region's initial value — present immediately on mount
-const [card, setCard] = useLive(build());
-
-document.body.append(<main>{card}</main>);
 \`\`\`
 
 ## A live clock

@@ -67,8 +67,9 @@ document.body.append(
 
 Property-backed attributes like \`checked\`, \`value\` and \`selected\` are
 written as properties. With a signal preset installed (see **Signals &
-Presets**) they accept reactive cells directly; with core \`useLive\`, keep
-the value in a variable and rebuild the element through the region:
+Presets**) they accept reactive cells directly; with core \`useLive\`, hold
+the displayed text in a region seeded with its initial value and write the
+new value to the setter:
 
 \`\`\`jsx live
 import { h, useLive } from "uele";
@@ -105,38 +106,36 @@ document.body.append(
 
 \`style\` takes a string or an object. Object keys may be camelCase,
 kebab-case or custom properties, and \`null\` / \`undefined\` clears a value.
-When a style value must change, rebuild the styled element through a region:
+With a signal preset, a style value can be a cell and uele rewrites just that
+one CSS property on every change — the element is never rebuilt:
 
 \`\`\`jsx live
-import { h, useLive } from "uele";
+import { h } from "uele";
+import { useUlive } from "uele/adapters/ulive";
+import { signal } from "ulive";
 
-let size = 16;
+useUlive();
 
-const build = () => (
-  <div>
-    <label>
-      Font size: {size}px{" "}
+const size = signal(16);
+
+document.body.append(
+  <main>
+    <div>
+      <label>
+        Font size: {size}px{" "}
       <input
         type="range" min="12" max="40"
         value={size}
-        onInput={(e) => {
-          size = Number(e.target.value);
-          setDemo(build());
-        }}
+        onInput={(e) => (size.value = Number(e.target.value))}
       />
     </label>
     <p style={{ fontSize: size, fontWeight: 700, color: "#635bff" }}>
       Resize me with the slider
     </p>
-  </div>
+    </div>
+  </main>
 );
-const [demo, setDemo] = useLive(build());
-
-document.body.append(<main>{demo}</main>);
 \`\`\`
-
-With a signal preset installed, style values can instead be cells and uele
-rewrites just that CSS property on every change — no rebuild needed.
 
 ## Custom attributes and the props registry
 

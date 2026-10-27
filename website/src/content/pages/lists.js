@@ -112,52 +112,53 @@ document.body.append(
 
 ## Interactive lists
 
-For lists that change, keep the data in a variable and render the rows through
-a \`useLive\` region — adding, removing and reordering all rebuild against the
-same builder:
+For lists that change, hold the data in a signal cell and hand it straight to
+\`For\`. Update the cell immutably (\`map\`, \`filter\`, spread) — the keyed
+reconciler then moves, adds or removes only the rows whose keys changed, and
+the render callback never re-runs for a row whose node was reused:
 
 \`\`\`jsx live
-import { h, useLive } from "uele";
+import { h, For } from "uele";
+import { useUlive } from "uele/adapters/ulive";
+import { signal } from "ulive";
 
-let nextId = 3;
-let tasks = [
+useUlive();
+
+const nextId = signal(3);
+const tasks = signal([
   { id: 1, text: "Learn h()" },
   { id: 2, text: "Write some JSX" },
-];
-
-const build = () => (
-  <div>
-    <h3>Tasks ({tasks.length})</h3>
-    <ul style={{ listStyle: "none", padding: 0 }}>
-      {tasks.map((task) => (
-        <li
-          key={task.id}
-          style={{ display: "flex", gap: 8, alignItems: "center", margin: "6px 0" }}
-        >
-          <span style={{ flex: 1 }}>{task.text}</span>
-          <button
-            onClick={() => {
-              tasks = tasks.filter((t) => t.id !== task.id);
-              setList(build());
-            }}
-          >
-            Delete
-          </button>
-        </li>
-      ))}
-    </ul>
-  </div>
-);
-const [list, setList] = useLive(build());
+]);
 
 document.body.append(
   <main>
-    {list}
+    <div>
+      <h3>Tasks {() => "(" + tasks.value.length + ")"}</h3>
+      <ul style={{ listStyle: "none", padding: 0 }}>
+        <For each={tasks} key={(task) => task.id}>
+          {(task) => (
+            <li
+              key={task.id}
+              style={{ display: "flex", gap: 8, alignItems: "center", margin: "6px 0" }}
+            >
+              <span style={{ flex: 1 }}>{task.text}</span>
+              <button
+                onClick={() =>
+                  (tasks.value = tasks.value.filter((t) => t.id !== task.id))
+                }
+              >
+                Delete
+              </button>
+            </li>
+          )}
+        </For>
+      </ul>
+    </div>
     <button
       className="primary"
       onClick={() => {
-        tasks = [...tasks, { id: ++nextId, text: "Task " + nextId }];
-        setList(build());
+        const id = nextId.value++;
+        tasks.value = [...tasks.value, { id, text: "Task " + id }];
       }}
     >
       Add task
@@ -165,6 +166,13 @@ document.body.append(
   </main>
 );
 \`\`\`
+
+> **Why not a \`useLive\` region with \`.map()\`?** Rebuilding the whole list
+> hands the differ a fresh array of brand-new nodes reconciled by position,
+> so every row is touched even when only one changed. A persistent keyed
+> \`For\` over a signal cell reuses the existing row nodes instead — this is
+> the pattern used by the repository's own example apps
+> (\`examples/todos/ulive.jsx\`, \`examples/dashboard.jsx\`).
 
 > **Tip:** any iterable works — arrays, \`Set\`, generators and \`NodeList\`.
 > Duplicate keys are safe: a node is reused at most once per render, so

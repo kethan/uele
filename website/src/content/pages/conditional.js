@@ -13,73 +13,62 @@ changes.
 JSX-friendly name.
 
 \`\`\`jsx live
-import { h, useLive, If } from "uele";
+import { h, If } from "uele";
+import { useUlive } from "uele/adapters/ulive";
+import { signal } from "ulive";
 
-let loggedIn = false;
+useUlive();
 
-const build = () => (
-  <If when={loggedIn} fallback={<p>Please sign in to continue.</p>}>
-    <p>Welcome back! 👋</p>
-  </If>
-);
-const [panel, setPanel] = useLive(build());
+const loggedIn = signal(false);
 
 document.body.append(
   <main>
-    {panel}
+    <If when={loggedIn} fallback={<p>Please sign in to continue.</p>}>
+      <p>Welcome back! 👋</p>
+    </If>
     <button
       className="primary"
-      onClick={() => {
-        loggedIn = !loggedIn;
-        setPanel(build());
-      }}
+      onClick={() => (loggedIn.value = !loggedIn.value)}
     >
-      {loggedIn ? "Sign out" : "Sign in"}
+      {() => (loggedIn.value ? "Sign out" : "Sign in")}
     </button>
   </main>
 );
 \`\`\`
 
-Because core \`useLive\` regions hold DOM rather than boolean cells, the
-pattern is: keep the condition in a variable, build the \`If\` inside a live
-region, and re-run the builder when the variable flips. With a signal preset
-the condition can be a cell and the region updates on its own.
+A signal cell is truthy as a JavaScript value, so never write
+\`{cell && <p>…</p>}\` — the cell itself renders as a child. Hand it straight
+to \`If\` (or wrap it: \`when={() => cell.value}\`); the effect swaps the
+branch in place when the condition flips, no surrounding DOM is rebuilt.
 
 ## Inline conditionals
 
 Plain JavaScript expressions work too — \`&&\`, the ternary operator and
-guard clauses are all valid inside JSX. Keep the condition in a plain
-variable and rebuild the region when it changes:
+guard clauses are all valid inside JSX. Wrap a condition in a thunk so the
+signal preset re-runs just that expression when its cell changes:
 
 \`\`\`jsx live
-import { h, useLive } from "uele";
+import { h } from "uele";
+import { useUlive } from "uele/adapters/ulive";
+import { signal } from "ulive";
 
-let unread = 3;
+useUlive();
 
-const build = () =>
-  unread > 0
-    ? <strong>You have {unread} new messages</strong>
-    : <span>Inbox zero 🎉</span>;
-const [inbox, setInbox] = useLive(build());
+const unread = signal(3);
 
 document.body.append(
   <main>
-    <p>{inbox}</p>
-    <button
-      onClick={() => {
-        unread = Math.max(0, unread - 1);
-        setInbox(build());
-      }}
-    >
+    <p>
+      {() =>
+        unread.value > 0
+          ? <strong>You have {unread} new messages</strong>
+          : <span>Inbox zero 🎉</span>
+      }
+    </p>
+    <button onClick={() => (unread.value = Math.max(0, unread.value - 1))}>
       Read one
     </button>
-    <button
-      className="primary"
-      onClick={() => {
-        unread += 1;
-        setInbox(build());
-      }}
-    >
+    <button className="primary" onClick={() => (unread.value += 1)}>
       Receive one
     </button>
   </main>
@@ -92,24 +81,13 @@ document.body.append(
 its own \`fallback\` when none match. \`Match\` is an alias of \`If\`.
 
 \`\`\`jsx live
-import { h, useLive, Switch, Match } from "uele";
+import { h, Switch, Match } from "uele";
+import { useUlive } from "uele/adapters/ulive";
+import { signal } from "ulive";
 
-let route = "home";
+useUlive();
 
-const build = () => (
-  <Switch fallback={<p>404 — page not found</p>}>
-    <Match when={route === "home"}>
-      <p>🏠 Home page</p>
-    </Match>
-    <Match when={route === "about"}>
-      <p>ℹ️ About page</p>
-    </Match>
-    <Match when={route === "contact"}>
-      <p>✉️ Contact page</p>
-    </Match>
-  </Switch>
-);
-const [view, setView] = useLive(build());
+const route = signal("home");
 
 document.body.append(
   <main>
@@ -117,17 +95,26 @@ document.body.append(
       {["home", "about", "contact", "missing"].map((r) => (
         <button
           key={r}
-          onClick={() => {
-            route = r;
-            setView(build());
-          }}
+          onClick={() => (route.value = r)}
           style={{ marginRight: 6 }}
         >
           {r}
         </button>
       ))}
     </nav>
-    <section style={{ marginTop: 12 }}>{view}</section>
+    <section style={{ marginTop: 12 }}>
+      <Switch fallback={<p>404 — page not found</p>}>
+        <Match when={() => route.value === "home"}>
+          <p>🏠 Home page</p>
+        </Match>
+        <Match when={() => route.value === "about"}>
+          <p>ℹ️ About page</p>
+        </Match>
+        <Match when={() => route.value === "contact"}>
+          <p>✉️ Contact page</p>
+        </Match>
+      </Switch>
+    </section>
   </main>
 );
 \`\`\`
@@ -138,35 +125,34 @@ document.body.append(
 the props. It is the tool for tabs, plugin slots and feature-flagged UI:
 
 \`\`\`jsx live
-import { h, useLive, Dynamic } from "uele";
+import { h, Dynamic } from "uele";
+import { useUlive } from "uele/adapters/ulive";
+import { signal } from "ulive";
+
+useUlive();
 
 const Red = ({ label }) => <p style={{ color: "#e5484d", fontWeight: 700 }}>{label}</p>;
 const Blue = ({ label }) => <p style={{ color: "#635bff", fontWeight: 700 }}>{label}</p>;
 
-let useRed = true;
-
-const build = () => (
-  <Dynamic component={useRed ? Red : Blue} label="Swapped at runtime" />
-);
-const [slot, setSlot] = useLive(build());
+const useRed = signal(true);
 
 document.body.append(
   <main>
-    {slot}
-    <button
-      onClick={() => {
-        useRed = !useRed;
-        setSlot(build());
-      }}
-    >
+    {() => (
+      <Dynamic
+        component={useRed.value ? Red : Blue}
+        label="Swapped at runtime"
+      />
+    )}
+    <button onClick={() => (useRed.value = !useRed.value)}>
       Swap component
     </button>
   </main>
 );
 \`\`\`
 
-> **Note:** \`Dynamic\` reads \`component\` when the element is created. If the
-> choice itself depends on changing state, rebuild it through a live region as
-> shown above — or put the \`Dynamic\` inside a function component that a
-> parent re-runs.
+> **Note:** \`Dynamic\` calls whatever function it receives in \`component\`
+> as a component, so the selector cannot itself be a thunk — put the thunk
+> one level up and have it return the chosen \`Dynamic\` element. The region
+> then swaps just that element when the cell changes.
 `;

@@ -25,49 +25,51 @@ const useRebuild = () => {
 };
 \`\`\`
 
-Here it is driving a region whose list is reversed, shuffled, grown and
-trimmed:
+Here it is driving a reactive region whose list is reversed, shuffled, grown
+and trimmed. A ulive cell holds the data; the thunk child re-runs when it
+changes and each swap goes through \`api.diff\` — which, under useRebuild,
+removes and re-inserts every node:
 
 \`\`\`jsx live
-import { h, useLive, map } from "uele";
+import { h, map } from "uele";
 import { useRebuild } from "uele/diffs/rebuild";
+import { useUlive } from "uele/adapters/ulive";
+import { signal } from "ulive";
 
 useRebuild();
+useUlive();
 
-let items = [1, 2, 3, 4, 5];
-
-const build = () =>
-  map(
-    items,
-    (n) => <li key={n}>item {n}</li>,
-    <li>empty</li>,
-    (n) => n
-  );
-const [region, setRegion] = useLive(build());
-
-const mutate = (fn) => {
-  fn();
-  setRegion(build());
-};
+const items = signal([1, 2, 3, 4, 5]);
 
 document.body.append(
   <main>
     <h3>useRebuild — zero-dependency differ</h3>
-    <ul>{region}</ul>
-    <button onClick={() => mutate(() => (items = [...items].reverse()))}>
+    <ul>
+      {() =>
+        map(
+          items.value,
+          (n) => <li key={n}>item {n}</li>,
+          <li>empty</li>,
+          (n) => n
+        )
+      }
+    </ul>
+    <button onClick={() => (items.value = [...items.value].reverse())}>
       Reverse
     </button>
     <button
       onClick={() =>
-        mutate(() => (items = [...items].sort(() => Math.random() - 0.5)))
+        (items.value = [...items.value].sort(() => Math.random() - 0.5))
       }
     >
       Shuffle
     </button>
-    <button onClick={() => mutate(() => (items = [...items, items.length + 1]))}>
+    <button
+      onClick={() => (items.value = [...items.value, items.value.length + 1])}
+    >
       Add
     </button>
-    <button onClick={() => mutate(() => (items = items.slice(1)))}>
+    <button onClick={() => (items.value = items.value.slice(1))}>
       Remove first
     </button>
   </main>
@@ -81,57 +83,54 @@ hands uele its diff function and an identity getter through \`api.udom\`, so
 reorders move existing nodes instead of rebuilding them.
 
 \`\`\`jsx live
-import { h, useLive, For } from "uele";
+import { h, For } from "uele";
 import { useUdomdiff } from "uele/diffs/udomdiff";
+import { useUlive } from "uele/adapters/ulive";
+import { signal } from "ulive";
 
 useUdomdiff();
+useUlive();
 
-let rows = [
+const rows = signal([
   { id: 1, label: "one" },
   { id: 2, label: "two" },
   { id: 3, label: "three" },
   { id: 4, label: "four" },
-];
-const build = () => (
-  <For each={rows} key={(row) => row.id} fallback={<p>no rows</p>}>
-    {(row) => (
-      <li key={row.id}>
-        {row.id}: {row.label}
-      </li>
-    )}
-  </For>
-);
-const [region, setRegion] = useLive(build());
-
-const mutate = (fn) => {
-  fn();
-  setRegion(build());
-};
+]);
 
 document.body.append(
   <main>
     <h3>useUdomdiff — keyed moves</h3>
-    <ul>{region}</ul>
-    <button onClick={() => mutate(() => (rows = [...rows].reverse()))}>
+    <ul>
+      <For each={rows} key={(row) => row.id} fallback={<p>no rows</p>}>
+        {(row) => (
+          <li key={row.id}>
+            {row.id}: {row.label}
+          </li>
+        )}
+      </For>
+    </ul>
+    <button onClick={() => (rows.value = [...rows.value].reverse())}>
       Reverse
     </button>
     <button
       onClick={() =>
-        mutate(() => (rows = [...rows].sort(() => Math.random() - 0.5)))
+        (rows.value = [...rows.value].sort(() => Math.random() - 0.5))
       }
     >
       Shuffle
     </button>
     <button
       onClick={() =>
-        mutate(() =>
-          (rows = [...rows, { id: Math.max(...rows.map((r) => r.id)) + 1, label: "new" }])
-        )
+        (rows.value = [
+          ...rows.value,
+          { id: Math.max(...rows.value.map((r) => r.id)) + 1, label: "new" },
+        ])
       }
     >
       Add row
     </button>
-    <button onClick={() => mutate(() => (rows = rows.slice(1)))}>
+    <button onClick={() => (rows.value = rows.value.slice(1))}>
       Remove first
     </button>
   </main>

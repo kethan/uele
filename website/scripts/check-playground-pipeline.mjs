@@ -241,11 +241,16 @@ const contracts = [
   {
     name: "attributes example shows the enabled button before any toggle",
     code: `
-      import { h, useLive } from "uele";
-      let disabled = false;
-      const build = () => <button disabled={disabled}>{disabled ? "Disabled" : "Enabled"} button</button>;
-      const [view, setView] = useLive(build());
-      document.body.append(<main>{view}</main>);
+      import { h } from "uele";
+      import { useUlive } from "uele/adapters/ulive";
+      import { signal } from "ulive";
+      useUlive();
+      const disabled = signal(false);
+      document.body.append(
+        <main>
+          <button disabled={disabled}>{() => (disabled.value ? "Disabled" : "Enabled")} button</button>
+        </main>
+      );
     `,
     expect: (dom) =>
       dom.document.body.textContent.includes("Enabled") &&
@@ -254,11 +259,16 @@ const contracts = [
   {
     name: "class/style card is visible on mount",
     code: `
-      import { h, useLive } from "uele";
-      let featured = false;
-      const build = () => <section className={{ card: true, featured }}><h3>Class + style maps</h3></section>;
-      const [card] = useLive(build());
-      document.body.append(<main>{card}</main>);
+      import { h } from "uele";
+      import { useUlive } from "uele/adapters/ulive";
+      import { signal } from "ulive";
+      useUlive();
+      const featured = signal(false);
+      document.body.append(
+        <main>
+          <section className={{ card: true, featured }}><h3>Class + style maps</h3></section>
+        </main>
+      );
     `,
     expect: (dom) => dom.document.body.textContent.includes("Class + style maps"),
   },
@@ -328,26 +338,39 @@ const contracts = [
   {
     name: "Switch renders its default (home) panel on mount",
     code: `
-      import { h, useLive, Switch, Match } from "uele";
-      let route = "home";
-      const build = () => (
-        <Switch fallback={<p>404</p>}>
-          <Match when={route === "home"}><p>Home page</p></Match>
-          <Match when={route === "about"}><p>About page</p></Match>
-        </Switch>
+      import { h, Switch, Match } from "uele";
+      import { useUlive } from "uele/adapters/ulive";
+      import { signal } from "ulive";
+      useUlive();
+      const route = signal("home");
+      document.body.append(
+        <main>
+          <section>
+            <Switch fallback={<p>404</p>}>
+              <Match when={() => route.value === "home"}><p>Home page</p></Match>
+              <Match when={() => route.value === "about"}><p>About page</p></Match>
+            </Switch>
+          </section>
+        </main>
       );
-      const [view] = useLive(build());
-      document.body.append(<main><section>{view}</section></main>);
     `,
     expect: (dom) => dom.document.body.textContent.includes("Home page"),
   },
   {
     name: "Dynamic renders its default component on mount",
     code: `
-      import { h, useLive, Dynamic } from "uele";
+      import { h, Dynamic } from "uele";
+      import { useUlive } from "uele/adapters/ulive";
+      import { signal } from "ulive";
+      useUlive();
       const Red = ({ label }) => <p>{label}</p>;
-      const [slot] = useLive(<Dynamic component={Red} label="Swapped at runtime" />);
-      document.body.append(<main>{slot}</main>);
+      const Blue = ({ label }) => <p>{label}</p>;
+      const useRed = signal(true);
+      document.body.append(
+        <main>
+          {() => <Dynamic component={useRed.value ? Red : Blue} label="Swapped at runtime" />}
+        </main>
+      );
     `,
     expect: (dom) => dom.document.body.textContent.includes("Swapped at runtime"),
   },
@@ -374,11 +397,16 @@ const contracts = [
   {
     name: "like-post subtree renders before any click",
     code: `
-      import { h, useLive } from "uele";
-      let liked = false;
-      const build = () => <article><p>{liked ? "liked" : "Not liked yet"}</p></article>;
-      const [card] = useLive(build());
-      document.body.append(<main>{card}</main>);
+      import { h } from "uele";
+      import { useUlive } from "uele/adapters/ulive";
+      import { signal } from "ulive";
+      useUlive();
+      const liked = signal(false);
+      document.body.append(
+        <main>
+          <article><p>{() => (liked.value ? "liked" : "Not liked yet")}</p></article>
+        </main>
+      );
     `,
     expect: (dom) => dom.document.body.textContent.includes("Not liked yet"),
   },

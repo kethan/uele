@@ -1,5 +1,7 @@
-// Full mini-apps shown in the Examples gallery. Every example uses only core
-// uele + useLive and is also validated by scripts/check-examples.mjs.
+// Full mini-apps shown in the Examples gallery. Simple demos use core
+// useLive with a default value; stateful apps use a signal preset (ulive or
+// Preact signals) with cells and keyed <For> lists. Every example is also
+// validated by scripts/check-examples.mjs.
 
 export const EXAMPLES = [
   {
@@ -22,21 +24,48 @@ document.body.append(
   {
     id: "todos",
     title: "Todo list",
-    description: "Add, complete and delete tasks — state in variables, rows in a live region.",
+    description: "ulive signals hold the state; a keyed For reuses every unchanged row's DOM node.",
     tall: true,
-    code: `import { h, useLive } from "uele";
+    code: `import { h, For } from "uele";
+import { useUlive } from "uele/adapters/ulive";
+import { signal, computed } from "ulive";
 
-let todos = [
+useUlive();
+
+let seq = 2;
+const todos = signal([
   { id: 1, text: "Read the introduction", done: true },
   { id: 2, text: "Edit a live example", done: false },
-];
-let seq = 2;
-let draft = "";
+]);
+const draft = signal("");
+const remaining = computed(() => todos.value.filter((t) => !t.done).length);
 
-const build = () => (
-    <div>
-      <ul style={{ listStyle: "none", padding: 0, margin: "10px 0" }}>
-        {todos.map((todo) => (
+const addTodo = (form) => {
+  const text = draft.value.trim();
+  if (!text) return;
+  todos.value = [...todos.value, { id: ++seq, text, done: false }];
+  draft.value = "";
+  form.querySelector("input").value = "";
+};
+
+document.body.append(
+  <main style={{ maxWidth: 400 }}>
+    <h2>Todos</h2>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        addTodo(e.currentTarget);
+      }}
+    >
+      <input
+        placeholder="What needs doing?"
+        onInput={(e) => (draft.value = e.target.value)}
+      />
+      <button type="submit">Add</button>
+    </form>
+    <ul style={{ listStyle: "none", padding: 0, margin: "10px 0" }}>
+      <For each={todos} key={(todo) => todo.id} fallback={<li>Nothing to do</li>}>
+        {(todo) => (
           <li
             key={todo.id}
             style={{ display: "flex", gap: 8, alignItems: "center", margin: "6px 0" }}
@@ -44,12 +73,11 @@ const build = () => (
             <input
               type="checkbox"
               checked={todo.done}
-              onChange={() => {
-                todos = todos.map((t) =>
+              onChange={() =>
+                (todos.value = todos.value.map((t) =>
                   t.id === todo.id ? { ...t, done: !t.done } : t
-                );
-                setView(build());
-              }}
+                ))
+              }
             />
             <span
               style={{
@@ -61,41 +89,15 @@ const build = () => (
               {todo.text}
             </span>
             <button
-              onClick={() => {
-                todos = todos.filter((t) => t.id !== todo.id);
-                setView(build());
-              }}
+              onClick={() => (todos.value = todos.value.filter((t) => t.id !== todo.id))}
             >
               Delete
             </button>
           </li>
-        ))}
-      </ul>
-      <p style={{ color: "#6b6f7c", margin: "6px 0" }}>
-        {todos.filter((t) => !t.done).length} remaining
-      </p>
-    </div>
-  );
-const [view, setView] = useLive(build());
-
-document.body.append(
-  <main style={{ maxWidth: 400 }}>
-    <h2>Todos</h2>
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        const text = draft.trim();
-        if (!text) return;
-        todos = [...todos, { id: ++seq, text, done: false }];
-        draft = "";
-        e.target.querySelector("input").value = "";
-        setView(build());
-      }}
-    >
-      <input placeholder="What needs doing?" onInput={(e) => (draft = e.target.value)} />
-      <button type="submit">Add</button>
-    </form>
-    {view}
+        )}
+      </For>
+    </ul>
+    <p style={{ color: "#6b6f7c", margin: "6px 0" }}>{remaining} remaining</p>
   </main>
 );`,
   },
@@ -161,59 +163,46 @@ document.body.append(
   {
     id: "filter",
     title: "Search filter",
-    description: "Filter an array on every keystroke and stream the rows into a region.",
-    code: `import { h, useLive } from "uele";
+    description: "A computed cell filters the array on every keystroke; For keeps the rows that still match on their existing nodes.",
+    code: `import { h, For } from "uele";
+import { useUlive } from "uele/adapters/ulive";
+import { signal, computed } from "ulive";
+
+useUlive();
 
 const languages = [
   "JavaScript", "TypeScript", "Python", "Rust", "Go",
   "Ruby", "Elixir", "Swift", "Kotlin", "Zig",
 ];
-
-const [results, setResults] = useLive(
-  languages.map((l) => <li key={l}>{l}</li>)
-);
+const query = signal("");
+const results = computed(() => {
+  const q = query.value.toLowerCase();
+  return languages.filter((l) => l.toLowerCase().includes(q));
+});
 
 document.body.append(
   <main>
     <h2>Languages</h2>
-    <input
-      placeholder="Search…"
-      onInput={(e) => {
-        const q = e.target.value.toLowerCase();
-        const found = languages.filter((l) => l.toLowerCase().includes(q));
-        setResults(
-          found.length
-            ? found.map((l) => <li key={l}>{l}</li>)
-            : <li>No matches</li>
-        );
-      }}
-    />
-    <ul>{results}</ul>
+    <input placeholder="Search…" onInput={(e) => (query.value = e.target.value)} />
+    <ul>
+      <For each={results} key={(language) => language} fallback={<li>No matches</li>}>
+        {(language) => <li key={language}>{language}</li>}
+      </For>
+    </ul>
   </main>
 );`,
   },
   {
     id: "tabs",
     title: "Tabs with Switch",
-    description: "A Switch/Match pair swaps panels while the buttons stay untouched.",
-    code: `import { h, useLive, Switch, Match } from "uele";
+    description: "A signal cell drives Switch/Match — the buttons and surrounding DOM are never rebuilt.",
+    code: `import { h, Switch, Match } from "uele";
+import { useUlive } from "uele/adapters/ulive";
+import { signal } from "ulive";
 
-let tab = "one";
+useUlive();
 
-const build = () => (
-    <Switch fallback={<p>Not found</p>}>
-      <Match when={tab === "one"}>
-        <p>📄 Content of the first tab</p>
-      </Match>
-      <Match when={tab === "two"}>
-        <p>⚙️ Settings live on the second tab</p>
-      </Match>
-      <Match when={tab === "three"}>
-        <p>✉️ Messages on the third tab</p>
-      </Match>
-    </Switch>
-  );
-const [panel, setPanel] = useLive(build());
+const tab = signal("one");
 
 document.body.append(
   <main>
@@ -222,72 +211,83 @@ document.body.append(
         <button
           key={t}
           style={{ marginRight: 6 }}
-          onClick={() => {
-            tab = t;
-            setPanel(build());
-          }}
+          onClick={() => (tab.value = t)}
         >
           {t}
         </button>
       ))}
     </nav>
-    <section style={{ marginTop: 12, padding: "4px 0" }}>{panel}</section>
+    <section style={{ marginTop: 12, padding: "4px 0" }}>
+      <Switch fallback={<p>Not found</p>}>
+        <Match when={() => tab.value === "one"}>
+          <p>📄 Content of the first tab</p>
+        </Match>
+        <Match when={() => tab.value === "two"}>
+          <p>⚙️ Settings live on the second tab</p>
+        </Match>
+        <Match when={() => tab.value === "three"}>
+          <p>✉️ Messages on the third tab</p>
+        </Match>
+      </Switch>
+    </section>
   </main>
 );`,
   },
   {
     id: "swatch",
     title: "Color swatch",
-    description: "A color input rebuilds a styled subtree — note the hex label lives in the region too.",
-    code: `import { h, useLive } from "uele";
+    description: "One signal cell, three live bindings — uele patches only the CSS property and text that change.",
+    code: `import { h } from "uele";
+import { useUlive } from "uele/adapters/ulive";
+import { signal } from "ulive";
 
-let hex = "#635bff";
+useUlive();
 
-const build = () => (
-    <div>
-      <div
-        style={{
-          width: 130,
-          height: 130,
-          borderRadius: 14,
-          background: hex,
-          margin: "10px 0",
-          boxShadow: "0 8px 24px -10px rgba(0,0,0,.4)",
-        }}
-      />
-      <code>{hex}</code>
-    </div>
-  );
-const [swatch, setSwatch] = useLive(build());
+const hex = signal("#635bff");
 
 document.body.append(
   <main>
     <h2>Swatch</h2>
-    <input
-      type="color"
-      value={hex}
-      onInput={(e) => {
-        hex = e.target.value;
-        setSwatch(build());
+    <input type="color" value={hex} onInput={(e) => (hex.value = e.target.value)} />
+    <div
+      style={{
+        width: 130,
+        height: 130,
+        borderRadius: 14,
+        background: hex,
+        margin: "10px 0",
+        boxShadow: "0 8px 24px -10px rgba(0,0,0,.4)",
       }}
     />
-    {swatch}
+    <code>{hex}</code>
   </main>
 );`,
   },
   {
     id: "form-preview",
     title: "Live form preview",
-    description: "Plain variables hold field values; a region renders the preview card.",
-    code: `import { h, useLive } from "uele";
+    description: "Two signal cells hold the field values; the preview card re-renders only its text nodes.",
+    code: `import { h, If } from "uele";
+import { useUlive } from "uele/adapters/ulive";
+import { signal } from "ulive";
 
-const form = { name: "", role: "Developer" };
-const [card, setCard] = useLive(
-  <p style={{ color: "#6b6f7c" }}>Fill the form to see a preview</p>
-);
+useUlive();
 
-const render = () =>
-  setCard(
+const name = signal("");
+const role = signal("Developer");
+
+document.body.append(
+  <main style={{ maxWidth: 360 }}>
+    <h2>Profile</h2>
+    <input placeholder="Name" onInput={(e) => (name.value = e.target.value)} />
+    <select style={{ marginLeft: 8 }} onChange={(e) => (role.value = e.target.value)}>
+      <option>Developer</option>
+      <option>Designer</option>
+      <option>Manager</option>
+    </select>
+    <If when={() => name.value.trim() === ""} fallback={<span />}>
+      <p style={{ color: "#6b6f7c" }}>Fill the form to see a preview</p>
+    </If>
     <article
       style={{
         border: "1px solid #d8dae5",
@@ -297,33 +297,9 @@ const render = () =>
         background: "#fff",
       }}
     >
-      <h3 style={{ margin: "0 0 4px" }}>{form.name || "Your name"}</h3>
-      <p style={{ margin: 0, color: "#6b6f7c" }}>{form.role}</p>
+      <h3 style={{ margin: "0 0 4px" }}>{() => name.value || "Your name"}</h3>
+      <p style={{ margin: 0, color: "#6b6f7c" }}>{role}</p>
     </article>
-  );
-
-document.body.append(
-  <main style={{ maxWidth: 360 }}>
-    <h2>Profile</h2>
-    <input
-      placeholder="Name"
-      onInput={(e) => {
-        form.name = e.target.value;
-        render();
-      }}
-    />
-    <select
-      style={{ marginLeft: 8 }}
-      onChange={(e) => {
-        form.role = e.target.value;
-        render();
-      }}
-    >
-      <option>Developer</option>
-      <option>Designer</option>
-      <option>Manager</option>
-    </select>
-    {card}
   </main>
 );`,
   },
@@ -358,34 +334,33 @@ document.body.append(
   {
     id: "likes",
     title: "Like button",
-    description: "Two independent regions track likes and the actor — no component re-renders.",
-    code: `import { h, useLive } from "uele";
+    description: "Two independent signal cells track the count and the actor — no component re-renders.",
+    code: `import { h } from "uele";
+import { useUlive } from "uele/adapters/ulive";
+import { signal } from "ulive";
 
-let count = 0;
-const [likes, setLikes] = useLive(0);
-const [who, setWho] = useLive("nobody yet");
+useUlive();
+
+const likes = signal(0);
+const who = signal("nobody yet");
 
 const people = ["Ada", "Lin", "Grace", "Alan"];
 
 document.body.append(
   <main>
-    <h2>{likes} {count === 1 ? "like" : "likes"}</h2>
+    <h2>
+      {likes} {() => (likes.value === 1 ? "like" : "likes")}
+    </h2>
     <button
       className="primary"
       onClick={() => {
-        count += 1;
-        setLikes(count);
-        setWho(people[Math.min(count - 1, people.length - 1)]);
+        likes.value += 1;
+        who.value = people[Math.min(likes.value - 1, people.length - 1)];
       }}
     >
       ♥ Like
     </button>
-    <button
-      onClick={() => {
-        count = Math.max(0, count - 1);
-        setLikes(count);
-      }}
-    >
+    <button onClick={() => (likes.value = Math.max(0, likes.value - 1))}>
       Unlike
     </button>
     <p style={{ color: "#6b6f7c" }}>Last liked by: <strong>{who}</strong></p>
@@ -557,37 +532,36 @@ document.body.append(
   {
     id: "diff-shuffle",
     title: "Keyed diff on shuffle",
-    description: "useUdomdiff installs a real DOM differ behind every live-region swap.",
-    code: `import { h, useLive, For } from "uele";
+    description: "A signal cell feeds For directly; udomdiff moves the existing keyed nodes instead of rebuilding them.",
+    code: `import { h, For } from "uele";
 import { useUdomdiff } from "uele/diffs/udomdiff";
+import { useUlive } from "uele/adapters/ulive";
+import { signal } from "ulive";
 
 useUdomdiff();
+useUlive();
 
-let cards = [1, 2, 3, 4, 5, 6].map((n) => ({ id: n }));
-
-const build = () => (
-    <For each={cards} key={(card) => card.id} fallback={<p>empty</p>}>
-      {(card) => <li key={card.id}>card {card.id}</li>}
-    </For>
-  );
-const [region, setRegion] = useLive(build());
+const cards = signal([1, 2, 3, 4, 5, 6].map((n) => ({ id: n })));
 
 document.body.append(
   <main>
-    <h3>udomdiff live region</h3>
-    <ul>{region}</ul>
-    <button onClick={() => { cards = [...cards].reverse(); setRegion(build()); }}>
+    <h3>udomdiff keyed list</h3>
+    <ul>
+      <For each={cards} key={(card) => card.id} fallback={<p>empty</p>}>
+        {(card) => <li key={card.id}>card {card.id}</li>}
+      </For>
+    </ul>
+    <button onClick={() => (cards.value = [...cards.value].reverse())}>
       Reverse
     </button>
     <button
-      onClick={() => {
-        cards = [...cards].sort(() => Math.random() - 0.5);
-        setRegion(build());
-      }}
+      onClick={() =>
+        (cards.value = [...cards.value].sort(() => Math.random() - 0.5))
+      }
     >
       Shuffle
     </button>
-    <button onClick={() => { cards = cards.slice(1); setRegion(build()); }}>
+    <button onClick={() => (cards.value = cards.value.slice(1))}>
       Remove first
     </button>
   </main>

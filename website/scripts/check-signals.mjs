@@ -216,25 +216,24 @@ for (const [preset, spec] of [
 ]) {
   await test(`${preset} differ survives reverse/shuffle/remove cycles`, async () => {
     const dom = await mount(`
-      import { h, useLive, For } from "uele";
+      import { h, For } from "uele";
       import { ${preset === "rebuild" ? "useRebuild" : "useUdomdiff"} } from "${spec}";
+      import { useUlive } from "uele/adapters/ulive";
+      import { signal } from "ulive";
       ${preset === "rebuild" ? "useRebuild();" : "useUdomdiff();"}
-      let rows = [1, 2, 3, 4, 5].map((n) => ({ id: n }));
-      const [region, setRegion] = useLive("");
-      const render = () =>
-        setRegion(
-          <For each={rows} key={(r) => r.id} fallback={<p>empty</p>}>
-            {(r) => <li key={r.id}>row {r.id}</li>}
-          </For>
-        );
-      render();
+      useUlive();
+      const rows = signal([1, 2, 3, 4, 5].map((n) => ({ id: n })));
       document.body.append(
         <main>
-          <ul id="l">{region}</ul>
-          <button id="rev" onClick={() => { rows = [...rows].reverse(); render(); }}>rev</button>
-          <button id="shuf" onClick={() => { rows = [...rows].sort(() => Math.random() - 0.5); render(); }}>shuf</button>
-          <button id="rm" onClick={() => { rows = rows.slice(1); render(); }}>rm</button>
-          <button id="add" onClick={() => { rows = [...rows, { id: Math.max(...rows.map((r) => r.id)) + 1 }]; render(); }}>add</button>
+          <ul id="l">
+            <For each={rows} key={(r) => r.id} fallback={<p>empty</p>}>
+              {(r) => <li key={r.id}>row {r.id}</li>}
+            </For>
+          </ul>
+          <button id="rev" onClick={() => (rows.value = [...rows.value].reverse())}>rev</button>
+          <button id="shuf" onClick={() => (rows.value = [...rows.value].sort(() => Math.random() - 0.5))}>shuf</button>
+          <button id="rm" onClick={() => (rows.value = rows.value.slice(1))}>rm</button>
+          <button id="add" onClick={() => (rows.value = [...rows.value, { id: Math.max(...rows.value.map((r) => r.id)) + 1 }])}>add</button>
         </main>
       );
     `);
