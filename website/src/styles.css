@@ -340,6 +340,28 @@ td code { white-space: normal; }
 .btn.ghost { border-color: transparent; }
 .btn:disabled { opacity: 0.5; cursor: default; }
 
+.runner-switch {
+  display: inline-flex;
+  border: 1px solid var(--line-2);
+  border-radius: 7px;
+  overflow: hidden;
+  background: #fff;
+}
+.runner-btn {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.runner-btn + .runner-btn { border-left: 1px solid var(--line-2); }
+.runner-btn:hover { color: var(--indigo); }
+.runner-btn.active { background: var(--indigo); color: #fff; }
+
 .playground-body {
   display: grid;
   grid-template-columns: 1fr 1fr;

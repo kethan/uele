@@ -169,6 +169,9 @@ const lineCount = (code) => code.split("\n").length;
 // iframe message listeners, pending debounces and the iframe itself
 const instances = new Set();
 
+// localStorage key remembering which execution engine the visitor picked
+const RUNNER_KEY = "uele:playground-runner";
+
 export function destroyAllPlaygrounds() {
   for (const dispose of instances) dispose();
   instances.clear();
@@ -179,6 +182,18 @@ export function createPlayground({ code, title = "Live example", tall = false } 
   let timer = 0;
   let logs = [];
   let disposed = false;
+
+  // Two execution engines share one iframe: the built-in srcdoc runner
+  // (default, fully offline and covered by the linkedom test suites) and the
+  // self-hosted Sandpack bundler (lazy-loaded, see lib/sandpack.js).
+  let storedMode = null;
+  try {
+    storedMode = localStorage.getItem(RUNNER_KEY);
+  } catch {
+    /* storage unavailable (private mode / linkedom) */
+  }
+  let mode = storedMode === "sandpack" ? "sandpack" : "uele";
+  let sandpackRunner = null;
 
   /* -- editor ------------------------------------------------------- */
   const gutter = h("div", { class: "gutter", "aria-hidden": "true" });
@@ -211,9 +226,15 @@ export function createPlayground({ code, title = "Live example", tall = false } 
   });
 
   /* -- preview + console -------------------------------------------- */
+  // The built-in runner stays in an opaque-origin sandbox. Sandpack's
+  // bundler spawns Web Workers, which an opaque origin cannot construct, so
+  // the Sandpack mode widens the flags while it owns the frame.
+  const SANDBOX_BUILTIN = "allow-scripts allow-modals";
+  const SANDBOX_SANDPACK =
+    "allow-scripts allow-modals allow-forms allow-popups allow-same-origin";
   const frame = h("iframe", {
     title: `${title} preview`,
-    sandbox: "allow-scripts allow-modals",
+    sandbox: SANDBOX_BUILTIN,
     loading: "lazy",
   });
 
@@ -303,18 +324,100 @@ export function createPlayground({ code, title = "Live example", tall = false } 
     frame.srcdoc = srcdoc;
   };
 
+  /* -- Sandpack engine (lazy, self-hosted bundler) ------------------ */
+  const setStatus = (state) => {
+    statusDot.style.background =
+      state === "error" ? "var(--red)" : state === "ok" ? "var(--green)" : "var(--amber)";
+    statusDot.title = state;
+  };
+  const pushLog = (entry) => {
+    logs.push(entry);
+    if (logs.length > 60) logs.shift();
+    renderConsole();
+  };
+  const runSandpack = async () => {
+    try {
+      frame.setAttribute("sandbox", SANDBOX_SANDPACK);
+      if (!sandpackRunner) {
+        setStatus("loading");
+        const mod = await import("./sandpack.js");
+        sandpackRunner = await mod.createSandpackRunner({
+          frame,
+          getCode: () => editor.value,
+          onStatus: setStatus,
+          onLog: pushLog,
+        });
+        if (disposed || mode !== "sandpack") return;
+      }
+      logs = [];
+      renderConsole();
+      await sandpackRunner.run(transformJSX);
+    } catch (err) {
+      setStatus("error");
+      pushLog({ level: "error", text: `Sandpack failed to start: ${err.message}` });
+    }
+  };
+  const activeRun = () => (mode === "sandpack" ? runSandpack() : run());
+
   const scheduleRun = () => {
     syncGutter();
     clearTimeout(timer);
-    timer = setTimeout(run, 450);
+    timer = setTimeout(activeRun, 450);
   };
   editor.addEventListener("input", scheduleRun);
 
   const reset = () => {
     editor.value = initialCode;
     syncGutter();
-    run();
+    activeRun();
   };
+
+  const btnBuiltin = h(
+    "button",
+    { class: "runner-btn", type: "button", onclick: () => switchMode("uele") },
+    "Built-in"
+  );
+  const btnSandpack = h(
+    "button",
+    { class: "runner-btn", type: "button", onclick: () => switchMode("sandpack") },
+    "Sandpack"
+  );
+  const runnerSwitch = h(
+    "div",
+    { class: "runner-switch", role: "group", "aria-label": "Execution engine" },
+    btnBuiltin,
+    btnSandpack
+  );
+  const updateToggle = () => {
+    btnBuiltin.classList.toggle("active", mode === "uele");
+    btnSandpack.classList.toggle("active", mode === "sandpack");
+    btnBuiltin.setAttribute("aria-pressed", String(mode === "uele"));
+    btnSandpack.setAttribute("aria-pressed", String(mode === "sandpack"));
+  };
+  const switchMode = (next) => {
+    if (next === mode) return;
+    mode = next;
+    try {
+      localStorage.setItem(RUNNER_KEY, mode);
+    } catch {
+      /* storage unavailable */
+    }
+    updateToggle();
+    logs = [];
+    renderConsole();
+    if (mode === "sandpack") {
+      frame.setAttribute("sandbox", SANDBOX_SANDPACK);
+      runSandpack();
+    } else {
+      if (sandpackRunner) {
+        sandpackRunner.dispose();
+        sandpackRunner = null;
+      }
+      frame.setAttribute("sandbox", SANDBOX_BUILTIN);
+      run();
+    }
+  };
+  updateToggle();
 
   const head = h(
     "div",
@@ -322,8 +425,9 @@ export function createPlayground({ code, title = "Live example", tall = false } 
     statusDot,
     document.createTextNode(title),
     h("span", { class: "spacer" }),
+    runnerSwitch,
     h("button", { class: "btn ghost", type: "button", onclick: reset, title: "Restore the original example" }, "Reset"),
-    h("button", { class: "btn primary", type: "button", onclick: run }, "Run")
+    h("button", { class: "btn primary", type: "button", onclick: activeRun }, "Run")
   );
 
   const root = h(
@@ -343,15 +447,19 @@ export function createPlayground({ code, title = "Live example", tall = false } 
     disposed = true;
     clearTimeout(timer);
     window.removeEventListener("message", onMessage);
+    if (sandpackRunner) {
+      sandpackRunner.dispose();
+      sandpackRunner = null;
+    }
     frame.srcdoc = "";
     instances.delete(dispose);
   };
   instances.add(dispose);
 
-  // run once mounted
+  // run once mounted, using whichever engine the visitor last selected
   queueMicrotask(() => {
-    if (!disposed) run();
+    if (!disposed) activeRun();
   });
 
-  return { root, run, reset, editor, dispose };
+  return { root, run: activeRun, reset, editor, dispose };
 }
