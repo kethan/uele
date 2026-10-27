@@ -44,6 +44,7 @@ check(
 let jsFiles = 0;
 let badPublicPath = 0;
 let rootStaticRefs = 0;
+let rootAbsRefs = 0;
 const walk = (d) => {
   for (const entry of readdirSync(d)) {
     const p = join(d, entry);
@@ -51,8 +52,10 @@ const walk = (d) => {
     else if (p.endsWith(".js")) {
       jsFiles++;
       const text = readFileSync(p, "utf8");
-      if (text.includes('.p="/"')) badPublicPath++;
+      if (text.includes('.p="/"' )) badPublicPath++;
       if (text.includes('"/static/')) rootStaticRefs++;
+      const rootAbsUrls = (text.match(/"\/(?!s\/)[a-zA-Z0-9_.-]/g) || []).length;
+      rootAbsRefs += rootAbsUrls;
     }
   }
 };
@@ -60,12 +63,13 @@ walk(dir);
 check(jsFiles > 20, `bundler JS assets present (${jsFiles} files scanned)`);
 check(badPublicPath === 0, "no webpack publicPath=\"/\" remains (sub-path workers would 404)");
 check(rootStaticRefs === 0, 'no root-absolute "/static/" asset strings remain');
+check(rootAbsRefs === 0, "no other root-absolute asset URLs remain");
 
 const require = createRequire(import.meta.url);
 const clientEntry = require.resolve("@codesandbox/sandpack-client");
 const clientPkg = resolve(dirname(clientEntry), "..", "package.json");
 const pkg = JSON.parse(readFileSync(clientPkg, "utf8"));
-check(pkg.exports?.["."]?.import, "sandpack-client exposes a browser ESM entry");
+check(pkg.exports?.[ "." ]?.import, "sandpack-client exposes a browser ESM entry");
 
 // every spec the runner virtualizes must have a fetched vendor bundle
 check(
@@ -75,3 +79,4 @@ check(
 
 console.log(failures.length ? `\nFAILED — ${failures.length} check(s)` : "\nOK — 0 failure(s)");
 process.exit(failures.length ? 1 : 0);
+

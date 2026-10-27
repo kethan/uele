@@ -59,7 +59,10 @@ const loadSources = async () =>
     return out;
   })());
 
-const bundlerURL = () => new URL("sandpack/", document.baseURI).href;
+// bundlerURL points at the bundler's index.html page (not the directory:
+// /sandpack/ would be intercepted by the site's SPA fallback and serve the
+// docs app instead of the Sandpack bundler page).
+const bundlerURL = () => new URL("sandpack/index.html", document.baseURI).href;
 
 /**
  * Mount a Sandpack runner onto an existing iframe.

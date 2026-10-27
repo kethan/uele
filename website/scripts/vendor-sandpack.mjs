@@ -66,6 +66,9 @@ walk(dest, (path) => {
     text = text.split('href="/').join('href="');
     text = text.split('src="/').join('src="');
   }
+  // any other root-absolute URL string -> relative (sub-path safe).
+  // skip "/s/..." CodeSandbox sandbox URL patterns (url-generator etc.)
+  text = text.replace(/"\/(?!s\/)[a-zA-Z0-9_.-]/g, (m) => '"' + m.slice(2));
   if (text !== before) {
     writeFileSync(path, text);
     patchedFiles++;
