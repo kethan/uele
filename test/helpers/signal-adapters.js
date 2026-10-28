@@ -362,3 +362,24 @@ const solid = async () => {
 };
 
 export const ADAPTERS = [ulive, preact, vue, usignal, alien, sjs, mobx, rxjs, nanostores, tanstack, solid];
+
+/** Exercise shipped presets themselves, rather than test-only lookalike hooks. */
+const presetAdapter = (slug, hook) => async () => {
+	const mod = await import(`../../adapters/${slug}.js`);
+	const target = mod[hook]({});
+	return {
+		name: slug, reactiveThunks: true, overrides: target,
+		signal: target.signal, set: target.set, read: target.get,
+		derived: (cell, fn) => target.derived(() => fn(target.get(cell))),
+		batch: target.batch, untracked: target.untracked
+	};
+};
+ADAPTERS.push(
+	presetAdapter('reflex', 'useReflex'),
+	presetAdapter('reactively', 'useReactively'),
+	presetAdapter('anod', 'useAnod'),
+	presetAdapter('lite-signal', 'useLiteSignal'),
+	presetAdapter('rescript-signals', 'useRescriptSignals'),
+	presetAdapter('maverick', 'useMaverick'),
+	presetAdapter('oby', 'useOby')
+);
