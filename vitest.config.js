@@ -40,6 +40,7 @@ export default defineConfig({
 			{ find: /^react\/jsx-runtime$/, replacement: src('./jsx-runtime/index.ts') },
 			{ find: /^uele\/jsx-runtime$/, replacement: src('./jsx-runtime/index.ts') },
 			{ find: /^uele\/jsx-dev-runtime$/, replacement: src('./jsx-dev-runtime/index.ts') },
+			{ find: /^uele\/props$/, replacement: src('./props/index.js') },
 			{ find: /^uele$/, replacement: src('./src/index.js') },
 			{ find: /^uele\/router$/, replacement: src('./router/index.js') },
 			{ find: /^uele\/flow$/, replacement: src('./flow/index.js') },

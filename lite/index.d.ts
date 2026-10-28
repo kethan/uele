@@ -48,7 +48,7 @@ export declare function useLive<T>(
 ): [Node[], (value: T | ((prev: T) => T)) => void];
 
 // custom attribute/property handlers, keyed by attribute name
-export declare const props: Map<string, (node: Node, value: any, name: string, attrs: Props) => void>;
+export declare const props: Map<string, (node: Node, value: any, name: string, attrs: Props) => void | (() => void)>;
 
 // Utility functions
 export declare function get<T>(v: T): T;
