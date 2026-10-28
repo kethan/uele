@@ -22,8 +22,8 @@ describe('reactive facade with no preset installed', () => {
 
 describe('subscribe-only presets report their capabilities honestly', () => {
 	it('computed/effect throw descriptive errors; batch/untracked pass through', async () => {
-		const { useRxjs } = await import('uele/adapters/rxjs');
-		useRxjs();
+		const { rxjs } = await import('uele/signals/rxjs');
+		rxjs();
 		const { signal, read, write, computed, effect, batch, untracked, canEffect, canCompute } = await import('uele/reactive');
 		const cell = signal(2);
 		write(cell, 3);
@@ -43,21 +43,24 @@ describe('router without a window', () => {
 		expect(() => navigate('/anywhere')).not.toThrow();
 		const app = createRouter();
 		app.get('/', () => 'home-node');
-		const [view, linkProps, go] = useRouter(app, 'initial', 'not-found-node');
-		expect(linkProps().onclick).toBeTypeOf('function');
+		const { view, props: linkProps, navigate: go, dispose } = useRouter(app, 'initial', 'not-found-node');
+		expect(linkProps.onclick).toBeTypeOf('function');
 		const result = await go('/');
 		expect(result).toBeUndefined(); // navigate() returns the fetch promise chain
 		const { read } = await import('uele/reactive');
 		expect(read(view)).toBe('home-node');
 		await go('/missing');
 		expect(read(view)).toBe('not-found-node');
+		dispose(); dispose();
+		await go('/');
+		expect(read(view)).toBe('not-found-node');
 	});
 });
 
 describe('hooks without a DOM', () => {
 	it('browser hooks degrade to inert state', async () => {
-		const { useRxjs } = await import('uele/adapters/rxjs');
-		useRxjs();
+		const { rxjs } = await import('uele/signals/rxjs');
+		rxjs();
 		const { read } = await import('uele/reactive');
 		const hooks = await import('uele/hooks');
 
@@ -75,16 +78,16 @@ describe('hooks without a DOM', () => {
 		expect(geo.supported).toBe(false);
 		geo.refresh(); // no-op, no throw
 
-		const media = hooks.useMediaQuery('(min-width: 10px)');
+		const { matches: media } = hooks.useMediaQuery('(min-width: 10px)');
 		expect(read(media)).toBe(false);
 
-		const size = hooks.useWindowSize();
+		const { size: size } = hooks.useWindowSize();
 		expect(read(size)).toEqual({ width: 0, height: 0 });
 
-		expect(read(hooks.useDocumentVisibility())).toBe('visible');
-		expect(read(hooks.useWindowFocus())).toBe(true);
-		expect(read(hooks.useScrollPosition())).toEqual({ x: 0, y: 0, direction: 'none' });
-		expect(read(hooks.useBreakpoint())).toBe('base');
+		expect(read(hooks.useDocumentVisibility().visibility)).toBe('visible');
+		expect(read(hooks.useWindowFocus().focused)).toBe(true);
+		expect(read(hooks.useScrollPosition().position)).toEqual({ x: 0, y: 0, direction: 'none' });
+		expect(read(hooks.useBreakpoint().breakpoint)).toBe('base');
 
 		const lock = hooks.useScrollLock();
 		lock.lock();
@@ -97,26 +100,33 @@ describe('hooks without a DOM', () => {
 		raf.stop();
 
 		const title = hooks.useTitle('node title');
-		title.restore(); // guarded, no document to write to
+		title.dispose(); // guarded, no document to write to
 
-		const [param, setParam] = hooks.useQueryParam('tab', 'one');
+		const { value: param, set: setParam } = hooks.useQueryParam('tab', 'one');
 		expect(read(param)).toBe('one');
 		setParam('two'); // writes the cell, skips the URL work
 		expect(read(param)).toBe('two');
 
-		const [cookie, setCookie] = hooks.useCookie('session', 'abc');
+		const { value: cookie, set: setCookie } = hooks.useCookie('session', 'abc');
 		expect(read(cookie)).toBe('abc');
 		setCookie('def');
 		expect(read(cookie)).toBe('def');
 
-		const online = hooks.useOnline();
+		const { online: online } = hooks.useOnline();
 		expect(typeof read(online)).toBe('boolean');
 	}, 10000);
+
+	it('inert server resources also support disposal', async () => {
+		const hooks = await import('uele/hooks');
+		for (const resource of [hooks.useLocalStorage('dispose'), hooks.useMediaQuery('all'), hooks.useColorScheme(), hooks.useHotkey('enter', () => {}), hooks.useKeyPress('x'), hooks.useClickOutside(() => null, () => {})]) {
+			resource.dispose(); resource.dispose();
+		}
+	});
 
 	it('timers still run server-side', async () => {
 		const { read } = await import('uele/reactive');
 		const hooks = await import('uele/hooks');
-		const idle = hooks.useIdle(5);
+		const { idle: idle } = hooks.useIdle(5);
 		expect(read(idle)).toBe(false);
 		await new Promise((r) => setTimeout(r, 25));
 		expect(read(idle)).toBe(true);
@@ -127,16 +137,16 @@ describe('hooks without a DOM', () => {
 		const hooks = await import('uele/hooks');
 
 		// storage hooks get a null store server-side; the cross-tab listener is a no-op
-		const [local, setLocal, removeLocal] = hooks.useLocalStorage('k', 'v0');
+		const { value: local, set: setLocal, remove: removeLocal } = hooks.useLocalStorage('k', 'v0');
 		expect(read(local)).toBe('v0');
 		setLocal('v1');
 		expect(read(local)).toBe('v1');
 		removeLocal();
-		const [session] = hooks.useSessionStorage('k2', 's0');
+		const { value: session } = hooks.useSessionStorage('k2', 's0');
 		expect(read(session)).toBe('s0');
 
 		// a null target resolves through the no-window side of target resolution
-		const off = hooks.useEventListener(null, 'click', () => {});
+		const { dispose: off } = hooks.useEventListener(null, 'click', () => {});
 		expect(typeof off).toBe('function');
 		off();
 
@@ -150,6 +160,7 @@ describe('hooks without a DOM', () => {
 		const fs = hooks.useFullscreen();
 		expect(fs.supported).toBe(false);
 		expect(read(fs.fullscreen)).toBe(false);
+		fs.enter(); fs.exit(); fs.toggle(); fs.dispose();
 	});
 });
 

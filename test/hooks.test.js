@@ -7,21 +7,14 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { h } from 'uele';
-import { usePreactSignals } from 'uele/adapters/preact';
+import { preactSignals } from 'uele/signals/preact';
 import { signal } from '@preact/signals-core';
 import { read, write } from 'uele/reactive';
-import {
-	useSignal, useComputed, useEffect, useId, useToggle, useBoolean, useDisclosure,
-	useCounter, useControllable, usePrevious, useAsync, useHistory, useList,
-	useDebounce, useDebounceFn, useInterval, useTimeout, useCountdown,
-	useLocalStorage, useSessionStorage, useEventListener, useMediaQuery, useOnline,
-	useWindowSize, useKeyPress, useHotkey, useClickOutside, useHover, useFocus,
-	useClipboard, useIntersectionObserver, useResizeObserver, paginationRange,
-	usePagination, useOTP, usePinInput, useForm
-} from 'uele/hooks';
+import { useId, useToggle, useDisclosure, useCounter, useControllable, usePrevious, useAsync, useHistory, useList, useDebounce, useDebounceFn, useInterval, useTimeout, useCountdown, useLocalStorage, useSessionStorage, useEventListener, useMediaQuery, useOnline, useWindowSize, useKeyPress, useHotkey, useClickOutside, useHover, useFocus, useClipboard, useIntersectionObserver, useResizeObserver, paginationRange, usePagination, useOTP, useForm } from 'uele/hooks';
+import { signal as useSignal, computed as useComputed, effect as useEffect } from 'uele/reactive';
 
 beforeEach(() => {
-	usePreactSignals();
+	preactSignals();
 	document.body.innerHTML = '';
 	localStorage.clear();
 	sessionStorage.clear();
@@ -52,8 +45,8 @@ describe('signal basics', () => {
 });
 
 describe('state hooks', () => {
-	it('useToggle / useBoolean / useDisclosure', () => {
-		const [on, toggle, setOn] = useToggle();
+	it('useToggle / useToggle / useDisclosure', () => {
+		const { value: on, toggle: toggle, set: setOn } = useToggle();
 		expect(read(on)).toBe(false);
 		toggle();
 		expect(read(on)).toBe(true);
@@ -61,7 +54,7 @@ describe('state hooks', () => {
 		expect(read(on)).toBe(false);
 		setOn(true);
 		expect(read(on)).toBe(true);
-		expect(useBoolean).toBe(useToggle);
+		expect(Object.keys(useToggle()).sort()).toEqual(['set', 'toggle', 'value']);
 
 		const d = useDisclosure();
 		expect(read(d.open)).toBe(false);
@@ -89,14 +82,14 @@ describe('state hooks', () => {
 
 	it('useControllable: uncontrolled owns state, controlled defers, onChange always fires', () => {
 		const seen = [];
-		const [value, setValue] = useControllable(undefined, 'a', (v) => seen.push(v));
+		const { value: value, set: setValue } = useControllable(undefined, 'a', (v) => seen.push(v));
 		setValue('b');
 		expect(read(value)).toBe('b');
 		setValue((v) => v + '!');
 		expect(read(value)).toBe('b!');
 
 		const controlled = signal('x');
-		const [cValue, cSet] = useControllable(controlled, 'ignored', (v) => seen.push(v));
+		const { value: cValue, set: cSet } = useControllable(controlled, 'ignored', (v) => seen.push(v));
 		expect(read(cValue)).toBe('x');
 		cSet('y');
 		expect(controlled.value).toBe('y');
@@ -105,7 +98,7 @@ describe('state hooks', () => {
 
 	it('usePrevious lags one write behind', () => {
 		const source = signal(1);
-		const [previous] = usePrevious(source);
+		const { previous: previous } = usePrevious(source);
 		expect(read(previous)).toBe(undefined);
 		source.value = 2;
 		expect(read(previous)).toBe(1);
@@ -175,7 +168,7 @@ describe('async and timers', () => {
 	it('useDebounce follows the source after the quiet period', () => {
 		vi.useFakeTimers();
 		const source = signal('a');
-		const [debounced, dispose] = useDebounce(source, 200);
+		const { value: debounced, dispose: dispose } = useDebounce(source, 200);
 		source.value = 'b';
 		source.value = 'c';
 		vi.advanceTimersByTime(199);
@@ -245,16 +238,16 @@ describe('async and timers', () => {
 
 describe('storage hooks', () => {
 	it('useLocalStorage persists JSON and rehydrates', () => {
-		const [value, setValue] = useLocalStorage('uele-test', { n: 1 });
+		const { value: value, set: setValue } = useLocalStorage('uele-test', { n: 1 });
 		expect(read(value)).toEqual({ n: 1 });
 		setValue({ n: 2 });
 		expect(JSON.parse(localStorage.getItem('uele-test'))).toEqual({ n: 2 });
-		const [again] = useLocalStorage('uele-test', { n: 9 });
+		const { value: again } = useLocalStorage('uele-test', { n: 9 });
 		expect(read(again)).toEqual({ n: 2 });
 	});
 
 	it('useSessionStorage mirrors the same contract', () => {
-		const [value, setValue, remove] = useSessionStorage('k', 'a');
+		const { value: value, set: setValue, remove: remove } = useSessionStorage('k', 'a');
 		setValue('b');
 		expect(sessionStorage.getItem('k')).toBe('"b"');
 		remove();
@@ -268,7 +261,7 @@ describe('DOM and event hooks', () => {
 		const handler = vi.fn();
 		const button = document.createElement('button');
 		document.body.append(button);
-		const off = useEventListener(button, 'click', handler);
+		const { dispose: off } = useEventListener(button, 'click', handler);
 		button.click();
 		expect(handler).toHaveBeenCalledTimes(1);
 		off();
@@ -283,27 +276,27 @@ describe('DOM and event hooks', () => {
 			addEventListener: () => {},
 			removeEventListener: () => {}
 		});
-		expect(read(useMediaQuery('(min-width: 600px)'))).toBe(true);
-		expect(read(useMediaQuery('(min-width: 900px)'))).toBe(false);
+		expect(read(useMediaQuery('(min-width: 600px)').matches)).toBe(true);
+		expect(read(useMediaQuery('(min-width: 900px)').matches)).toBe(false);
 		window.matchMedia = original;
-		expect(read(useMediaQuery('(min-width: 1px)'))).toBe(false);
+		expect(read(useMediaQuery('(min-width: 1px)').matches)).toBe(false);
 	});
 
 	it('useOnline and useWindowSize follow window events', () => {
-		const online = useOnline();
+		const { online: online } = useOnline();
 		window.dispatchEvent(new Event('offline'));
 		expect(read(online)).toBe(false);
 		window.dispatchEvent(new Event('online'));
 		expect(read(online)).toBe(true);
 
-		const size = useWindowSize();
+		const { size: size } = useWindowSize();
 		window.dispatchEvent(new Event('resize'));
 		expect(read(size).width).toBe(window.innerWidth);
 	});
 
 	it('useKeyPress and useHotkey match keys and combos', () => {
 		const handler = vi.fn();
-		const [pressed, off] = useKeyPress('a', handler);
+		const { pressed: pressed, dispose: off } = useKeyPress('a', handler);
 		window.dispatchEvent(new KeyboardEvent('keydown', { key: 'A' }));
 		expect(read(pressed)).toBe(true);
 		expect(handler).toHaveBeenCalledTimes(1);
@@ -312,7 +305,7 @@ describe('DOM and event hooks', () => {
 		off();
 
 		const hot = vi.fn();
-		const offHot = useHotkey('ctrl+k', hot);
+		const { dispose: offHot } = useHotkey('ctrl+k', hot);
 		window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }));
 		expect(hot).toHaveBeenCalledTimes(1);
 		window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k' }));
@@ -324,7 +317,7 @@ describe('DOM and event hooks', () => {
 		const handler = vi.fn();
 		const box = h('div', null, h('span', null, 'in'));
 		document.body.append(box);
-		const off = useClickOutside(box, handler);
+		const { dispose: off } = useClickOutside(box, handler);
 		box.querySelector('span').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
 		expect(handler).not.toHaveBeenCalled();
 		document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
@@ -333,8 +326,8 @@ describe('DOM and event hooks', () => {
 	});
 
 	it('useHover and useFocus bind props drive their cells', () => {
-		const [hovered, hoverProps] = useHover();
-		const [focused, focusProps] = useFocus();
+		const { hovered: hovered, props: hoverProps } = useHover();
+		const { focused: focused, props: focusProps } = useFocus();
 		const el = h('div', { ...hoverProps, ...focusProps });
 		el.dispatchEvent(new MouseEvent('mouseenter'));
 		expect(read(hovered)).toBe(true);
@@ -426,7 +419,7 @@ describe('pagination and OTP logic', () => {
 		expect(otp.code()).toBe('');
 		otp.setDigit(0, '9876');
 		expect(otp.code()).toBe('9876');
-		expect(usePinInput).toBe(useOTP);
+		expect(otp.digits).toHaveLength(4);
 	});
 });
 
@@ -462,11 +455,11 @@ describe('useForm', () => {
 
 describe('hooks run on another preset (ulive) unchanged', () => {
 	it('useCounter + useToggle on ulive cells', async () => {
-		(await import('uele/adapters/ulive')).useUlive();
+		(await import('uele/signals/ulive')).ulive();
 		const { count, inc } = useCounter(5);
 		inc();
 		expect(read(count)).toBe(6);
-		const [on, toggle] = useToggle(true);
+		const { value: on, toggle: toggle } = useToggle(true);
 		toggle();
 		expect(read(on)).toBe(false);
 	});

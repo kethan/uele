@@ -9,7 +9,7 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { usePreactSignals } from 'uele/adapters/preact';
+import { preactSignals } from 'uele/signals/preact';
 import { signal, computed } from '@preact/signals-core';
 import { Subject } from 'rxjs';
 import { h } from 'uele';
@@ -28,7 +28,7 @@ import {
 } from 'uele/ui';
 
 beforeEach(() => {
-	usePreactSignals();
+	preactSignals();
 	document.body.innerHTML = '';
 	document.body.style.overflow = '';
 });

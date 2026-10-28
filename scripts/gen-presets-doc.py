@@ -3,8 +3,8 @@
 
     python3 scripts/gen-presets-doc.py
 
-The preset descriptions come from the jsdoc block of every `adapters/*.js` and
-`diffs/*.js`, the hook name from its `export const use…`, the cell idioms from
+The preset descriptions come from the jsdoc block of every `signals/*.js` and
+`diffs/*.js`, the preferred installer name from its export alias, the cell idioms from
 the table below, and the comparison tables from README.md (they are measured
 data, so the README stays the single place they are edited).
 """
@@ -59,16 +59,16 @@ def description(path):
     body = read(path).split('*/')[0].split('/**')[1]
     lines = [line.strip(' *').strip() for line in body.strip().split('\n')]
     return ' '.join(line for line in lines
-                    if line and not line.startswith('import ') and not re.match(r'^use\w+\(\);?$', line))
+                    if line and not line.startswith('import ') and not re.match(r'^\w+\(\);?$', line))
 
 
 def hooks(path):
-    return re.findall(r'export const (use\w+)', read(path))
+    return re.findall(r'export const (\w+) =', read(path))
 
 
 def slugs(folder):
     return sorted(s[:-3] for s in os.listdir(os.path.join(ROOT, folder))
-                  if s.endswith('.js') and s != 'util.js')
+                  if s.endswith('.js') and s not in ('util.js', 'internal.js'))
 
 
 def main():
@@ -80,9 +80,9 @@ def main():
     w('presets can never leave stale configuration behind) and returns the configured `api` object.')
     w('')
     w('```jsx')
-    w('import { usePreactSignals } from "%s/adapters/preact";' % PKG)
+    w('import { preactSignals } from "%s/signals/preact";' % PKG)
     w('')
-    w('usePreactSignals(); // that is the whole setup')
+    w('preactSignals(); // that is the whole setup')
     w('```')
     w('')
     w('Every signal preset accepts an optional target - pass the `api` exported by `%s/lite` to' % PKG)
@@ -91,18 +91,21 @@ def main():
     w('')
     w(JSX_NOTE)
     w('')
-    w('## Signal adapter presets')
+    w('Install presets at startup, before creating state or rendering. See [API.md](API.md)')
+    w('for optional `configure()` and lite setup.')
     w('')
-    for slug in slugs('adapters'):
-        name = hooks('adapters/%s.js' % slug)[-1]
-        create, read_as, write_as = SIGNAL_CELLS[slug]
-        w('### `%s/adapters/%s` - `%s()`' % (PKG, slug, name))
+    w('## Signal presets')
+    w('')
+    for slug in slugs('signals'):
+        name = hooks('signals/%s.js' % slug)[-1]
+        create, read_as, write_as = SIGNAL_CELLS.get(slug, ('api.signal(%s)', 'api.get(count)', 'api.set(count, api.get(count) + 1)'))
+        w('### `%s/signals/%s` - `%s()`' % (PKG, slug, name))
         w('')
-        w(description('adapters/%s.js' % slug))
+        w(description('signals/%s.js' % slug))
         w('')
         w('```jsx')
-        w(SIGNAL_IMPORTS[slug])
-        w("import { %s } from '%s/adapters/%s';" % (name, PKG, slug))
+        w(SIGNAL_IMPORTS.get(slug, "import { api } from '%s';" % PKG))
+        w("import { %s } from '%s/signals/%s';" % (name, PKG, slug))
         w('')
         w('%s(); // one call, whole api configured' % name)
         w('')
@@ -132,11 +135,11 @@ def main():
         w('')
         w('```jsx')
         w("import { For } from '%s';" % PKG)
-        w("import { useUlive } from '%s/adapters/ulive'; // any signal preset works" % PKG)
+        w("import { ulive } from '%s/signals/ulive'; // any signal preset works" % PKG)
         w("import { %s } from '%s/diffs/%s';" % (name, PKG, slug))
         w("import { signal } from 'ulive';")
         w('')
-        w('useUlive();')
+        w('ulive();')
         w('%s(); // sets api.diff (and api.udom, when the engine needs it)' % name)
         w('')
         w('const items = signal([1, 2, 3]);')
@@ -170,7 +173,7 @@ def main():
 
     open(os.path.join(ROOT, 'docs/PRESETS.md'), 'w').write('\n'.join(out))
     print('docs/PRESETS.md regenerated (%d signal presets, %d diff presets)'
-          % (len(slugs('adapters')), len(slugs('diffs'))))
+          % (len(slugs('signals')), len(slugs('diffs'))))
 
 
 if __name__ == '__main__':

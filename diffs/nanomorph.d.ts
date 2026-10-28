@@ -1,1 +1,1 @@
-export declare function useNanomorph<T extends object>(target?: T): T;
+export declare function nanomorph<T extends object>(target?: T): T;

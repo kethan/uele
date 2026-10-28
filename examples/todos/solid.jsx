@@ -5,7 +5,7 @@
  *     import { mountTodos } from './solid.jsx';
  *     mountTodos(document.body);
  *
- * Signals come from solid-js; `useSolid()` wires uele to them (called for you by
+ * Signals come from solid-js; `solid()` wires uele to them (called for you by
  * `TodoApp`/`mountTodos`). Everything below the actions is the same JSX you
  * would write with any other preset.
  *
@@ -15,18 +15,18 @@
  */
 import { For } from 'uele';
 import { Form, Row, Card, Stack, Button, Input, Checkbox, Label } from 'uele/ui';
-import { useSolid } from 'uele/adapters/solid';
+import { solid } from 'uele/signals/solid';
 // node resolves `solid-js` to its no-op server build; apps bundle the client build
 import { createSignal, createMemo } from 'solid-js/dist/solid.js';
 
 export const TodoApp = () => {
-	useSolid();
+	solid();
 	const [newTodo, setNewTodo] = createSignal('');
 	const [todos, setTodos] = createSignal([]);
 	const [filter, setFilterValue] = createSignal('all');
 	const remaining = createMemo(() => todos().filter((t) => !t.done).length);
 	// read `filter` eagerly: a lazy read inside .filter() is skipped on an empty list,
-	// and the derived value would never subscribe to it
+	// and the computed value would never subscribe to it
 	const visible = createMemo(() => {
 		const f = filter();
 		return todos().filter((t) => (f === 'all' ? true : f === 'active' ? !t.done : t.done));

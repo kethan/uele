@@ -1,15 +1,15 @@
 import { afterEach, describe, expect, test } from 'vitest';
 import * as main from '../src/index.js';
 import * as lite from '../lite/index.js';
-import { HOOKS } from '../adapters/util.js';
+import { HOOKS } from '../signals/internal.js';
 
 const entries = [
-	['reflex', 'useReflex'], ['reactively', 'useReactively'], ['anod', 'useAnod'],
-	['lite-signal', 'useLiteSignal'], ['rescript-signals', 'useRescriptSignals'],
-	['maverick', 'useMaverick'], ['oby', 'useOby']
+	['reflex', 'reflex'], ['reactively', 'reactively'], ['anod', 'anod'],
+	['lite-signal', 'liteSignal'], ['rescript-signals', 'rescriptSignals'],
+	['maverick', 'maverick'], ['oby', 'oby']
 ];
 for (const [slug, hook] of entries) {
-	const { [hook]: install } = await import(`../adapters/${slug}.js`);
+	const { [hook]: install } = await import(`../signals/${slug}.js`);
 	for (const [label, mod] of [['main', main], ['lite', lite]]) {
 		describe(`${slug}: ${label} authoring and lifecycle`, () => {
 			const original = { ...mod.api };
@@ -23,8 +23,8 @@ for (const [slug, hook] of entries) {
 			});
 			test('dynamic computed chains follow only the active branch', () => {
 				const api = setup(), first = api.signal(1), second = api.signal(10), toggle = api.signal(true);
-				const selected = api.derived(() => api.get(api.get(toggle) ? first : second));
-				const doubled = api.derived(() => api.get(selected) * 2);
+				const selected = api.computed(() => api.get(api.get(toggle) ? first : second));
+				const doubled = api.computed(() => api.get(selected) * 2);
 				const el = mod.h('p', null, doubled);
 				expect(el.textContent).toBe('2');
 				api.set(toggle, false); expect(el.textContent).toBe('20');
@@ -67,11 +67,11 @@ for (const [slug, hook] of entries) {
 }
 
 test('Anod computed errors propagate and a later read recovers', async () => {
-	const { useAnod } = await import('../adapters/anod.js');
-	const api = useAnod({});
+	const { anod } = await import('../signals/anod.js');
+	const api = anod({});
 	const fail = api.signal(true);
 	const error = new Error('computed failed');
-	const computed = api.derived(() => {
+	const computed = api.computed(() => {
 		if (api.get(fail)) throw error;
 		return 42;
 	});

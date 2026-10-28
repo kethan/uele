@@ -4,6 +4,15 @@ var uele = require('uele');
 var reactive = require('uele/reactive');
 var hooks = require('uele/hooks');
 
+// A private, inert marker uses the existing prop-disposer protocol. No effect
+// runner, public lifecycle API, MutationObserver, or core-size change is needed.
+const key = '__uele_cleanup';
+const handler = (_node, dispose) => dispose;
+const onTeardown = (cleanup) => {
+    uele.props.set(key, handler);
+    return uele.h('template', { [key]: cleanup });
+};
+
 /**
  * Headless UI primitives for `uele` — Radix-style, but signal-native.
  *
@@ -66,7 +75,7 @@ const own = (initial) => {
  * component discards its subtree (the preset's `api.cleanup`, like `Title`).
  * Document listeners, intervals and observers must not outlive their component.
  */
-const onTeardown = (fn) => () => (reactive.active().cleanup?.(fn), null);
+
 
 /**
  * Radix-style controllable state. `controlled` may be a cell, a plain value or
@@ -356,10 +365,6 @@ const OTPInput = ({ length = 6, model: cell, value, onChange, onComplete, label,
 	host.dataset.length = String(length);
 	return host;
 };
-/** alias */
-const PinInput = OTPInput;
-/** alias */
-const OTP = OTPInput;
 
 /** tag/chip editor over an array cell: Enter or comma adds, × / Backspace removes */
 const TagInput = ({ model: cell, value, placeholder = 'Add a tag…', onChange, ...props } = {}) => {
@@ -498,8 +503,6 @@ const Separator = ({ orientation = 'horizontal', decorative = true, ...props } =
 			? { width: '1px', alignSelf: 'stretch', background: 'var(--uele-border, #e2e8f0)', ...props.style }
 			: { height: '1px', width: '100%', background: 'var(--uele-border, #e2e8f0)', border: 'none', ...props.style }
 	});
-/** alias */
-const Divider = Separator;
 
 /** keeps children at `ratio` (e.g. `16/9` or `1.777`) */
 const AspectRatio = ({ ratio = '16/9', children, ...props } = {}) =>
@@ -657,11 +660,6 @@ const TableHeader = ({ children, ...props } = {}) =>
 	uele.h('th', { ...props, scope: props.scope || 'col', style: { textAlign: 'left', padding: '0.5rem', borderBottom: '2px solid var(--uele-border, #e2e8f0)', ...props.style } }, children);
 const TableCell = ({ children, ...props } = {}) =>
 	uele.h('td', { ...props, style: { padding: '0.5rem', borderBottom: '1px solid var(--uele-border, #e2e8f0)', ...props.style } }, children);
-/** aliases in the `<thead>`/`<th>` naming style */
-const Thead = TableHead;
-const Tbody = TableBody;
-const Th = TableHeader;
-const Td = TableCell;
 
 /* --------------------------------------------------------------- navigation */
 
@@ -853,6 +851,7 @@ const Dialog = ({ open, model: modelProp, defaultOpen = false, onOpenChange, onC
 	const descId = nextId('uele-dialog-desc');
 	const close = () => (setOpen(false), applyLock()); // re-apply the scroll lock on every internal close, not just cell-driven ones
 	let host = null;
+	let focusTimer;
 	let locked = false;
 	let prevOverflow = '';
 	const applyLock = () => { // only ever called/subtcribed under the document guard below
@@ -860,8 +859,10 @@ const Dialog = ({ open, model: modelProp, defaultOpen = false, onOpenChange, onC
 			locked = true;
 			prevOverflow = document.body.style.overflow;
 			document.body.style.overflow = 'hidden';
-			setTimeout(() => host?.querySelector('[role="dialog"]')?.focus?.(), 0);
+			clearTimeout(focusTimer);
+			focusTimer = setTimeout(() => host?.querySelector('[role="dialog"]')?.focus?.(), 0);
 		} else if (!isOpen() && locked) {
+			clearTimeout(focusTimer);
 			locked = false;
 			document.body.style.overflow = prevOverflow;
 		}
@@ -905,7 +906,12 @@ const Dialog = ({ open, model: modelProp, defaultOpen = false, onOpenChange, onC
 			? uele.h('button', { type: 'button', 'aria-haspopup': 'dialog', 'aria-expanded': () => String(!!isOpen()), onclick: () => (setOpen(true), applyLock()) }, trigger)
 			: null,
 		() => panel(),
-		onTeardown(() => { document.removeEventListener('keydown', onKey); offSource?.(); }));
+		onTeardown(() => {
+			clearTimeout(focusTimer);
+			document.removeEventListener('keydown', onKey);
+			offSource?.();
+			if (locked) document.body.style.overflow = prevOverflow;
+		}));
 	return host;
 };
 
@@ -919,8 +925,6 @@ const DRAWER_STYLES = {
 /** dialog that slides from an edge (`side`: right/left/top/bottom) — anchored, full-height on the sides */
 const Drawer = ({ side = 'right', style, ...props } = {}) =>
 	Dialog({ ...props, 'data-side': side, style: { ...DRAWER_STYLES[side] || DRAWER_STYLES.right, ...style } });
-/** alias (the name shadcn/ui popularised for the same component) */
-const Sheet = Drawer;
 
 /**
  * Confirmation dialog: a Dialog preset with Cancel/Confirm actions.
@@ -951,8 +955,6 @@ const AlertDialog = ({ open, model: modelProp, defaultOpen = false, onOpenChange
 		]
 	});
 };
-/** alias */
-const ConfirmDialog = AlertDialog;
 
 /** popover panel anchored to a trigger button; toggles, Escape closes */
 const Popover = ({ trigger, label, open, model: modelProp, defaultOpen = false, onOpenChange, children, ...props } = {}) => {
@@ -1022,8 +1024,6 @@ const Menu = ({ label, trigger, items, onSelect, children, ...props } = {}) => {
 				})))
 			: ''));
 };
-/** alias */
-const DropdownMenu = Menu;
 
 /**
  * A single toast. `open`/`model` controls visibility; with `duration` it
@@ -1212,8 +1212,6 @@ const StatusDot = ({ status = 'online', label, ...props } = {}) =>
 		role: 'status', 'aria-label': label || status, 'data-status': status, ...props,
 		style: { display: 'inline-block', width: '0.625rem', height: '0.625rem', borderRadius: '50%', background: STATUS_COLORS[status] || STATUS_COLORS.offline, ...props.style }
 	});
-/** alias */
-const Presence = StatusDot;
 
 /** overlapping avatar stack with a +n overflow bubble */
 const AvatarGroup = ({ avatars, max = 4, children, ...props } = {}) => {
@@ -1271,13 +1269,14 @@ const PasswordInput = ({ model: cell, value, showStrength, onChange, ...props } 
 /** copy-to-clipboard button with transient "Copied" feedback */
 const CopyButton = ({ text, label = 'Copy', copiedLabel = 'Copied', ...props } = {}) => {
 	const copied = own(false);
-	let timer = null;
+	let timer = null, dead = false;
 	return uele.h('button', {
 		type: 'button', ...props, 'data-copied': () => String(!!reactive.read(copied)),
 		onclick: async () => {
 			const value = String(val(text) ?? '');
 			try { await navigator.clipboard.writeText(value); }
 			catch {
+				if (dead) return;
 				const area = document.createElement('textarea');
 				area.value = value;
 				document.body.append(area);
@@ -1285,11 +1284,13 @@ const CopyButton = ({ text, label = 'Copy', copiedLabel = 'Copied', ...props } =
 				try { document.execCommand('copy'); } catch { /* unavailable */ }
 				area.remove();
 			}
+			if (dead) return;
 			reactive.write(copied, true);
 			clearTimeout(timer);
 			timer = setTimeout(() => reactive.write(copied, false), 1500);
 		}
-	}, () => (reactive.read(copied) ? copiedLabel : label));
+	}, () => (reactive.read(copied) ? copiedLabel : label),
+		onTeardown(() => { dead = true; clearTimeout(timer); }));
 };
 
 /** colour picker: native swatch input + hex text + preset swatches, two-way via `model` */
@@ -1481,8 +1482,6 @@ const TimeAgo = ({ date, value, interval = 30000, ...props } = {}) => {
 			return diff < 0 ? `${label} ago` : `in ${label}`;
 		});
 };
-/** alias */
-const RelativeTime = TimeAgo;
 
 /** ticking countdown to a date (or from `seconds`), `onComplete` at zero; renders `hh:mm:ss` */
 const CountdownTimer = ({ to, seconds, onComplete, ...props } = {}) => {
@@ -1581,8 +1580,6 @@ const Tree = ({ items, model: cell, value, defaultExpanded = [], onSelect, ...pr
 	return uele.h('ul', { role: 'tree', 'data-uele-tree': '', ...props, style: { listStyle: 'none', margin: 0, padding: 0, ...props.style } },
 		() => renderItems(val(items) || [], 0));
 };
-/** alias */
-const TreeView = Tree;
 
 /**
  * Windowed list for very long data: only the visible slice (+ overscan) is
@@ -1616,14 +1613,13 @@ const VirtualList = ({ items, itemHeight = 32, height = 320, overscan = 3, rende
 /** sentinel-driven lazy loading: calls `onLoadMore` when the end scrolls into view (button fallback without IntersectionObserver) */
 const InfiniteScroll = ({ onLoadMore, loading, hasMore = true, children, ...props } = {}) => {
 	const sentinel = uele.h('div', { 'data-uele-sentinel': '', style: { height: '1px' } });
-	const tryLoad = () => {
-		if (val(hasMore) && !val(loading)) onLoadMore?.();
-	};
-	let io = null;
 	let dead = false;
+	const tryLoad = () => {
+		if (!dead && val(hasMore) && !val(loading)) onLoadMore?.();
+	};
+	let io = null, timer;
 	if (typeof IntersectionObserver !== 'undefined') {
-		setTimeout(() => {
-			if (dead) return; // torn down before the observer was ever attached
+		timer = setTimeout(() => {
 			io = new IntersectionObserver((entries) => entries[0]?.isIntersecting && tryLoad());
 			io.observe(sentinel);
 		}, 0);
@@ -1631,7 +1627,7 @@ const InfiniteScroll = ({ onLoadMore, loading, hasMore = true, children, ...prop
 	return uele.h('div', { 'data-uele-infinite-scroll': '', ...props },
 		children,
 		sentinel,
-		onTeardown(() => (dead = true, io?.disconnect())),
+		onTeardown(() => (dead = true, clearTimeout(timer), io?.disconnect())),
 		typeof IntersectionObserver === 'undefined'
 			? uele.h('button', { type: 'button', disabled: () => !!val(loading) || !val(hasMore), onclick: tryLoad }, () => (val(loading) ? 'Loading…' : 'Load more'))
 			: uele.h('div', { 'aria-live': 'polite' }, () => (val(loading) ? 'Loading…' : '')));
@@ -1709,8 +1705,6 @@ const CommandPalette = ({ open, model: modelProp, defaultOpen = false, trigger, 
 		() => panel(),
 		onTeardown(() => document.removeEventListener('keydown', onKey)));
 };
-/** alias */
-const Command = CommandPalette;
 
 /* ------------------------------------------------ menus, nav & overlays 2 */
 
@@ -1769,8 +1763,8 @@ const HoverCard = ({ trigger, content, children, delay = 300, ...props } = {}) =
 	const visible = own(false);
 	let openTimer = null;
 	let closeTimer = null;
-	const scheduleOpen = () => (clearTimeout(closeTimer), (openTimer = setTimeout(() => reactive.write(visible, true), delay)));
-	const scheduleClose = () => (clearTimeout(openTimer), (closeTimer = setTimeout(() => reactive.write(visible, false), 120)));
+	const scheduleOpen = () => (clearTimeout(openTimer), clearTimeout(closeTimer), (openTimer = setTimeout(() => reactive.write(visible, true), delay)));
+	const scheduleClose = () => (clearTimeout(closeTimer), clearTimeout(openTimer), (closeTimer = setTimeout(() => reactive.write(visible, false), 120)));
 	return uele.h('span', {
 		style: { position: 'relative', display: 'inline-block' },
 		onmouseenter: scheduleOpen, onmouseleave: scheduleClose, onfocus: scheduleOpen, onblur: scheduleClose
@@ -1778,7 +1772,7 @@ const HoverCard = ({ trigger, content, children, delay = 300, ...props } = {}) =
 		uele.h('span', {
 			role: 'dialog', 'data-uele-hover-card': '', hidden: () => !reactive.read(visible), ...props,
 			style: { position: 'absolute', top: '100%', left: 0, zIndex: 25, marginTop: '0.375rem', background: 'var(--uele-surface, #fff)', border: '1px solid var(--uele-border, #e2e8f0)', borderRadius: 'var(--uele-radius, 10px)', boxShadow: 'var(--uele-shadow-md, 0 4px 16px rgba(0,0,0,0.12))', padding: '0.875rem', minWidth: '14rem', ...props.style }
-		}, content));
+		}, content), onTeardown(() => { clearTimeout(openTimer); clearTimeout(closeTimer); }));
 };
 
 /** two resizable panels with a draggable divider; ratio via `model` (0..1) */
@@ -1786,7 +1780,9 @@ const SplitPane = ({ first, second, children, direction = 'horizontal', model: c
 	const [ratio, setRatio] = controllable(cell, defaultRatio, onChange);
 	const horizontal = direction === 'horizontal';
 	let container = null;
+	let stopDrag = () => {};
 	const startDrag = (e) => {
+		stopDrag();
 		e.preventDefault();
 		const move = (ev) => {
 			const rect = container.getBoundingClientRect(); // ref assigns container during h(), before any drag can start
@@ -1797,6 +1793,7 @@ const SplitPane = ({ first, second, children, direction = 'horizontal', model: c
 			document.removeEventListener('mousemove', move);
 			document.removeEventListener('mouseup', up);
 		};
+		stopDrag = up;
 		document.addEventListener('mousemove', move);
 		document.addEventListener('mouseup', up);
 	};
@@ -1820,17 +1817,15 @@ const SplitPane = ({ first, second, children, direction = 'horizontal', model: c
 				if (e.key === 'ArrowRight' || e.key === 'ArrowDown') setRatio(Math.min(max, ratio() + step));
 			}
 		}),
-		uele.h('div', { 'data-pane': 'second', style: { flex: '1 1 auto', overflow: 'auto' } }, right));
+		uele.h('div', { 'data-pane': 'second', style: { flex: '1 1 auto', overflow: 'auto' } }, right), onTeardown(() => stopDrag()));
 };
-/** alias */
-const Resizable = SplitPane;
 
 /** click-to-edit inline text: Enter/blur commits, Escape cancels */
 const Editable = ({ model: cell, value, placeholder = 'Click to edit', onChange, label, ...props } = {}) => {
 	const [current, setCurrent] = controllable(cell ?? value, '', onChange);
 	const editing = own(false);
 	let draft = '';
-	let input = null;
+	let input = null, focusTimer;
 	const commit = () => (setCurrent(draft), reactive.write(editing, false));
 	const view = uele.h('button', {
 		type: 'button', 'aria-label': label || 'Edit',
@@ -1839,7 +1834,8 @@ const Editable = ({ model: cell, value, placeholder = 'Click to edit', onChange,
 		onclick: () => {
 			draft = String(current() ?? '');
 			reactive.write(editing, true);
-			setTimeout(() => input?.focus(), 0);
+			clearTimeout(focusTimer);
+			focusTimer = setTimeout(() => input?.focus(), 0);
 		}
 	}, () => String(current() ?? '') || placeholder);
 	input = uele.h('input', {
@@ -1853,7 +1849,7 @@ const Editable = ({ model: cell, value, placeholder = 'Click to edit', onChange,
 		},
 		onblur: () => reactive.read(editing) && commit()
 	});
-	return uele.h('span', { 'data-uele-editable': '', 'data-editing': () => String(!!reactive.read(editing)) }, view, input);
+	return uele.h('span', { 'data-uele-editable': '', 'data-editing': () => String(!!reactive.read(editing)) }, view, input, onTeardown(() => clearTimeout(focusTimer)));
 };
 
 /** thumbnail gallery with a lightbox viewer (prev/next/close, Escape closes) */
@@ -1893,8 +1889,6 @@ const Lightbox = ({ images = [], ...props } = {}) => {
 					uele.h('button', { type: 'button', 'aria-label': 'Close viewer', onclick: () => reactive.write(open, false), style: { position: 'absolute', top: '1rem', right: '1rem' } }, '×'))
 			: ''));
 };
-/** alias */
-const Gallery = Lightbox;
 
 const formatBytes = (bytes) => {
 	if (bytes == null) return '';
@@ -1934,8 +1928,6 @@ const Wizard = ({ steps = [], model: cell, defaultStep = 0, onChange, onFinish, 
 				? uele.h('button', { type: 'button', 'data-action': 'finish', onclick: (e) => onFinish?.(e) }, finishLabel)
 				: uele.h('button', { type: 'button', 'data-action': 'next', onclick: () => setStep(step() + 1) }, 'Next'))));
 };
-/** alias */
-const FormWizard = Wizard;
 
 /* ------------------------------------------------------ app chrome & misc */
 
@@ -1978,8 +1970,8 @@ const Timeline = ({ items, children, ...props } = {}) =>
 			item.description ? uele.h('p', { style: { margin: '0.25rem 0 0' } }, item.description) : null)));
 
 Object.defineProperty(exports, "paginationRange", {
-	enumerable: true,
-	get: function () { return hooks.paginationRange; }
+    enumerable: true,
+    get: function () { return hooks.paginationRange; }
 });
 exports.Accordion = Accordion;
 exports.AccordionItem = AccordionItem;
@@ -2005,9 +1997,7 @@ exports.Code = Code;
 exports.Collapsible = Collapsible;
 exports.ColorPicker = ColorPicker;
 exports.Combobox = Combobox;
-exports.Command = Command;
 exports.CommandPalette = CommandPalette;
-exports.ConfirmDialog = ConfirmDialog;
 exports.Container = Container;
 exports.ContextMenu = ContextMenu;
 exports.CopyButton = CopyButton;
@@ -2015,9 +2005,7 @@ exports.CountdownTimer = CountdownTimer;
 exports.DataTable = DataTable;
 exports.DatePicker = DatePicker;
 exports.Dialog = Dialog;
-exports.Divider = Divider;
 exports.Drawer = Drawer;
-exports.DropdownMenu = DropdownMenu;
 exports.Dropzone = Dropzone;
 exports.Editable = Editable;
 exports.Empty = Empty;
@@ -2027,8 +2015,6 @@ exports.FieldHint = FieldHint;
 exports.FileInput = FileInput;
 exports.FileList = FileList;
 exports.Form = Form;
-exports.FormWizard = FormWizard;
-exports.Gallery = Gallery;
 exports.Grid = Grid;
 exports.Heading = Heading;
 exports.HoverCard = HoverCard;
@@ -2048,27 +2034,21 @@ exports.MultiSelect = MultiSelect;
 exports.Navbar = Navbar;
 exports.NavigationMenu = NavigationMenu;
 exports.NumberInput = NumberInput;
-exports.OTP = OTP;
 exports.OTPInput = OTPInput;
 exports.Option = Option;
 exports.Pagination = Pagination;
 exports.PasswordInput = PasswordInput;
-exports.PinInput = PinInput;
 exports.Popover = Popover;
-exports.Presence = Presence;
 exports.Progress = Progress;
 exports.Radio = Radio;
 exports.RadioGroup = RadioGroup;
 exports.Rating = Rating;
-exports.RelativeTime = RelativeTime;
-exports.Resizable = Resizable;
 exports.Row = Row;
 exports.ScrollArea = ScrollArea;
 exports.SearchInput = SearchInput;
 exports.SegmentedControl = SegmentedControl;
 exports.Select = Select;
 exports.Separator = Separator;
-exports.Sheet = Sheet;
 exports.Skeleton = Skeleton;
 exports.SkipLink = SkipLink;
 exports.Slider = Slider;
@@ -2091,12 +2071,8 @@ exports.TableHeader = TableHeader;
 exports.TableRow = TableRow;
 exports.Tabs = Tabs;
 exports.TagInput = TagInput;
-exports.Tbody = Tbody;
-exports.Td = Td;
 exports.Text = Text;
 exports.Textarea = Textarea;
-exports.Th = Th;
-exports.Thead = Thead;
 exports.TimeAgo = TimeAgo;
 exports.Timeline = Timeline;
 exports.Toast = Toast;
@@ -2106,7 +2082,6 @@ exports.ToggleGroup = ToggleGroup;
 exports.Toolbar = Toolbar;
 exports.Tooltip = Tooltip;
 exports.Tree = Tree;
-exports.TreeView = TreeView;
 exports.VirtualList = VirtualList;
 exports.VisuallyHidden = VisuallyHidden;
 exports.Wizard = Wizard;

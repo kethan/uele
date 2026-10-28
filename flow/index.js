@@ -9,17 +9,15 @@
  *       <Suspense fallback={<p>Loading…</p>}>{async () => (await load()).name}</Suspense>
  *     </ErrorBoundary>
  *
- * Nothing here starts an effect of its own: every reactive part is a function
- * child, which uele renders as a thunk — re-run when the cells it reads change,
- * and disposed with the node. That is why these components work on all eleven
- * signal presets, including the subscribe-only ones.
+ * Reactive thunks rerun on effect-capable presets; subscribe-only presets run
+ * them once. Direct cell bindings still subscribe on either kind. Resource
+ * cleanup is owned by renderer markers, independent of engine cleanup hooks.
  */
-import { h, add } from 'uele';
-import { signal, read, write, isCell, canEffect, active } from 'uele/reactive';
+import { h, add, useLive } from 'uele';
+import { onTeardown } from '../props/internal.js';
+import { signal, read, write, isCell, canEffect } from 'uele/reactive';
 
 const ghost = () => h('div', { style: { display: 'contents' } });
-const comment = () => document.createComment('');
-const cleanup = (fn) => active().cleanup?.(fn);
 /** jsx hands a component its children as the varargs array: a single child arrives as `[child]` */
 const one = (children) => (Array.isArray(children) ? children[0] : children);
 const call = (children, value) => (typeof one(children) === 'function' ? one(children)(value) : one(children));
@@ -60,7 +58,7 @@ export const Await = ({ for: source, children, fallback = '', catch: onError } =
 	// the view is attached first: `load` runs while it is added, and a write is
 	// only applied once the live region's markers have a parent
 	const host = h('div', { style: { display: 'contents' } }, view);
-	host.append(...add(thunk(load)));
+	host.append(...add(thunk(load)), onTeardown(() => { latest++; }));
 	return host;
 };
 
@@ -98,30 +96,34 @@ export const ErrorBoundary = ({ children, fallback = '', onError } = {}) => {
 
 /**
  * Renders `children` into another part of the document (`document.body` by
- * default) and leaves a comment placeholder where it was used. Signal bindings
+ * default) and leaves an inert placeholder where it was used. Signal bindings
  * keep working: they live on the nodes, which are simply moved.
  */
 export const Portal = ({ mount = document.body, children } = {}) => {
 	const host = typeof mount === 'string' ? document.querySelector(mount) : mount;
-	(host || document.body).append(...add(children));
-	return comment();
+	const [nodes, replace] = useLive(children);
+	(host || document.body).append(...nodes);
+	return onTeardown(() => {
+		replace([]);
+		nodes[0].remove();
+		nodes[nodes.length - 1].remove();
+	});
 };
 
 /**
  * Keeps `document.title` in sync with a string, a cell or a thunk. The
- * previous title is restored when the binding is torn down (`api.cleanup`).
+ * previous title is restored when the renderer discards this component.
  */
 export const Title = ({ children } = {}) => {
 	const previous = document.title;
 	let applied;
 	const apply = () => {
-		// restore on teardown, but only if no newer Title has taken over since
-		cleanup(() => { if (document.title === applied) document.title = previous; });
 		const child = one(children);
 		const value = typeof child === 'function' ? child() : isCell(child) ? read(child) : child;
 		applied = value == null ? '' : String(value);
 		document.title = applied;
 		return null;
 	};
-	return h('div', { style: { display: 'contents' } }, thunk(apply));
+	return h('div', { style: { display: 'contents' } }, thunk(apply),
+		onTeardown(() => { if (document.title === applied) document.title = previous; }));
 };

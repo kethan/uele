@@ -1,9 +1,9 @@
 /** Single/multiple select and select-all state. Install a signal adapter first. */
 import { h } from 'uele';
 import { signal, read, write } from 'uele/reactive';
-import { useProps } from 'uele/props';
+import { appProps } from 'uele/props';
 
-useProps();
+appProps();
 export function SelectionForm() {
 	const priority = signal('normal'), recipients = signal(['team']);
 	const options = ['team', 'support', 'engineering'];

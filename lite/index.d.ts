@@ -68,7 +68,13 @@ export declare function r(
 ): void | (() => void);
 
 // API interface to define reactive behaviors
-interface Api {
+export interface Api {
+    /** Optional authoring hooks installed by uele/signals/* integrations. */
+    signal?: <T>(value: T) => any;
+    computed?: <T>(fn: () => T) => any;
+    set?: (cell: any, value: any) => void;
+    batch?: <T>(fn: () => T) => T | void;
+    untracked?: <T>(fn: () => T) => T;
     effect?: (f: () => void) => void;
     cleanup?: (cleanupFn: () => void) => void;
     any?: (

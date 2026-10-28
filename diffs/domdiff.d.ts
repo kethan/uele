@@ -1,1 +1,1 @@
-export declare function useDomdiff<T extends object>(target?: T): T;
+export declare function domdiff<T extends object>(target?: T): T;

@@ -6,18 +6,18 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, beforeEach } from 'vitest';
-import { usePreactSignals } from 'uele/adapters/preact';
+import { preactSignals } from 'uele/signals/preact';
 import { signal } from '@preact/signals-core';
 import { read } from 'uele/reactive';
 import {
-	accents, themes, lightTheme, darkTheme, createTheme, defineTheme, resolveTheme,
-	cssVars, themeVars, stylesheet, ThemeProvider, ThemeStyle, useTheme, cx,
-	variants, cva, defineVariants, styled, applyTheme, prefersColorScheme
+	accents, themes, lightTheme, darkTheme, createTheme, resolveTheme,
+	cssVars, stylesheet, ThemeProvider, ThemeStyle, useTheme, cx,
+	variants, styled, applyTheme, prefersColorScheme
 } from 'uele/themes';
 import { Button } from 'uele/ui';
 
 beforeEach(() => {
-	usePreactSignals();
+	preactSignals();
 	document.body.innerHTML = '';
 });
 
@@ -28,7 +28,6 @@ describe('createTheme and presets', () => {
 		expect(theme.colors.accent).toBe(accents.blue.accent);
 		expect(theme.radii.radiusMd).toBe('10px');
 		expect(theme.font.fontFamily).toContain('system-ui');
-		expect(defineTheme).toBe(createTheme);
 	});
 
 	it('builds dark, accented and customised themes', () => {
@@ -68,7 +67,6 @@ describe('cssVars and stylesheet', () => {
 		expect(vars['--uele-accent']).toBe(accents.blue.accent);
 		expect(vars['--uele-radius']).toBe('10px');
 		expect(vars['--uele-font-family']).toContain('system-ui');
-		expect(themeVars).toBe(cssVars);
 		expect(cssVars('light')['--uele-text']).toBe(lightTheme.colors.text);
 	});
 
@@ -102,8 +100,6 @@ describe('cx and variants', () => {
 		expect(button({ tone: 'brand', small: true })).toBe('btn btn-brand btn-sm btn-brand-sm');
 		const tone = signal('brand');
 		expect(button({ tone })).toBe('btn btn-brand btn-md');
-		expect(cva).toBe(variants);
-		expect(defineVariants).toBe(variants);
 	});
 
 	it('styled turns a tag + config into a component', () => {

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import * as main from '../src/index.js';
 import * as lite from '../lite/index.js';
-import { useProps } from '../props/index.js';
+import { appProps } from '../props/index.js';
 import { signal, effect } from 'ulive';
 
 for (const [label, target] of [['main', main], ['lite', lite]]) {
@@ -13,7 +13,7 @@ for (const [label, target] of [['main', main], ['lite', lite]]) {
 			original.forEach((value, key) => target.props.set(key, value));
 			document.body.replaceChildren();
 		});
-		const setup = () => { expect(useProps(target)).toBe(target); return target.h; };
+		const setup = () => { expect(appProps(target)).toBe(target); return target.h; };
 		test('show toggles hidden, text is safe and handles null', () => {
 			const h = setup(), visible = signal(true), text = signal('<b>hello</b>');
 			const el = h('p', { show: visible, text });

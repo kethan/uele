@@ -8,7 +8,7 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, beforeEach } from 'vitest';
-import { usePreactSignals } from 'uele/adapters/preact';
+import { preactSignals } from 'uele/signals/preact';
 import { signal, write, read } from 'uele/reactive';
 import { Await, Suspense, ErrorBoundary, Title } from 'uele/flow';
 import { createRouter, useRouter, navigate } from 'uele/router';
@@ -16,7 +16,7 @@ import { createRouter, useRouter, navigate } from 'uele/router';
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
 beforeEach(() => {
-	usePreactSignals();
+	preactSignals();
 	document.body.innerHTML = '';
 	document.title = 'before';
 	window.history.pushState(null, '', '/');
@@ -131,9 +131,9 @@ describe('useRouter same-route link clicks', () => {
 		const app = createRouter();
 		app.get('/', () => <h1>Home</h1>);
 		app.get('/about', () => <h1>About</h1>);
-		const [view, linkProps] = useRouter(app, '', <h1>404</h1>);
+		const { view, props: linkProps } = useRouter(app, '', <h1>404</h1>);
 		const node = (
-			<main {...linkProps()}>
+			<main {...linkProps}>
 				{view}
 				<a href="/about">About</a>
 			</main>

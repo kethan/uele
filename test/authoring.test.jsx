@@ -4,14 +4,14 @@
  * as documented - copy-paste code must not rot.
  *
  * The signal library below is a 25-line stand-in for any of the eleven real
- * ones: a cell, an effect runner with dependency tracking and a derived cell.
+ * ones: a cell, an effect runner with dependency tracking and a computed cell.
  * The plugin and the diff engine are the ones printed in the README.
  *
  * @vitest-environment jsdom
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { h, r, props, api, For } from 'uele';
-import { scoped, wire } from 'uele/adapters/util';
+import { scoped, install } from '../signals/internal.js';
 
 /* ----------------------------------------------------------------- a library */
 
@@ -49,7 +49,7 @@ const effect = (fn) => {
 	return () => deps.forEach((d) => d.subs.delete(run));
 };
 
-const derived = (fn) => {
+const computed = (fn) => {
 	const out = new Cell();
 	effect(() => out.set(fn()));
 	return out;
@@ -76,13 +76,13 @@ const tooltip = () => {
 
 const useMySignals = (target = api) => {
 	const s = scoped(effect);
-	return wire(target, {
+	return install(target, {
 		is: (v) => v instanceof Cell,
 		get: (v) => v.peek(),
 		effect: s.effect,
 		cleanup: s.cleanup,
 		signal: (v) => new Cell(v),
-		derived,
+		computed,
 		set: (cell, v) => cell.set(v),
 		batch: (fn) => fn(),
 		untracked
@@ -141,7 +141,7 @@ describe('the README authoring snippets', () => {
 
 	it('a signal adapter renders, derives and updates', () => {
 		const count = new Cell(0);
-		const double = derived(() => count.peek() * 2);
+		const double = computed(() => count.peek() * 2);
 
 		const node = h('div', () => `${count.peek()}/${double.peek()}`);
 		document.body.append(node);

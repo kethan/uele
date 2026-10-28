@@ -1,7 +1,7 @@
 import * as main from 'uele';
 
 /** Install optional DOM props on the main renderer, or pass the uele/lite module. */
-export const useProps = (target = main) => {
+export const appProps = (target = main) => {
 	const { props, r } = target;
 	const bind = (apply) => (node, value) => r(value, (v) => apply(node, v));
 	const attributes = (prefix) => (node, values) => {

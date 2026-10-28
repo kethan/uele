@@ -1,15 +1,15 @@
 /**
  * `domdiff` - takes an options object instead of a node (`{ before: end }`).
  *
- *     import { useDomdiff } from 'uele/diffs/domdiff';
- *     useDomdiff();
+ *     import { domdiff } from 'uele/diffs/domdiff';
+ *     domdiff();
  */
 import { api } from 'uele';
-import domdiff from 'domdiff';
+import engine from 'domdiff';
 
-export const useDomdiff = (target = api) => {
+export const domdiff = (target = api) => {
 	/* istanbul ignore next -- CJS interop: the .default side only exists under require() */
-	const diff = typeof domdiff === 'function' ? domdiff : domdiff.default;
+	const diff = typeof engine === 'function' ? engine : engine.default;
 	target.diff = (parent, oldNodes, newNodes, end) => diff(parent, oldNodes, newNodes, { before: end || null });
 	target.udom = undefined;
 	return target;

@@ -5,16 +5,16 @@ var uele = require('uele');
 /**
  * Write a UI primitive or utility ONCE and run it on any signal library.
  *
- *     import { signal, computed, effect, write } from 'uele/reactive';
+ *     import { signal, computed, effect, read, write } from 'uele/reactive';
  *
  *     export const useCounter = (start = 0) => {
  *       const count = signal(start);
- *       const doubled = computed(() => count.value + count.value); // or read(count) * 2
+ *       const doubled = computed(() => read(count) * 2);
  *       return { count, doubled, inc: () => write(count, read(count) + 1) };
  *     };
  *
  * Every function here delegates to the hooks the active preset installed
- * (`usePreactSignals()`, `useSolid()`, …), so the same code runs on ulive,
+ * (`preactSignals()`, `solid()`, …), so the same code runs on ulive,
  * preact, vue, usignal, alien-signals, s-js, mobx or solid-js - and, for the
  * parts that do not need an effect runner, on rxjs, nanostores and
  * `@tanstack/store` too.
@@ -31,14 +31,14 @@ const missing = (hook, why) => () => {
 
 /** create a cell: a signal, ref, atom, box, subject, store, accessor… */
 const signal = (value) => {
-	if (!uele.api.signal) return missing('signal', 'install a preset first: import { usePreactSignals } from "uele/adapters/preact"')();
+	if (!uele.api.signal) return missing('signal', 'install a preset first: import { preactSignals } from "uele/signals/preact"')();
 	return uele.api.signal(value);
 };
 
 /** derive a value from other cells; the thunk re-runs when they change */
 const computed = (fn) => {
-	if (!uele.api.derived) return missing('computed', 'the active library is subscribe-only - derive with its own API, or pick an effect-capable preset')();
-	return uele.api.derived(fn);
+	if (!uele.api.computed) return missing('computed', 'the active library is subscribe-only - derive with its own API, or pick an effect-capable preset')();
+	return uele.api.computed(fn);
 };
 
 /** run `fn` now and again whenever the cells it reads change; returns a disposer */
@@ -86,7 +86,7 @@ const isCell = (value) => !!uele.api.is?.(value);
 
 /** capabilities of the active preset (see the module docs) */
 const canEffect = () => typeof uele.api.effect === 'function';
-const canCompute = () => typeof uele.api.derived === 'function';
+const canCompute = () => typeof uele.api.computed === 'function';
 
 /** the object the presets configure - for advanced use */
 const active = () => uele.api;

@@ -8,21 +8,14 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { usePreactSignals } from 'uele/adapters/preact';
+import { preactSignals } from 'uele/signals/preact';
 import { read, write } from 'uele/reactive';
-import {
-	useMediaQuery, useOnline, useWindowSize, useKeyPress, useHotkey,
-	useIntersectionObserver, useResizeObserver, useInView, useWebSocket,
-	useEventSource, useBroadcastChannel, useFetch, useGeolocation,
-	useDocumentVisibility, useWindowFocus, useScrollPosition, useScrollLock,
-	useFocusTrap, useFullscreen, useBreakpoint, useColorScheme, useQueryParam,
-	useCookie, useIdle, useLongPress, useSwipe, useAnimationFrame, useTitle
-} from 'uele/hooks';
+import { useMediaQuery, useOnline, useWindowSize, useKeyPress, useHotkey, useIntersectionObserver, useResizeObserver, useInView, useWebSocket, useEventSource, useBroadcastChannel, useFetch, useGeolocation, useDocumentVisibility, useWindowFocus, useScrollPosition, useScrollLock, useFocusTrap, useFullscreen, useBreakpoint, useColorScheme, useQueryParam, useCookie, useIdle, useLongPress, useSwipe, useAnimationFrame, useTitle } from 'uele/hooks';
 
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
 beforeEach(() => {
-	usePreactSignals();
+	preactSignals();
 	document.body.innerHTML = '';
 	localStorage.clear();
 	window.history.pushState(null, '', '/');
@@ -66,30 +59,30 @@ class FakeRO {
 describe('media and environment hooks', () => {
 	it('useMediaQuery follows change events on a stubbed mql', () => {
 		const mql = stubMedia(true);
-		const matches = useMediaQuery('(min-width: 100px)');
+		const { matches: matches } = useMediaQuery('(min-width: 100px)');
 		expect(read(matches)).toBe(true);
 		mql.fire(false);
 		expect(read(matches)).toBe(false);
 	});
 
 	it('useOnline, useWindowSize, useDocumentVisibility, useWindowFocus follow their events', () => {
-		const online = useOnline();
+		const { online: online } = useOnline();
 		window.dispatchEvent(new Event('offline'));
 		expect(read(online)).toBe(false);
 		window.dispatchEvent(new Event('online'));
 		expect(read(online)).toBe(true);
 
-		const size = useWindowSize();
+		const { size: size } = useWindowSize();
 		window.dispatchEvent(new Event('resize'));
 		expect(read(size).width).toBe(window.innerWidth);
 
-		const vis = useDocumentVisibility();
+		const { visibility: vis } = useDocumentVisibility();
 		Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
 		document.dispatchEvent(new Event('visibilitychange'));
 		expect(read(vis)).toBe('hidden');
 		Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
 
-		const focused = useWindowFocus();
+		const { focused: focused } = useWindowFocus();
 		window.dispatchEvent(new Event('blur'));
 		expect(read(focused)).toBe(false);
 		window.dispatchEvent(new Event('focus'));
@@ -97,7 +90,7 @@ describe('media and environment hooks', () => {
 	});
 
 	it('useScrollPosition derives direction from successive scrolls', () => {
-		const pos = useScrollPosition();
+		const { position: pos } = useScrollPosition();
 		const setY = (y) => Object.defineProperty(window, 'scrollY', { value: y, configurable: true });
 		setY(100);
 		window.dispatchEvent(new Event('scroll'));
@@ -111,7 +104,7 @@ describe('media and environment hooks', () => {
 	});
 
 	it('useBreakpoint picks the largest satisfied breakpoint', () => {
-		const bp = useBreakpoint({ sm: 10, md: 2000 });
+		const { breakpoint: bp } = useBreakpoint({ sm: 10, md: 2000 });
 		expect(read(bp)).toBe('sm'); // jsdom innerWidth is 1024
 	});
 });
@@ -121,7 +114,7 @@ describe('media and environment hooks', () => {
 describe('keyboard hooks', () => {
 	it('useKeyPress tracks pressed state case-insensitively and stops after teardown', () => {
 		const fn = vi.fn();
-		const [pressed, off] = useKeyPress('Enter', fn);
+		const { pressed: pressed, dispose: off } = useKeyPress('Enter', fn);
 		window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ENTER' }));
 		expect(read(pressed)).toBe(true);
 		expect(fn).toHaveBeenCalled();
@@ -134,26 +127,26 @@ describe('keyboard hooks', () => {
 
 	it('useHotkey matches combos, modifiers and aliases, and rejects near-misses', () => {
 		const fn = vi.fn();
-		const off = useHotkey('ctrl+shift+p', fn);
+		const { dispose: off } = useHotkey('ctrl+shift+p', fn);
 		window.dispatchEvent(new KeyboardEvent('keydown', { key: 'P', ctrlKey: true, shiftKey: true }));
 		expect(fn).toHaveBeenCalledTimes(1);
 		window.dispatchEvent(new KeyboardEvent('keydown', { key: 'p', ctrlKey: true }));
 		expect(fn).toHaveBeenCalledTimes(1); // missing shift: no match
 
 		const esc = vi.fn();
-		const offEsc = useHotkey('esc', esc);
+		const { dispose: offEsc } = useHotkey('esc', esc);
 		window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
 		expect(esc).toHaveBeenCalledTimes(1);
 
 		const mod = vi.fn();
-		const offMod = useHotkey('mod+k', mod);
+		const { dispose: offMod } = useHotkey('mod+k', mod);
 		window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }));
 		expect(mod).toHaveBeenCalledTimes(1);
 		window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k' }));
 		expect(mod).toHaveBeenCalledTimes(1); // no modifier: no match
 
 		const space = vi.fn();
-		const offSpace = useHotkey('space', space);
+		const { dispose: offSpace } = useHotkey('space', space);
 		window.dispatchEvent(new KeyboardEvent('keydown', { key: ' ' }));
 		expect(space).toHaveBeenCalledTimes(1);
 		off();
@@ -199,11 +192,11 @@ describe('observer hooks with stubbed globals', () => {
 		vi.stubGlobal('IntersectionObserver', FakeIO);
 		const el = document.createElement('div');
 		for (const target of [el, () => el, { current: el }]) {
-			const visible = useInView(target);
+			const { visible: visible } = useInView(target);
 			FakeIO.last.cb([{ isIntersecting: true }]);
 			expect(read(visible)).toBe(true);
 		}
-		const idle = useInView();
+		const { visible: idle } = useInView();
 		expect(read(idle)).toBe(false);
 	});
 });
@@ -444,7 +437,7 @@ describe('browser state hooks', () => {
 
 	it('useIdle flips after inactivity and resets on activity', () => {
 		vi.useFakeTimers();
-		const idle = useIdle(1000);
+		const { idle: idle } = useIdle(1000);
 		vi.advanceTimersByTime(500);
 		window.dispatchEvent(new Event('mousemove'));
 		vi.advanceTimersByTime(999);
@@ -497,7 +490,7 @@ describe('useColorScheme', () => {
 describe('useQueryParam and useCookie', () => {
 	it('query param: initial from URL, set/delete round-trip, popstate syncs', () => {
 		window.history.pushState(null, '', '/?tab=init&x=1');
-		const [value, setValue] = useQueryParam('tab', 'fallback');
+		const { value: value, set: setValue } = useQueryParam('tab', 'fallback');
 		expect(read(value)).toBe('init');
 		setValue('next');
 		expect(new URL(window.location.href).searchParams.get('tab')).toBe('next');
@@ -514,7 +507,7 @@ describe('useQueryParam and useCookie', () => {
 
 	it('cookie: reads an existing value (with = inside), writes, deletes', () => {
 		document.cookie = 'session=abc==; path=/';
-		const [value, setValue] = useCookie('session', 'none');
+		const { value: value, set: setValue } = useCookie('session', 'none');
 		expect(read(value)).toBe('abc==');
 		setValue('xyz');
 		expect(read(value)).toBe('xyz');
@@ -523,8 +516,8 @@ describe('useQueryParam and useCookie', () => {
 		expect(document.cookie).toContain('session=xyz2');
 		setValue(null);
 		expect(read(value)).toBe('');
-		const fresh = useCookie('missing', 'defaulted');
-		expect(read(fresh[0])).toBe('defaulted');
+		const { value: fresh } = useCookie('missing', 'defaulted');
+		expect(read(fresh)).toBe('defaulted');
 	});
 });
 
@@ -534,7 +527,7 @@ describe('touch and press hooks', () => {
 	it('useLongPress fires after the delay and cancels on release (mouse and touch)', () => {
 		vi.useFakeTimers();
 		const fn = vi.fn();
-		const props = useLongPress(fn, 200);
+		const { props } = useLongPress(fn, 200);
 		props.onmousedown();
 		vi.advanceTimersByTime(199);
 		props.onmouseup();
@@ -616,7 +609,7 @@ describe('mop-up: getters, mismatched keys, mid-list Tab, stopped rAF', () => {
 
 	it('useKeyPress/useHotkey ignore non-matching keys', () => {
 		const fn = vi.fn();
-		const [pressed, off] = useKeyPress('k', fn);
+		const { pressed: pressed, dispose: off } = useKeyPress('k', fn);
 		window.dispatchEvent(new KeyboardEvent('keydown', { key: 'x' })); // not the wanted key
 		expect(read(pressed)).toBe(false);
 		expect(fn).not.toHaveBeenCalled();
@@ -629,7 +622,7 @@ describe('mop-up: getters, mismatched keys, mid-list Tab, stopped rAF', () => {
 
 	it('useHotkey fires on alt-modified combos', () => {
 		const fn = vi.fn();
-		const off = useHotkey('alt+k', fn);
+		const { dispose: off } = useHotkey('alt+k', fn);
 		window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k' })); // missing alt
 		expect(fn).not.toHaveBeenCalled();
 		window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', altKey: true }));
@@ -670,15 +663,15 @@ describe('mop-up: getters, mismatched keys, mid-list Tab, stopped rAF', () => {
 describe('mop-up: environment fallbacks', () => {
 	it('useOnline assumes online when navigator itself is absent', () => {
 		vi.stubGlobal('navigator', undefined);
-		expect(read(useOnline())).toBe(true);
+		expect(read(useOnline().online)).toBe(true);
 	});
 
 	it('visibility/focus hooks fall back when the document APIs are empty', () => {
 		Object.defineProperty(document, 'visibilityState', { value: '', configurable: true });
-		expect(read(useDocumentVisibility())).toBe('visible'); // '' falls back
+		expect(read(useDocumentVisibility().visibility)).toBe('visible'); // '' falls back
 		delete document.visibilityState;
 		Object.defineProperty(document, 'hasFocus', { value: undefined, configurable: true });
-		expect(read(useWindowFocus())).toBe(true); // missing hasFocus falls back to true
+		expect(read(useWindowFocus().focused)).toBe(true); // missing hasFocus falls back to true
 		delete document.hasFocus;
 	});
 });
@@ -731,7 +724,7 @@ describe('mop-up: fetch options, abort-less environments, scheme toggle, absent 
 		cs.toggle();
 		expect(read(cs.scheme)).toBe('dark');
 
-		const [missing] = useQueryParam('absent', 'fb'); // not in the URL
+		const { value: missing } = useQueryParam('absent', 'fb'); // not in the URL
 		expect(read(missing)).toBe('fb');
 	});
 });
@@ -739,7 +732,7 @@ describe('mop-up: fetch options, abort-less environments, scheme toggle, absent 
 describe('mop-up: throwing platform parsers', () => {
 	it('useQueryParam falls back to initial when URLSearchParams throws', () => {
 		vi.stubGlobal('URLSearchParams', class { constructor() { throw new Error('nope'); } });
-		const [value] = useQueryParam('tab', 'fallback');
+		const { value: value } = useQueryParam('tab', 'fallback');
 		expect(read(value)).toBe('fallback');
 	});
 
@@ -748,7 +741,7 @@ describe('mop-up: throwing platform parsers', () => {
 			configurable: true,
 			get() { throw new Error('blocked'); }
 		});
-		const [value] = useCookie('session', 'anon');
+		const { value: value } = useCookie('session', 'anon');
 		expect(read(value)).toBe('anon');
 		delete document.cookie;
 	});

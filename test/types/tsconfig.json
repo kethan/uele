@@ -1,24 +1,102 @@
 {
-	"compilerOptions": {
-		"strict": true,
-		"noEmit": true,
-		"target": "es2022",
-		"lib": ["es2022", "dom", "dom.iterable"],
-		"module": "esnext",
-		"moduleResolution": "bundler",
-		"jsx": "react-jsx",
-		"jsxImportSource": "uele",
-		"skipLibCheck": true,
-		"types": [],
-		"paths": {
-			"uele": ["../../src/index.d.ts"],
-			"uele/props": ["../../props/index.d.ts"],
-			"uele/lite": ["../../lite/index.d.ts"],
-			"uele/jsx-runtime": ["../../jsx-runtime/index.d.ts"],
-			"uele/jsx-dev-runtime": ["../../jsx-dev-runtime/index.d.ts"],
-			"uele/adapters/*": ["../../adapters/*.d.ts"],
-			"uele/diffs/*": ["../../diffs/*.d.ts"]
-		}
-	},
-	"include": ["app.tsx", "*.ts"]
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true,
+    "target": "es2022",
+    "lib": [
+      "es2022",
+      "dom",
+      "dom.iterable"
+    ],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "jsxImportSource": "uele",
+    "skipLibCheck": true,
+    "types": [],
+    "paths": {
+      "uele": [
+        "../../src/index.d.ts"
+      ],
+      "uele/props": [
+        "../../props/index.d.ts"
+      ],
+      "uele/lite": [
+        "../../lite/index.d.ts"
+      ],
+      "uele/jsx-runtime": [
+        "../../jsx-runtime/index.d.ts"
+      ],
+      "uele/jsx-dev-runtime": [
+        "../../jsx-dev-runtime/index.d.ts"
+      ],
+      "uele/setup": [
+        "../../setup/index.d.ts"
+      ],
+      "uele/diffs/*": [
+        "../../diffs/*.d.ts"
+      ],
+      "uele/signals/alien-signals": [
+        "../../signals/alien-signals.d.ts"
+      ],
+      "uele/signals/anod": [
+        "../../signals/anod.d.ts"
+      ],
+      "uele/signals/lite-signal": [
+        "../../signals/lite-signal.d.ts"
+      ],
+      "uele/signals/maverick": [
+        "../../signals/maverick.d.ts"
+      ],
+      "uele/signals/mobx": [
+        "../../signals/mobx.d.ts"
+      ],
+      "uele/signals/nanostores": [
+        "../../signals/nanostores.d.ts"
+      ],
+      "uele/signals/oby": [
+        "../../signals/oby.d.ts"
+      ],
+      "uele/signals/preact": [
+        "../../signals/preact.d.ts"
+      ],
+      "uele/signals/reactively": [
+        "../../signals/reactively.d.ts"
+      ],
+      "uele/signals/reflex": [
+        "../../signals/reflex.d.ts"
+      ],
+      "uele/signals/rescript-signals": [
+        "../../signals/rescript-signals.d.ts"
+      ],
+      "uele/signals/rxjs": [
+        "../../signals/rxjs.d.ts"
+      ],
+      "uele/signals/signals": [
+        "../../signals/signals.d.ts"
+      ],
+      "uele/signals/sjs": [
+        "../../signals/sjs.d.ts"
+      ],
+      "uele/signals/solid": [
+        "../../signals/solid.d.ts"
+      ],
+      "uele/signals/tanstack": [
+        "../../signals/tanstack.d.ts"
+      ],
+      "uele/signals/ulive": [
+        "../../signals/ulive.d.ts"
+      ],
+      "uele/signals/usignal": [
+        "../../signals/usignal.d.ts"
+      ],
+      "uele/signals/vue": [
+        "../../signals/vue.d.ts"
+      ]
+    }
+  },
+  "include": [
+    "app.tsx",
+    "*.ts"
+  ]
 }

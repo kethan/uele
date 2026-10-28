@@ -25,10 +25,10 @@ afterEach(() => {
 /* ---------------------------------------------------------------- presets */
 
 describe('signal adapter presets', () => {
-	test('adapters/ulive: useUlive()', async () => {
-		const { useUlive } = await import('../adapters/ulive.js');
+	test('signals/ulive: ulive()', async () => {
+		const { ulive } = await import('../signals/ulive.js');
 		const { signal } = await import('ulive');
-		useUlive();
+		ulive();
 		const s = signal('a');
 		const root = host();
 		root.append(...add(h('p', null, s)));
@@ -37,10 +37,10 @@ describe('signal adapter presets', () => {
 		expect(root.textContent).toBe('b');
 	});
 
-	test('adapters/preact: usePreactSignals()', async () => {
-		const { usePreactSignals } = await import('../adapters/preact.js');
+	test('signals/preact: preactSignals()', async () => {
+		const { preactSignals } = await import('../signals/preact.js');
 		const { signal } = await import('@preact/signals-core');
-		usePreactSignals();
+		preactSignals();
 		const s = signal('a');
 		const root = host();
 		root.append(...add(h('p', null, s)));
@@ -49,10 +49,10 @@ describe('signal adapter presets', () => {
 		expect(root.textContent).toBe('b');
 	});
 
-	test('adapters/vue: useVue()', async () => {
-		const { useVue } = await import('../adapters/vue.js');
+	test('signals/vue: vue()', async () => {
+		const { vue } = await import('../signals/vue.js');
 		const { ref } = await import('@vue/reactivity');
-		useVue();
+		vue();
 		const s = ref('a');
 		const root = host();
 		root.append(...add(h('p', null, s)));
@@ -61,10 +61,10 @@ describe('signal adapter presets', () => {
 		expect(root.textContent).toBe('b');
 	});
 
-	test('adapters/usignal: useUsignal()', async () => {
-		const { useUsignal } = await import('../adapters/usignal.js');
+	test('signals/usignal: usignal()', async () => {
+		const { usignal } = await import('../signals/usignal.js');
 		const { signal } = await import('usignal');
-		useUsignal();
+		usignal();
 		const s = signal('a');
 		const root = host();
 		root.append(...add(h('p', null, s)));
@@ -73,10 +73,10 @@ describe('signal adapter presets', () => {
 		expect(root.textContent).toBe('b');
 	});
 
-	test('adapters/alien-signals: useAlienSignals()', async () => {
-		const { useAlienSignals } = await import('../adapters/alien-signals.js');
+	test('signals/alien-signals: alienSignals()', async () => {
+		const { alienSignals } = await import('../signals/alien-signals.js');
 		const { signal } = await import('alien-signals');
-		useAlienSignals();
+		alienSignals();
 		const s = signal('a');
 		const root = host();
 		root.append(...add(h('p', null, s)));
@@ -85,10 +85,10 @@ describe('signal adapter presets', () => {
 		expect(root.textContent).toBe('b');
 	});
 
-	test('adapters/sjs: useSjs()', async () => {
-		const { useSjs } = await import('../adapters/sjs.js');
+	test('signals/sjs: sjs()', async () => {
+		const { sjs } = await import('../signals/sjs.js');
 		const S = (await import('s-js')).default;
-		useSjs();
+		sjs();
 		const s = S.data('a');
 		const root = host();
 		root.append(...add(h('p', null, s)));
@@ -97,11 +97,11 @@ describe('signal adapter presets', () => {
 		expect(root.textContent).toBe('b');
 	});
 
-	test('adapters/mobx: useMobx()', async () => {
-		const { useMobx } = await import('../adapters/mobx.js');
+	test('signals/mobx: mobx()', async () => {
+		const { mobx } = await import('../signals/mobx.js');
 		const m = await import('mobx');
 		m.configure({ enforceActions: 'never', useProxies: 'never' }); // app policy, not part of the preset
-		useMobx();
+		mobx();
 		const s = m.observable.box('a');
 		const root = host();
 		root.append(...add(h('p', null, s)));
@@ -110,10 +110,10 @@ describe('signal adapter presets', () => {
 		expect(root.textContent).toBe('b');
 	});
 
-	test('adapters/rxjs: useRxjs()', async () => {
-		const { useRxjs } = await import('../adapters/rxjs.js');
+	test('signals/rxjs: rxjs()', async () => {
+		const { rxjs } = await import('../signals/rxjs.js');
 		const { BehaviorSubject } = await import('rxjs');
-		useRxjs();
+		rxjs();
 		const s = new BehaviorSubject('a'); // replays the current value on subscribe
 		const root = host();
 		root.append(...add(h('p', null, s)));
@@ -122,10 +122,10 @@ describe('signal adapter presets', () => {
 		expect(root.textContent).toBe('b');
 	});
 
-	test('adapters/nanostores: useNanostores()', async () => {
-		const { useNanostores } = await import('../adapters/nanostores.js');
+	test('signals/nanostores: nanostores()', async () => {
+		const { nanostores } = await import('../signals/nanostores.js');
 		const { atom } = await import('nanostores');
-		useNanostores();
+		nanostores();
 		const s = atom('a');
 		const root = host();
 		root.append(...add(h('p', null, s)));
@@ -133,10 +133,10 @@ describe('signal adapter presets', () => {
 		expect(root.textContent).toBe('b');
 	});
 
-	test('adapters/tanstack: useTanstackStore()', async () => {
-		const { useTanstackStore } = await import('../adapters/tanstack.js');
+	test('signals/tanstack: tanstackStore()', async () => {
+		const { tanstackStore } = await import('../signals/tanstack.js');
 		const { Store } = await import('@tanstack/store');
-		useTanstackStore();
+		tanstackStore();
 		const s = new Store('a'); // subscribe() does not emit synchronously: first content arrives on change
 		const root = host();
 		root.append(...add(h('p', null, s)));
@@ -145,10 +145,10 @@ describe('signal adapter presets', () => {
 		expect(root.textContent).toBe('b');
 	});
 
-	test('adapters/solid: useSolid() (client build)', async () => {
-		const { useSolid } = await import('../adapters/solid.js');
+	test('signals/solid: solid() (client build)', async () => {
+		const { solid } = await import('../signals/solid.js');
 		const m = await import('solid-js/dist/solid.js');
-		useSolid();
+		solid();
 		const [read, write] = m.createSignal('a');
 		const root = host();
 		root.append(...add(h('p', null, read)));
@@ -157,10 +157,10 @@ describe('signal adapter presets', () => {
 		expect(root.textContent).toBe('b');
 	});
 
-	test('adapters/signals: useSignals()', async () => {
-		const { useSignals } = await import('../adapters/signals.js');
+	test('signals/signals: signals()', async () => {
+		const { signals } = await import('../signals/signals.js');
 		const { signal } = await import('@webreflection/signals');
-		useSignals();
+		signals();
 		const s = signal('a');
 		const root = host();
 		root.append(...add(h('p', null, s)));
@@ -170,20 +170,20 @@ describe('signal adapter presets', () => {
 	});
 
 	test('presets accept a target (lite) and clear stale hooks when switching', async () => {
-		const { usePreactSignals } = await import('../adapters/preact.js');
-		const { useRxjs } = await import('../adapters/rxjs.js');
+		const { preactSignals } = await import('../signals/preact.js');
+		const { rxjs } = await import('../signals/rxjs.js');
 		const { api: liteApi } = await import('../lite/index.js');
 		const { signal } = await import('@preact/signals-core');
 
 		// rxjs wires api.any and leaves effect empty
-		useRxjs();
+		rxjs();
 		expect(typeof api.any).toBe('function');
 		// switching to an effect-based preset must not keep the subscribe hook
-		usePreactSignals();
+		preactSignals();
 		expect(api.any).toBeUndefined();
 
 		// the same call configures the lite core when given its api
-		usePreactSignals(liteApi);
+		preactSignals(liteApi);
 		const s = signal('a');
 		const root = host();
 		root.append(...add(h('p', null, s)));
@@ -195,20 +195,20 @@ describe('signal adapter presets', () => {
 
 /* ------------------------------------------------------------ diff presets */
 
-const { useBuiltinDiff } = await import('../diffs/builtin.js');
-const { useSwapdom } = await import('../diffs/swapdom.js');
-const { useUdomdiff } = await import('../diffs/udomdiff.js');
-const { useDomdiff } = await import('../diffs/domdiff.js');
-const { useMorphdom } = await import('../diffs/morphdom.js');
-const { useNanomorph } = await import('../diffs/nanomorph.js');
-const { useFastArrayDiff } = await import('../diffs/fast-array-diff.js');
-const { useRebuild } = await import('../diffs/rebuild.js');
+const { builtinDiff } = await import('../diffs/builtin.js');
+const { swapdom } = await import('../diffs/swapdom.js');
+const { udomdiff } = await import('../diffs/udomdiff.js');
+const { domdiff } = await import('../diffs/domdiff.js');
+const { morphdom } = await import('../diffs/morphdom.js');
+const { nanomorph } = await import('../diffs/nanomorph.js');
+const { fastArrayDiff } = await import('../diffs/fast-array-diff.js');
+const { rebuild } = await import('../diffs/rebuild.js');
 
 describe('diff engine presets', () => {
 	let ulive;
 	beforeEach(async () => {
-		const mod = await import('../adapters/ulive.js');
-		mod.useUlive(); // the differ presets only touch api.diff/api.udom
+		const mod = await import('../signals/ulive.js');
+		mod.ulive(); // the differ presets only touch api.diff/api.udom
 		ulive = await import('ulive');
 	});
 
@@ -235,23 +235,23 @@ describe('diff engine presets', () => {
 		expect(ids()).toBe('');
 	};
 
-	test('diffs/builtin: useBuiltinDiff() (marker walk)', drive(useBuiltinDiff));
-	test('diffs/swapdom: useSwapdom()', drive(useSwapdom));
-	test('diffs/udomdiff: useUdomdiff()', drive(useUdomdiff));
-	test('diffs/domdiff: useDomdiff()', drive(useDomdiff));
-	test('diffs/morphdom: useMorphdom()', drive(useMorphdom));
-	test('diffs/nanomorph: useNanomorph()', drive(useNanomorph));
-	test('diffs/fast-array-diff: useFastArrayDiff()', drive(useFastArrayDiff));
-	test('diffs/rebuild: useRebuild()', drive(useRebuild));
+	test('diffs/builtin: builtinDiff() (marker walk)', drive(builtinDiff));
+	test('diffs/swapdom: swapdom()', drive(swapdom));
+	test('diffs/udomdiff: udomdiff()', drive(udomdiff));
+	test('diffs/domdiff: domdiff()', drive(domdiff));
+	test('diffs/morphdom: morphdom()', drive(morphdom));
+	test('diffs/nanomorph: nanomorph()', drive(nanomorph));
+	test('diffs/fast-array-diff: fastArrayDiff()', drive(fastArrayDiff));
+	test('diffs/rebuild: rebuild()', drive(rebuild));
 
 	test('switching diff presets swaps the engine and builtin resets it', async () => {
-		useSwapdom();
+		swapdom();
 		expect(typeof api.diff).toBe('function');
 		expect(api.udom).toBeUndefined();
-		useUdomdiff();
+		udomdiff();
 		expect(typeof api.diff).toBe('function');
 		expect(typeof api.udom).toBe('function');
-		useBuiltinDiff();
+		builtinDiff();
 		expect(api.diff).toBeUndefined();
 		expect(api.udom).toBeUndefined();
 	});

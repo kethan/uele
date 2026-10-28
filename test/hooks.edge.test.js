@@ -7,24 +7,17 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { usePreactSignals } from 'uele/adapters/preact';
+import { preactSignals } from 'uele/signals/preact';
 import { signal } from '@preact/signals-core';
 import { read, write } from 'uele/reactive';
-import { useRxjs } from 'uele/adapters/rxjs';
+import { rxjs } from 'uele/signals/rxjs';
 import { Subject } from 'rxjs';
-import {
-	useToggle, useDisclosure, useCounter, useControllable, usePrevious, useAsync,
-	useHistory, useList, useDebounceFn, useInterval, useTimeout, useCountdown,
-	useLocalStorage, useSessionStorage, useEventListener, useClickOutside,
-	usePagination, useOTP, useForm, useStopwatch, useNow, useThrottleFn,
-	useLatest, useIsMounted, useId, useHover, useFocus, useResizeObserver,
-	useThrottle, useTitle, paginationRange
-} from 'uele/hooks';
+import { useToggle, useDisclosure, useCounter, useControllable, usePrevious, useAsync, useHistory, useList, useDebounceFn, useInterval, useTimeout, useCountdown, useLocalStorage, useSessionStorage, useEventListener, useClickOutside, usePagination, useOTP, useForm, useStopwatch, useNow, useThrottleFn, useLatest, useId, useHover, useFocus, useResizeObserver, useThrottle, useTitle, paginationRange } from 'uele/hooks';
 
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
 beforeEach(() => {
-	usePreactSignals();
+	preactSignals();
 	document.body.innerHTML = '';
 	localStorage.clear();
 	sessionStorage.clear();
@@ -40,14 +33,14 @@ afterEach(() => {
 describe('state hook edges', () => {
 	it('useControllable with a plain (non-cell) controlled value', () => {
 		const seen = [];
-		const [cell, setValue] = useControllable('fixed', 'init', (v) => seen.push(v));
+		const { value: cell, set: setValue } = useControllable('fixed', 'init', (v) => seen.push(v));
 		expect(read(cell)).toBe('fixed'); // plain value lands in the owned cell
 		setValue((current) => {
 			expect(current).toBe('fixed'); // updater receives the plain value
 			return 'next';
 		});
 		expect(seen).toEqual(['next']);
-		const [, setNull] = useControllable(null, 'seed');
+		const { set: setNull } = useControllable(null, 'seed');
 		setNull('grown'); // null means uncontrolled
 	});
 
@@ -64,7 +57,7 @@ describe('state hook edges', () => {
 	});
 
 	it('useToggle accepts an explicit boolean; useDisclosure wraps it', () => {
-		const [on, toggle] = useToggle(false);
+		const { value: on, toggle: toggle } = useToggle(false);
 		toggle(true);
 		expect(read(on)).toBe(true);
 		toggle(false);
@@ -81,12 +74,12 @@ describe('state hook edges', () => {
 	it('useId is prefixed and unique; useHover/useFocus bind props flip their cells', () => {
 		expect(useId('otp')).toMatch(/^otp-\d+$/);
 		expect(useId()).not.toBe(useId());
-		const [hovered, hoverProps] = useHover();
+		const { hovered: hovered, props: hoverProps } = useHover();
 		hoverProps.onmouseenter();
 		expect(read(hovered)).toBe(true);
 		hoverProps.onmouseleave();
 		expect(read(hovered)).toBe(false);
-		const [focused, focusProps] = useFocus();
+		const { focused: focused, props: focusProps } = useFocus();
 		focusProps.onfocus();
 		expect(read(focused)).toBe(true);
 		focusProps.onblur();
@@ -95,7 +88,7 @@ describe('state hook edges', () => {
 
 	it('usePrevious lags one commit and stops after disposal', () => {
 		const source = signal('a');
-		const [previous, off] = usePrevious(source);
+		const { previous: previous, dispose: off } = usePrevious(source);
 		write(source, 'b');
 		expect(read(previous)).toBe('a');
 		write(source, 'c');
@@ -105,15 +98,11 @@ describe('state hook edges', () => {
 		expect(read(previous)).toBe('b');
 	});
 
-	it('useLatest mirrors the source; useIsMounted flips on unmount', () => {
+	it('useLatest mirrors the source', () => {
 		const source = signal(1);
-		const latest = useLatest(source);
+		const { latest: latest } = useLatest(source);
 		write(source, 2);
 		expect(read(latest)).toBe(2);
-		const [mounted, isMounted, unmount] = useIsMounted();
-		expect(isMounted()).toBe(true);
-		unmount();
-		expect(read(mounted)).toBe(false);
 	});
 });
 
@@ -276,9 +265,9 @@ describe('timer hook guards', () => {
 	});
 
 	it('useNow with a null interval never ticks, and its stop is safe', () => {
-		const [now, stop] = useNow(null);
+		const { now: now, dispose: stop } = useNow(null);
 		expect(read(now)).toBeInstanceOf(Date);
-		expect(stop()).toBe(false);
+		expect(stop()).toBeUndefined();
 	});
 });
 
@@ -287,12 +276,12 @@ describe('timer hook guards', () => {
 describe('storage hook edges', () => {
 	it('corrupt stored JSON falls back to the initial value', () => {
 		localStorage.setItem('broken', '{not json');
-		const [value] = useLocalStorage('broken', 'fallback');
+		const { value: value } = useLocalStorage('broken', 'fallback');
 		expect(read(value)).toBe('fallback');
 	});
 
 	it('setValue(null) removes the key; storage events sync across tabs', () => {
-		const [value, setValue, remove] = useLocalStorage('k', 'init');
+		const { value: value, set: setValue, remove: remove } = useLocalStorage('k', 'init');
 		setValue('saved');
 		expect(localStorage.getItem('k')).toBe('"saved"');
 		window.dispatchEvent(new StorageEvent('storage', { key: 'k', newValue: '"from-other-tab"' }));
@@ -307,7 +296,7 @@ describe('storage hook edges', () => {
 	});
 
 	it('sessionStorage round-trips through the same hook shape', () => {
-		const [value, setValue] = useSessionStorage('s', 1);
+		const { value: value, set: setValue } = useSessionStorage('s', 1);
 		setValue((n) => n + 1);
 		expect(read(value)).toBe(2);
 		expect(sessionStorage.getItem('s')).toBe('2');
@@ -321,8 +310,8 @@ describe('event target shapes', () => {
 		const el = document.createElement('button');
 		document.body.append(el);
 		const seen = [];
-		const offGetter = useEventListener(() => el, 'click', () => seen.push('getter'));
-		const offRef = useEventListener({ current: el }, 'click', () => seen.push('ref'));
+		const { dispose: offGetter } = useEventListener(() => el, 'click', () => seen.push('getter'));
+		const { dispose: offRef } = useEventListener({ current: el }, 'click', () => seen.push('ref'));
 		el.click();
 		expect(seen).toEqual(['getter', 'ref']);
 		offGetter();
@@ -330,10 +319,10 @@ describe('event target shapes', () => {
 		el.click();
 		expect(seen).toEqual(['getter', 'ref']);
 
-		const offBad = useEventListener({ noListener: true }, 'click', () => seen.push('bad'));
+		const { dispose: offBad } = useEventListener({ noListener: true }, 'click', () => seen.push('bad'));
 		expect(() => offBad()).not.toThrow();
 
-		const offWindow = useEventListener(null, 'resize', () => seen.push('window'));
+		const { dispose: offWindow } = useEventListener(null, 'resize', () => seen.push('window'));
 		window.dispatchEvent(new Event('resize'));
 		expect(seen).toContain('window');
 		offWindow();
@@ -345,7 +334,7 @@ describe('event target shapes', () => {
 		box.append(inner);
 		document.body.append(box);
 		const fn = vi.fn();
-		const off = useClickOutside(box, fn);
+		const { dispose: off } = useClickOutside(box, fn);
 		inner.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
 		expect(fn).not.toHaveBeenCalled();
 		document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
@@ -359,8 +348,8 @@ describe('event target shapes', () => {
 /* ---------------------------------------------------- pagination and OTP */
 
 describe('usePagination on a subscribe-only preset (thunk derivations)', () => {
-	it('derived values are callable thunks and goTo clamps and floors', () => {
-		useRxjs();
+	it('computed values are callable thunks and goTo clamps and floors', () => {
+		rxjs();
 		const p = usePagination({ total: 95, pageSize: 10 });
 		expect(p.totalPages()).toBe(10);
 		expect(p.canNext()).toBe(true);
@@ -511,7 +500,7 @@ describe('mop-up: throttle value cleanup, triple-call window, form tails', () =>
 		vi.useFakeTimers();
 		try {
 			const source = signal(0);
-			const [throttled, off] = useThrottle(source, 100);
+			const { value: throttled, dispose: off } = useThrottle(source, 100);
 			write(source, 1); // inside the window: trailing timer scheduled
 			off(); // cleanup: timer && clearTimeout(timer)
 			vi.advanceTimersByTime(500);

@@ -13,12 +13,12 @@
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import axe from 'axe-core';
-import { usePreactSignals } from 'uele/adapters/preact';
+import { preactSignals } from 'uele/signals/preact';
 import { signal } from '@preact/signals-core';
 import { Accordion, Button, Checkbox, Dialog, Input, Label, Slider, Switch, Tabs, Textarea } from 'uele/ui';
 
 beforeEach(() => {
-	usePreactSignals();
+	preactSignals();
 	document.body.innerHTML = '';
 	document.body.style.overflow = '';
 });

@@ -3,8 +3,8 @@
  * for uele's bounded live regions. Inspired by the algorithm family compared at
  * https://github.com/luwes/js-diff-benchmark (not a wrapper for the framework).
  *
- *     import { useSnabbdom } from 'uele/diffs/snabbdom';
- *     useSnabbdom();
+ *     import { snabbdom } from 'uele/diffs/snabbdom';
+ *     snabbdom();
  */
 import { api } from 'uele';
 
@@ -39,7 +39,7 @@ const reconcile = (parent, oldNodes, newNodes, end = null) => {
 	}
 };
 
-export const useSnabbdom = (target = api) => {
+export const snabbdom = (target = api) => {
 	target.diff = reconcile;
 	target.udom = undefined;
 	return target;

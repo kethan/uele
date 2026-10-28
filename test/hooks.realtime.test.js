@@ -6,20 +6,13 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { usePreactSignals } from 'uele/adapters/preact';
+import { preactSignals } from 'uele/signals/preact';
 import { signal } from '@preact/signals-core';
 import { read, write } from 'uele/reactive';
-import {
-	useNow, useClock, useStopwatch, useThrottle, useThrottleFn, useWebSocket,
-	useEventSource, useBroadcastChannel, useFetch, useGeolocation,
-	useDocumentVisibility, useWindowFocus, useScrollPosition, useScrollLock,
-	useFocusTrap, useFullscreen, useBreakpoint, useColorScheme, useDarkMode,
-	useQueryParam, useCookie, useIdle, useLongPress, useSwipe,
-	useAnimationFrame, useInView, useTitle, useLatest, useIsMounted, useElementSize
-} from 'uele/hooks';
+import { useNow, useStopwatch, useThrottle, useThrottleFn, useWebSocket, useEventSource, useBroadcastChannel, useFetch, useGeolocation, useDocumentVisibility, useWindowFocus, useScrollPosition, useScrollLock, useFocusTrap, useFullscreen, useBreakpoint, useColorScheme, useQueryParam, useCookie, useIdle, useLongPress, useSwipe, useAnimationFrame, useInView, useTitle, useLatest, useResizeObserver } from 'uele/hooks';
 
 beforeEach(() => {
-	usePreactSignals();
+	preactSignals();
 	document.body.innerHTML = '';
 	document.body.style.overflow = '';
 	localStorage.clear();
@@ -32,7 +25,7 @@ afterEach(() => {
 describe('clocks and throttle', () => {
 	it('useNow ticks and stops', () => {
 		vi.useFakeTimers();
-		const [now, stop] = useNow(1000);
+		const { now: now, dispose: stop } = useNow(1000);
 		const first = read(now).getTime();
 		vi.advanceTimersByTime(3000);
 		expect(read(now).getTime()).toBeGreaterThan(first);
@@ -40,7 +33,7 @@ describe('clocks and throttle', () => {
 		const stopped = read(now).getTime();
 		vi.advanceTimersByTime(3000);
 		expect(read(now).getTime()).toBe(stopped);
-		expect(useClock).toBe(useNow);
+		expect(stop()).toBeUndefined();
 	});
 
 	it('useStopwatch runs, laps and resets (fake Date)', () => {
@@ -61,7 +54,7 @@ describe('clocks and throttle', () => {
 	it('useThrottle leads, trails and disposes', () => {
 		vi.useFakeTimers();
 		const source = signal(0);
-		const [throttled, dispose] = useThrottle(source, 100);
+		const { value: throttled, dispose: dispose } = useThrottle(source, 100);
 		source.value = 1;
 		source.value = 2;
 		source.value = 3;
@@ -180,17 +173,17 @@ describe('browser API hooks', () => {
 	});
 
 	it('visibility, window focus and scroll position follow events', () => {
-		const visibility = useDocumentVisibility();
+		const { visibility: visibility } = useDocumentVisibility();
 		document.dispatchEvent(new Event('visibilitychange'));
 		expect(read(visibility)).toBe(document.visibilityState);
 
-		const focused = useWindowFocus();
+		const { focused: focused } = useWindowFocus();
 		window.dispatchEvent(new Event('blur'));
 		expect(read(focused)).toBe(false);
 		window.dispatchEvent(new Event('focus'));
 		expect(read(focused)).toBe(true);
 
-		const pos = useScrollPosition();
+		const { position: pos } = useScrollPosition();
 		window.dispatchEvent(new Event('scroll'));
 		expect(read(pos).y).toBe(window.scrollY || 0);
 	});
@@ -229,7 +222,7 @@ describe('browser API hooks', () => {
 	});
 
 	it('useBreakpoint returns a known name', () => {
-		const bp = useBreakpoint({ sm: 640, md: 768, lg: 1024 });
+		const { breakpoint: bp } = useBreakpoint({ sm: 640, md: 768, lg: 1024 });
 		expect(['base', 'sm', 'md', 'lg']).toContain(read(bp));
 		window.dispatchEvent(new Event('resize'));
 		expect(['base', 'sm', 'md', 'lg']).toContain(read(bp));
@@ -243,12 +236,12 @@ describe('browser API hooks', () => {
 		cs.toggle();
 		expect(read(cs.scheme)).toBe('light');
 		expect(localStorage.getItem('uele-scheme')).toBe('light');
-		expect(useDarkMode).toBe(useColorScheme);
+		cs.dispose(); cs.dispose();
 	});
 
 	it('useQueryParam syncs the URL', () => {
 		window.history.pushState(null, '', '/page?tab=a');
-		const [tab, setTab] = useQueryParam('tab', 'a');
+		const { value: tab, set: setTab } = useQueryParam('tab', 'a');
 		expect(read(tab)).toBe('a');
 		setTab('b');
 		expect(new URLSearchParams(window.location.search).get('tab')).toBe('b');
@@ -258,10 +251,10 @@ describe('browser API hooks', () => {
 	});
 
 	it('useCookie round-trips through document.cookie', () => {
-		const [session, setSession] = useCookie('uele-session', '');
+		const { value: session, set: setSession } = useCookie('uele-session', '');
 		setSession('abc123');
 		expect(read(session)).toBe('abc123');
-		const [again] = useCookie('uele-session', '');
+		const { value: again } = useCookie('uele-session', '');
 		expect(read(again)).toBe('abc123');
 		setSession(null);
 		expect(read(session)).toBe('');
@@ -269,7 +262,7 @@ describe('browser API hooks', () => {
 
 	it('useIdle flips after inactivity and resets on activity', () => {
 		vi.useFakeTimers();
-		const idle = useIdle(1000);
+		const { idle: idle } = useIdle(1000);
 		expect(read(idle)).toBe(false);
 		vi.advanceTimersByTime(1000);
 		expect(read(idle)).toBe(true);
@@ -280,7 +273,7 @@ describe('browser API hooks', () => {
 	it('useLongPress fires after the hold, cancels on release', () => {
 		vi.useFakeTimers();
 		const handler = vi.fn();
-		const props = useLongPress(handler, 300);
+		const { props } = useLongPress(handler, 300);
 		props.onmousedown();
 		vi.advanceTimersByTime(300);
 		expect(handler).toHaveBeenCalledTimes(1);
@@ -312,7 +305,7 @@ describe('browser API hooks', () => {
 		expect(read(raf.running)).toBe(false);
 	});
 
-	it('useInView, useTitle, useLatest, useIsMounted, useElementSize', () => {
+	it('useInView, useTitle, useLatest, useResizeObserver', () => {
 		let callback;
 		globalThis.IntersectionObserver = class {
 			constructor(cb) { callback = cb; }
@@ -321,7 +314,7 @@ describe('browser API hooks', () => {
 		};
 		const el = document.createElement('div');
 		document.body.append(el);
-		const inView = useInView(el);
+		const { visible: inView } = useInView(el);
 		callback([{ isIntersecting: true }]);
 		expect(read(inView)).toBe(true);
 		delete globalThis.IntersectionObserver;
@@ -329,18 +322,14 @@ describe('browser API hooks', () => {
 		document.title = 'before';
 		const title = useTitle('after');
 		expect(document.title).toBe('after');
-		title.restore();
+		title.dispose();
 		expect(document.title).toBe('before');
 
 		const source = signal(1);
-		const latest = useLatest(source);
+		const { latest: latest } = useLatest(source);
 		source.value = 2;
 		expect(read(latest)).toBe(2);
 
-		const [mounted, isMounted, unmount] = useIsMounted();
-		expect(isMounted()).toBe(true);
-		unmount();
-		expect(read(mounted)).toBe(false);
-		expect(useElementSize).toBeDefined();
+		expect(useResizeObserver).toBeDefined();
 	});
 });

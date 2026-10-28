@@ -77,7 +77,7 @@ const ulive = async () => {
 			cell.value = v;
 		},
 		read: (cell) => cell.value,
-		derived: (cell, fn) => m.computed(() => fn(cell.value)),
+		computed: (cell, fn) => m.computed(() => fn(cell.value)),
 		batch: m.batch,
 		untracked: m.untracked,
 		raw: m
@@ -98,7 +98,7 @@ const preact = async () => {
 			cell.value = v;
 		},
 		read: (cell) => cell.value,
-		derived: (cell, fn) => m.computed(() => fn(cell.value)),
+		computed: (cell, fn) => m.computed(() => fn(cell.value)),
 		batch: m.batch,
 		untracked: m.untracked,
 		raw: m
@@ -122,7 +122,7 @@ const vue = async () => {
 			cell.value = v;
 		},
 		read: (cell) => cell.value,
-		derived: (cell, fn) => m.computed(() => fn(cell.value)),
+		computed: (cell, fn) => m.computed(() => fn(cell.value)),
 		scope: () => m.effectScope(),
 		stop: m.stop,
 		onScopeDispose: m.onScopeDispose,
@@ -146,7 +146,7 @@ const usignal = async () => {
 			cell.value = v;
 		},
 		read: (cell) => cell.value,
-		derived: (cell, fn) => m.computed(() => fn(cell.value)),
+		computed: (cell, fn) => m.computed(() => fn(cell.value)),
 		batch: m.batch,
 		raw: m
 	};
@@ -163,7 +163,7 @@ const alien = async () => {
 		signal: (v) => m.signal(v),
 		set: (cell, v) => cell(v),
 		read: (cell) => cell(),
-		derived: (cell, fn) => m.computed(() => fn(cell())),
+		computed: (cell, fn) => m.computed(() => fn(cell())),
 		batch: (fn) => {
 			m.startBatch();
 			try {
@@ -200,7 +200,7 @@ const sjs = async () => {
 		set: (cell, v) => cell(v),
 		read: (cell) => cell(),
 		// created inside a root so s-js owns (and can dispose) the computation
-		derived: (cell, fn) => {
+		computed: (cell, fn) => {
 			let node;
 			S.root(() => {
 				node = S(() => fn(cell()));
@@ -229,7 +229,7 @@ const mobx = async () => {
 		signal: (v) => m.observable.box(v),
 		set: (cell, v) => cell.set(v),
 		read: (cell) => cell.get(),
-		derived: (cell, fn) => m.computed(() => fn(cell.get())),
+		computed: (cell, fn) => m.computed(() => fn(cell.get())),
 		reaction: m.reaction,
 		autorun: m.autorun,
 		raw: m
@@ -260,7 +260,7 @@ const rxjs = async () => {
 		signal: (v) => new m.BehaviorSubject(v),
 		set: (cell, v) => cell.next(v),
 		read: (cell) => cell.value,
-		derived: (cell, fn) => cell.pipe(m.map(fn)),
+		computed: (cell, fn) => cell.pipe(m.map(fn)),
 		raw: m
 	};
 };
@@ -284,7 +284,7 @@ const nanostores = async () => {
 		signal: (v) => m.atom(v),
 		set: (cell, v) => cell.set(v),
 		read: (cell) => cell.get(),
-		derived: (cell, fn) => m.computed(cell, fn),
+		computed: (cell, fn) => m.computed(cell, fn),
 		batch: m.batch,
 		batched: m.batched,
 		onMount: m.onMount,
@@ -354,7 +354,7 @@ const solid = async () => {
 			cell.write(v);
 		},
 		read: (cell) => cell(),
-		derived: (cell, fn) => m.createMemo(() => fn(cell())),
+		computed: (cell, fn) => m.createMemo(() => fn(cell())),
 		batch: m.batch,
 		untracked: m.untracked,
 		raw: m
@@ -365,21 +365,21 @@ export const ADAPTERS = [ulive, preact, vue, usignal, alien, sjs, mobx, rxjs, na
 
 /** Exercise shipped presets themselves, rather than test-only lookalike hooks. */
 const presetAdapter = (slug, hook) => async () => {
-	const mod = await import(`../../adapters/${slug}.js`);
+	const mod = await import(`../../signals/${slug}.js`);
 	const target = mod[hook]({});
 	return {
 		name: slug, reactiveThunks: true, overrides: target,
 		signal: target.signal, set: target.set, read: target.get,
-		derived: (cell, fn) => target.derived(() => fn(target.get(cell))),
+		computed: (cell, fn) => target.computed(() => fn(target.get(cell))),
 		batch: target.batch, untracked: target.untracked
 	};
 };
 ADAPTERS.push(
-	presetAdapter('reflex', 'useReflex'),
-	presetAdapter('reactively', 'useReactively'),
-	presetAdapter('anod', 'useAnod'),
-	presetAdapter('lite-signal', 'useLiteSignal'),
-	presetAdapter('rescript-signals', 'useRescriptSignals'),
-	presetAdapter('maverick', 'useMaverick'),
-	presetAdapter('oby', 'useOby')
+	presetAdapter('reflex', 'reflex'),
+	presetAdapter('reactively', 'reactively'),
+	presetAdapter('anod', 'anod'),
+	presetAdapter('lite-signal', 'liteSignal'),
+	presetAdapter('rescript-signals', 'rescriptSignals'),
+	presetAdapter('maverick', 'maverick'),
+	presetAdapter('oby', 'oby')
 );

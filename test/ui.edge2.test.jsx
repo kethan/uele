@@ -6,7 +6,7 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { usePreactSignals } from 'uele/adapters/preact';
+import { preactSignals } from 'uele/signals/preact';
 import { signal } from '@preact/signals-core';
 import { h } from 'uele';
 import {
@@ -18,7 +18,7 @@ import {
 } from 'uele/ui';
 
 beforeEach(() => {
-	usePreactSignals();
+	preactSignals();
 	document.body.innerHTML = '';
 });
 afterEach(() => { document.body.innerHTML = ''; });

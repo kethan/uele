@@ -1,14 +1,14 @@
 /**
  * `swapdom` - a keyed differ written for exactly uele's `api.diff` signature.
  *
- *     import { useSwapdom } from 'uele/diffs/swapdom';
- *     useSwapdom();
+ *     import { swapdom } from 'uele/diffs/swapdom';
+ *     swapdom();
  */
 import { api } from 'uele';
-import swapdom from 'swapdom';
+import engine from 'swapdom';
 
-export const useSwapdom = (target = api) => {
-	target.diff = swapdom;
+export const swapdom = (target = api) => {
+	target.diff = engine;
 	target.udom = undefined;
 	return target;
 };

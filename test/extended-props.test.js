@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import * as main from '../src/index.js';
 import * as lite from '../lite/index.js';
-import { useProps, autoScroll } from '../props/index.js';
+import { appProps, autoScroll } from '../props/index.js';
 import { signal, effect } from 'ulive';
 
 for (const [label, target] of [['main', main], ['lite', lite]]) {
@@ -13,7 +13,7 @@ for (const [label, target] of [['main', main], ['lite', lite]]) {
 		});
 		const setup = () => {
 			Object.assign(target.api, { effect, is: (value) => value?.peek, get: (value) => value.value });
-			useProps(target); return target.h;
+			appProps(target); return target.h;
 		};
 		test('single select updates source and DOM, including empty and missing values', () => {
 			const h = setup(), value = signal('b');

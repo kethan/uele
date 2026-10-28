@@ -7,8 +7,8 @@
  * `uele/ui`. Install ANY preset before mounting and it runs unchanged
  * (`test/pages.test.jsx` drives it on eight of them):
  *
- *     import { usePreactSignals } from 'uele/adapters/preact';
- *     usePreactSignals();
+ *     import { preactSignals } from 'uele/signals/preact';
+ *     preactSignals();
  *     import { mountLogin } from './login.jsx';
  *     mountLogin(document.body);
  *

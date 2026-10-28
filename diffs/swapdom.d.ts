@@ -1,1 +1,1 @@
-export declare function useSwapdom<T extends object>(target?: T): T;
+export declare function swapdom<T extends object>(target?: T): T;

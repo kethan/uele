@@ -101,8 +101,6 @@ export const createTheme = (options = {}) => {
 	);
 };
 
-/** alias with the naming other theme systems use */
-export const defineTheme = createTheme;
 
 /** Ready-made themes, Radix-style: two appearances plus a few personalities. */
 export const themes = {
@@ -189,8 +187,6 @@ export const prefersColorScheme = () => {
 		return 'light';
 	}
 };
-/** alias */
-export const themeVars = cssVars;
 
 /** theme (or preset name / cell / thunk) -> the concrete theme object */
 export const resolveTheme = (input, fallback = themes.light) => {
@@ -296,10 +292,6 @@ export const variants = (config = {}) => {
 		return cx(...classes);
 	};
 };
-/** alias (the name `class-variance-authority` popularised) */
-export const cva = variants;
-/** alias */
-export const defineVariants = variants;
 
 /**
  * Turn a tag + variant config into a uele component:

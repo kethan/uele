@@ -16,18 +16,18 @@ const app = TodoApp();              // or build one and place it yourself
 
 | file | signal library | preset |
 | --- | --- | --- |
-| [`todos/ulive.jsx`](todos/ulive.jsx) | `ulive` | `useUlive()` |
-| [`todos/preact.jsx`](todos/preact.jsx) | `@preact/signals-core` | `usePreactSignals()` |
-| [`todos/vue.jsx`](todos/vue.jsx) | `@vue/reactivity` | `useVue()` |
-| [`todos/usignal.jsx`](todos/usignal.jsx) | `usignal` | `useUsignal()` |
-| [`todos/alien-signals.jsx`](todos/alien-signals.jsx) | `alien-signals` | `useAlienSignals()` |
-| [`todos/s-js.jsx`](todos/s-js.jsx) | `s-js` | `useSjs()` |
-| [`todos/mobx.jsx`](todos/mobx.jsx) | `mobx` | `useMobx()` |
-| [`todos/solid.jsx`](todos/solid.jsx) | `solid-js` | `useSolid()` |
-| [`todos/signals.jsx`](todos/signals.jsx) | `@webreflection/signals` | `useSignals()` |
-| [`todos/rxjs.jsx`](todos/rxjs.jsx) | `rxjs` | `useRxjs()` |
-| [`todos/nanostores.jsx`](todos/nanostores.jsx) | `nanostores` | `useNanostores()` |
-| [`todos/tanstack.jsx`](todos/tanstack.jsx) | `@tanstack/store` | `useTanstackStore()` |
+| [`todos/ulive.jsx`](todos/ulive.jsx) | `ulive` | `ulive()` |
+| [`todos/preact.jsx`](todos/preact.jsx) | `@preact/signals-core` | `preactSignals()` |
+| [`todos/vue.jsx`](todos/vue.jsx) | `@vue/reactivity` | `vue()` |
+| [`todos/usignal.jsx`](todos/usignal.jsx) | `usignal` | `usignal()` |
+| [`todos/alien-signals.jsx`](todos/alien-signals.jsx) | `alien-signals` | `alienSignals()` |
+| [`todos/s-js.jsx`](todos/s-js.jsx) | `s-js` | `sjs()` |
+| [`todos/mobx.jsx`](todos/mobx.jsx) | `mobx` | `mobx()` |
+| [`todos/solid.jsx`](todos/solid.jsx) | `solid-js` | `solid()` |
+| [`todos/signals.jsx`](todos/signals.jsx) | `@webreflection/signals` | `signals()` |
+| [`todos/rxjs.jsx`](todos/rxjs.jsx) | `rxjs` | `rxjs()` |
+| [`todos/nanostores.jsx`](todos/nanostores.jsx) | `nanostores` | `nanostores()` |
+| [`todos/tanstack.jsx`](todos/tanstack.jsx) | `@tanstack/store` | `tanstackStore()` |
 
 Read any two side by side: only the imports, the cell creation and the actions differ — the JSX is
 identical, because `uele/ui`, `For` and the renderer only ever talk to the `api` hooks the preset
@@ -41,10 +41,10 @@ against the unified layer — imports are only `uele/reactive`, `uele/hooks`, `u
 same page code runs unchanged:
 
 ```js
-import { useUlive } from 'uele/reactive';
-// any preset works: useVue(), useSolid(), useMobx(), ... (see the todos table above)
+import { ulive } from 'uele/reactive';
+// any preset works: vue(), solid(), mobx(), ... (see the todos table above)
 
-useUlive(); // install BEFORE importing/mounting the page
+ulive(); // install BEFORE importing/mounting the page
 const { mountDashboard } = await import('./pages/dashboard.jsx');
 mountDashboard(document.querySelector('#app'));
 ```

@@ -6,17 +6,17 @@ list. Benchmark rankings change; these integrations do not claim a performance o
 
 | Requested library | uele preset | Status |
 | --- | --- | --- |
-| alien-signals | `uele/adapters/alien-signals` → `useAlienSignals()` | Existing |
-| reflex | `uele/adapters/reflex` → `useReflex()` | Added (`@volynets/reflex`) |
-| @reactively | `uele/adapters/reactively` → `useReactively()` | Added (`@reactively/core`) |
-| @vue/reactivity 3.6 RC | `uele/adapters/vue` → `useVue()` | Existing adapter; tested with RC |
-| anod | `uele/adapters/anod` → `useAnod()` | Added |
-| Preact Signals | `uele/adapters/preact` → `usePreactSignals()` | Existing |
-| lite-signal | `uele/adapters/lite-signal` → `useLiteSignal()` | Added (`@zakkster/lite-signal`) |
-| rescript-signals | `uele/adapters/rescript-signals` → `useRescriptSignals()` | Added |
-| s-js | `uele/adapters/sjs` → `useSjs()` | Existing |
-| @maverick-js/signals | `uele/adapters/maverick` → `useMaverick()` | Added |
-| Oby | `uele/adapters/oby` → `useOby()` | Added (`oby`) |
+| alien-signals | `uele/signals/alien-signals` → `alienSignals()` | Existing |
+| reflex | `uele/signals/reflex` → `reflex()` | Added (`@volynets/reflex`) |
+| @reactively | `uele/signals/reactively` → `reactively()` | Added (`@reactively/core`) |
+| @vue/reactivity 3.6 RC | `uele/signals/vue` → `vue()` | Existing adapter; tested with RC |
+| anod | `uele/signals/anod` → `anod()` | Added |
+| Preact Signals | `uele/signals/preact` → `preactSignals()` | Existing |
+| lite-signal | `uele/signals/lite-signal` → `liteSignal()` | Added (`@zakkster/lite-signal`) |
+| rescript-signals | `uele/signals/rescript-signals` → `rescriptSignals()` | Added |
+| s-js | `uele/signals/sjs` → `sjs()` | Existing |
+| @maverick-js/signals | `uele/signals/maverick` → `maverick()` | Added |
+| Oby | `uele/signals/oby` → `oby()` | Added (`oby`) |
 
 ## Usage
 
@@ -30,10 +30,10 @@ npm install @maverick-js/signals
 ```
 
 ```js
-import { useMaverick } from 'uele/adapters/maverick';
+import { maverick } from 'uele/signals/maverick';
 import { signal, computed, read, write } from 'uele/reactive';
 
-useMaverick();
+maverick();
 const count = signal(0);
 const doubled = computed(() => read(count) * 2);
 write(count, 2);
@@ -44,8 +44,8 @@ All seven presets also accept the lite renderer's **api object**:
 
 ```js
 import { api } from 'uele/lite';
-import { useOby } from 'uele/adapters/oby';
-useOby(api);
+import { oby } from 'uele/signals/oby';
+oby(api);
 const count = api.signal(0);
 api.set(count, 1);
 ```
@@ -85,9 +85,9 @@ destroy it when the **whole app** is torn down (after removing its regions):
 ```js
 import { api } from 'uele';
 import { createRegistry } from '@zakkster/lite-signal';
-import { useLiteSignal } from 'uele/adapters/lite-signal';
+import { liteSignal } from 'uele/signals/lite-signal';
 const registry = createRegistry({ prealloc: 'lazy', onCapacityExceeded: 'grow' });
-useLiteSignal(api, registry);
+liteSignal(api, registry);
 // ... mount and later unmount the app ...
 registry.destroy();
 ```

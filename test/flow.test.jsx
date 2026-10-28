@@ -9,7 +9,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { h } from 'uele';
-import { usePreactSignals } from 'uele/adapters/preact';
+import { preactSignals } from 'uele/signals/preact';
 import { signal } from '@preact/signals-core';
 import { Suspense, Await, ErrorBoundary, Portal, Title } from 'uele/flow';
 import { createRouter, useRouter, Link, Router, navigate } from 'uele/router';
@@ -22,7 +22,7 @@ const deferred = () => {
 };
 
 beforeEach(() => {
-	usePreactSignals();
+	preactSignals();
 	document.body.innerHTML = '';
 	document.title = 'before';
 	window.history.pushState(null, '', '/');
@@ -354,7 +354,7 @@ describe('useRouter', () => {
 
 	it('renders the route we are already on, then follows navigate()', async () => {
 		const app = build();
-		const [view, , go] = useRouter(app, '…loading');
+		const { view, navigate: go } = useRouter(app, '…loading');
 		const node = <main>{view}</main>;
 		document.body.append(node);
 		await tick();
@@ -368,7 +368,7 @@ describe('useRouter', () => {
 
 	it('renders notFound for an unknown path', async () => {
 		const app = build();
-		const [view, , go] = useRouter(app, '', <h1>404</h1>);
+		const { view, navigate: go } = useRouter(app, '', <h1>404</h1>);
 		const node = <main>{view}</main>;
 		document.body.append(node);
 		await go('/missing');
@@ -377,7 +377,7 @@ describe('useRouter', () => {
 
 	it('follows browser history (popstate)', async () => {
 		const app = build();
-		const [view] = useRouter(app);
+		const { view } = useRouter(app);
 		const node = <main>{view}</main>;
 		document.body.append(node);
 		await tick();
@@ -389,7 +389,7 @@ describe('useRouter', () => {
 
 	it('navigate() (module level) pushes history and notifies mounted routers', async () => {
 		const app = build();
-		const [view] = useRouter(app);
+		const { view } = useRouter(app);
 		const node = <main>{view}</main>;
 		document.body.append(node);
 		await tick();
@@ -422,8 +422,8 @@ describe('Link and linkProps', () => {
 
 	it('leaves external links, target=_blank and modifier clicks to the browser', async () => {
 		const app = build();
-		const [view, linkProps] = useRouter(app);
-		const node = <main {...linkProps()}>{view}</main>;
+		const { view, props: linkProps } = useRouter(app);
+		const node = <main {...linkProps}>{view}</main>;
 		document.body.append(node);
 		await tick();
 
@@ -457,9 +457,9 @@ describe('Link and linkProps', () => {
 
 	it('intercepts a plain anchor nested inside the wrapper', async () => {
 		const app = build();
-		const [view, linkProps] = useRouter(app);
+		const { view, props: linkProps } = useRouter(app);
 		const node = (
-			<main {...linkProps()}>
+			<main {...linkProps}>
 				{view}
 				<nav>
 					<span>
@@ -494,7 +494,7 @@ describe('Router works with any fetch(Request) router, e.g. uflite/nano', () => 
 			}
 		};
 		nano.get('/', () => <h1>nano home</h1>);
-		const [view] = useRouter(nano, '…');
+		const { view } = useRouter(nano, '…');
 		const node = <main>{view}</main>;
 		document.body.append(node);
 		await tick();

@@ -12,7 +12,7 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { usePreactSignals } from 'uele/adapters/preact';
+import { preactSignals } from 'uele/signals/preact';
 import { signal } from '@preact/signals-core';
 import { write, read } from 'uele/reactive';
 import { Toggle, Radio, Lightbox, OTPInput } from 'uele/ui';
@@ -24,7 +24,7 @@ import { cssVars, cx, variants, styled } from 'uele/themes';
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
 beforeEach(() => {
-	usePreactSignals();
+	preactSignals();
 	document.body.innerHTML = '';
 	document.title = 'before';
 	window.history.pushState(null, '', '/');
@@ -214,7 +214,7 @@ describe('useRouter failure and interception guards', () => {
 	};
 
 	it('renders notFound when the route fetch rejects', async () => {
-		const [view, , go] = useRouter(build(), '', <h1>404</h1>);
+		const { view, navigate: go } = useRouter(build(), '', <h1>404</h1>);
 		const node = <main>{view}</main>;
 		document.body.append(node);
 		await go('/boom');
@@ -222,9 +222,9 @@ describe('useRouter failure and interception guards', () => {
 	});
 
 	it('intercepts plain internal clicks only', async () => {
-		const [view, linkProps] = useRouter(build(), '', <h1>404</h1>);
+		const { view, props: linkProps } = useRouter(build(), '', <h1>404</h1>);
 		const node = (
-			<main {...linkProps()}>
+			<main {...linkProps}>
 				<a href="https://example.com/page">external</a>
 				<a href="/about" target="_blank">new tab</a>
 				<a href="/about">internal</a>
@@ -265,10 +265,10 @@ describe('hook edges', () => {
 		expect(read(copied)).toBe(false);
 	});
 
-	it('useTitle applies immediately and restore() brings the old title back', () => {
+	it('useTitle applies immediately and disposal brings the old title back', () => {
 		const t = useTitle('Dashboard');
 		expect(document.title).toBe('Dashboard');
-		t.restore();
+		t.dispose();
 		expect(document.title).toBe('before');
 	});
 

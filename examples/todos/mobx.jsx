@@ -5,23 +5,23 @@
  *     import { mountTodos } from './mobx.jsx';
  *     mountTodos(document.body);
  *
- * Signals come from mobx; `useMobx()` wires uele to them (called for you by
+ * Signals come from mobx; `mobx()` wires uele to them (called for you by
  * `TodoApp`/`mountTodos`). Everything below the actions is the same JSX you
  * would write with any other preset.
  */
 import { For } from 'uele';
 import { Form, Row, Card, Stack, Button, Input, Checkbox, Label } from 'uele/ui';
-import { useMobx } from 'uele/adapters/mobx';
+import { mobx } from 'uele/signals/mobx';
 import { observable, computed, runInAction } from 'mobx';
 
 export const TodoApp = () => {
-	useMobx();
+	mobx();
 	const newTodo = observable.box('');
 	const todos = observable.box([]);
 	const filter = observable.box('all');
 	const remaining = computed(() => todos.get().filter((t) => !t.done).length);
 	// read `filter` eagerly: a lazy read inside .filter() is skipped on an empty list,
-	// and the derived value would never subscribe to it
+	// and the computed value would never subscribe to it
 	const visible = computed(() => {
 		const f = filter.get();
 		return todos.get().filter((t) => (f === 'all' ? true : f === 'active' ? !t.done : t.done));

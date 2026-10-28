@@ -4,8 +4,8 @@
  * Map keys preserve node identity (unlike string-keyed symbol tables).
  * DOM lists contain each node at most once, so shared tokens are unique matches.
  *
- *     import { useHeckel } from 'uele/diffs/heckel';
- *     useHeckel();
+ *     import { heckel } from 'uele/diffs/heckel';
+ *     heckel();
  */
 import { api } from 'uele';
 
@@ -29,7 +29,7 @@ const reconcile = (parent, oldNodes, newNodes, end = null) => {
 	}
 };
 
-export const useHeckel = (target = api) => {
+export const heckel = (target = api) => {
 	target.diff = reconcile;
 	target.udom = undefined;
 	return target;

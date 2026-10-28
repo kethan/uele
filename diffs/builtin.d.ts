@@ -1,1 +1,1 @@
-export declare function useBuiltinDiff<T extends object>(target?: T): T;
+export declare function builtinDiff<T extends object>(target?: T): T;
