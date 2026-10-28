@@ -10,7 +10,7 @@ uele's \`add()\` step flattens arrays, turns primitive values into text nodes,
 appends DOM nodes as-is, and turns reactive values into live regions. All of
 these are valid children at once:
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h } from "uele";
 
 const items = ["alpha", "beta", "gamma"];
@@ -40,7 +40,7 @@ When an attribute must change over time, hand it a reactive cell from a
 signal preset — uele flips the property in place, no rebuild (see **Signals &
 Presets**):
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h } from "uele";
 import { useUlive } from "uele/adapters/ulive";
 import { signal } from "ulive";
@@ -70,7 +70,7 @@ document.body.append(
 individual class names, and styles accept a plain object with camelCase,
 kebab-case or CSS custom-property keys.
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h } from "uele";
 import { useUlive } from "uele/adapters/ulive";
 import { signal } from "ulive";
@@ -112,7 +112,7 @@ document.body.append(
 Namespaced elements are detected automatically, so inline SVG and MathML
 just work with no extra configuration:
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h } from "uele";
 
 document.body.append(
@@ -133,7 +133,7 @@ document.body.append(
 The \`ref\` prop receives the finished element \`(element, props)\` once it is
 created — the place for focus, measurement and third-party libraries.
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h } from "uele";
 
 // a node created up front lets the ref callback report back through plain DOM

@@ -14,7 +14,7 @@ const tableFor = (group) => {
 };
 
 const catalog = UI_GROUPS.map(tableFor).join("\n\n");
-const fence = (code) => "```jsx live\n" + code.trim() + "\n```";
+const fence = (code) => "```jsx\n" + code.trim() + "\n```";
 
 /* ------------------------------------------------------------- fences */
 

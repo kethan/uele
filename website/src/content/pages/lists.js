@@ -11,7 +11,7 @@ whose keys disappear are released immediately.
 Pass an iterable as \`each\`, a render function as the sole child, and an
 optional \`fallback\` for empty collections.
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h, For } from "uele";
 
 const fruits = [
@@ -43,7 +43,7 @@ By default items are keyed by identity (\`key = (v) => v\`). Give \`For\` a
 versions of themselves — a pure reorder then only **moves** existing nodes,
 and filtering never leaks them.
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h, For } from "uele";
 
 const users = [
@@ -76,7 +76,7 @@ document.body.append(
 \`map(items, callback, fallback, key)\` is the same engine without JSX — handy
 inside \`h()\` calls and utility code.
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h, map } from "uele";
 
 const tags = ["jsx", "signals", "tiny", "dom"];
@@ -117,7 +117,7 @@ For lists that change, hold the data in a signal cell and hand it straight to
 reconciler then moves, adds or removes only the rows whose keys changed, and
 the render callback never re-runs for a row whose node was reused:
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h, For } from "uele";
 import { useUlive } from "uele/adapters/ulive";
 import { signal } from "ulive";

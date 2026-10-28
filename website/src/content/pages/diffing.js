@@ -30,7 +30,7 @@ and trimmed. A ulive cell holds the data; the thunk child re-runs when it
 changes and each swap goes through \`api.diff\` — which, under useRebuild,
 removes and re-inserts every node:
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h, map } from "uele";
 import { useRebuild } from "uele/diffs/rebuild";
 import { useUlive } from "uele/adapters/ulive";
@@ -82,7 +82,7 @@ document.body.append(
 hands uele its diff function and an identity getter through \`api.udom\`, so
 reorders move existing nodes instead of rebuilding them.
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h, For } from "uele";
 import { useUdomdiff } from "uele/diffs/udomdiff";
 import { useUlive } from "uele/adapters/ulive";

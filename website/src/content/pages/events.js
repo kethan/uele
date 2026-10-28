@@ -12,7 +12,7 @@ Native handlers are assigned as properties, so assigning a falsy value
 unregisters them; unknown events are bound with \`addEventListener\`, which
 means **custom events work automatically**.
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h, useLive } from "uele";
 
 const [status, setStatus] = useLive("nothing yet");
@@ -38,7 +38,7 @@ document.body.append(<App />);
 \`onSubmit\` receives the native event, so \`preventDefault()\` works exactly
 as it does in plain DOM code.
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h, useLive } from "uele";
 
 const [submitted, setSubmitted] = useLive("—");
@@ -71,7 +71,7 @@ Presets**) they accept reactive cells directly; with core \`useLive\`, hold
 the displayed text in a region seeded with its initial value and write the
 new value to the setter:
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h, useLive } from "uele";
 
 const [picked, setPicked] = useLive("vanilla");
@@ -109,7 +109,7 @@ kebab-case or custom properties, and \`null\` / \`undefined\` clears a value.
 With a signal preset, a style value can be a cell and uele rewrites just that
 one CSS property on every change — the element is never rebuilt:
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h } from "uele";
 import { useUlive } from "uele/adapters/ulive";
 import { signal } from "ulive";
@@ -143,7 +143,7 @@ Unknown attributes fall through to \`setAttribute\`, including
 \`data-*\`, \`aria-*\` and web-component attributes. For bespoke element
 behaviour, the \`props\` registry lets you teach uele a new prop:
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h, props } from "uele";
 
 // teach uele an "autofocus" prop (kept here as a demo of the registry)
@@ -162,7 +162,7 @@ document.body.append(
 Components are functions, so they don't carry DOM events themselves — pass
 **handler props** and let the component wire them to real elements:
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h, useLive } from "uele";
 
 const BigButton = ({ label, onActivate }) => (

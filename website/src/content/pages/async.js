@@ -12,7 +12,7 @@ A promise renders nothing until it resolves, then swaps in its value. Rejections
 are left for you to handle (\`.catch\`), so rejected promises never crash the
 tree:
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h } from "uele";
 
 const delayed = new Promise((resolve) =>
@@ -36,7 +36,7 @@ document.body.append(
 Because a component can return a promise, an \`async\` function is a valid
 component — fetching data inside it is plain \`await\`:
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h } from "uele";
 
 const loadUser = (id) =>
@@ -70,7 +70,7 @@ document.body.append(
 An object implementing \`Symbol.asyncIterator\` streams a sequence of values
 into the same region — each \`next()\` replaces the previous one:
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h } from "uele";
 
 const ticker = {
@@ -102,7 +102,7 @@ Anything with a \`subscribe\` method or \`Symbol.observable\` is recognised too.
 Each emitted value replaces the region, and the subscription is disposed
 automatically when the region is removed from the DOM.
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h } from "uele";
 
 // a minimal observable: emits 0..4 on a timer, then completes
@@ -132,7 +132,7 @@ loader returns a promise of a module with a \`default\` export — exactly the
 shape of dynamic \`import()\`. The fallback shows while loading or if the load
 fails.
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h, lazy } from "uele";
 
 // in a real app: lazy(() => import("./Greeter.jsx"), <p>Loading…</p>)

@@ -10,7 +10,7 @@ produce the exact same DOM.
 \`h(tag, props, ...children)\` creates a real element. Children can be
 strings, numbers, nodes, arrays or anything reactive.
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h } from "uele";
 
 document.body.append(
@@ -33,7 +33,7 @@ DOM API.
 \`f(h)\` returns a proxy where every property is an element factory, so you
 can write elements as plain function calls without tag strings.
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h, f, useLive } from "uele";
 
 const { main, h1, button, strong } = f(h);
@@ -58,7 +58,7 @@ With the automatic JSX runtime configured (see **Installation**), JSX just
 works. There is no \`h\` import and no compiler plugin beyond the standard
 React JSX transform.
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h, useLive } from "uele";
 
 const [name, setName] = useLive("stranger");
@@ -80,7 +80,7 @@ Fragments are built in: \`<></>\` **is** the \`h\` function itself
 (\`Fragment === h\`), so a fragment simply returns its children with no
 wrapper element.
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h } from "uele";
 
 document.body.append(

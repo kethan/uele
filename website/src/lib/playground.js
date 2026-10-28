@@ -322,14 +322,12 @@ export function createPlayground({ code, title = "Live example", tall = false, s
     run();
   };
 
-  // runs the first compile on mount; Babel is lazy-loaded inside run().
+  // Do NOT auto-compile on mount. Babel is only loaded when the user
+  // clicks "Run" or starts typing — pages stay light until then.
   const start = () => {
     if (started) return;
     started = true;
     editor.addEventListener("input", scheduleRun);
-    queueMicrotask(() => {
-      if (!disposed) run();
-    });
   };
   let started = false;
 
@@ -366,10 +364,8 @@ export function createPlayground({ code, title = "Live example", tall = false, s
   };
   instances.add(dispose);
 
-  // run once mounted — Babel is lazy-loaded on first compile, so pages stay light.
-  queueMicrotask(() => {
-    if (!disposed) start();
-  });
+  // Do not auto-compile on mount. Babel loads only when the user clicks
+  // "Run" or types in the editor — pages stay light until then.
 
   return { root, run, reset, editor, dispose, start };
 }

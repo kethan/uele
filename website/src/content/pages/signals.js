@@ -20,7 +20,7 @@ One call configures the whole \`api\` surface — \`is\`, \`get\`, effect
 runner, cleanup and authoring hooks. The same component code then runs on any
 preset; only this call changes.
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h } from "uele";
 import { usePreactSignals } from "uele/adapters/preact";
 import { signal, computed } from "@preact/signals-core";
@@ -49,7 +49,7 @@ dependencies change.
 This is the big difference from \`useLive\` — a signal can drive an attribute,
 a class toggle or a CSS property directly, no subtree rebuild:
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h } from "uele";
 import { usePreactSignals } from "uele/adapters/preact";
 import { signal, computed } from "@preact/signals-core";
@@ -81,7 +81,7 @@ If you want your code to survive a change of signal library, write it against
 the active preset, so the same utilities run unchanged on Preact signals,
 ulive, Solid or Vue.
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h } from "uele";
 import { usePreactSignals } from "uele/adapters/preact";
 import { signal, computed, effect, read, write } from "uele/reactive";
@@ -117,7 +117,7 @@ RxJS or nanostores.
 effect-capable preset. They return cells you render directly, plus plain
 action functions.
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h, If, For } from "uele";
 import { usePreactSignals } from "uele/adapters/preact";
 import { useToggle, useCounter, useList } from "uele/hooks";
@@ -168,7 +168,7 @@ The exact same component logic runs on ulive — uele's ultra-small signals
 package — by changing a single import and the setup call. Notice the JSX
 itself does not move.
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h } from "uele";
 import { useUlive } from "uele/adapters/ulive";
 import { signal, computed } from "ulive";

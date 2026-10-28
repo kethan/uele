@@ -12,7 +12,7 @@ changes.
 \`fallback\` for the false branch. \`Show\` is the same component under a more
 JSX-friendly name.
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h, If } from "uele";
 import { useUlive } from "uele/adapters/ulive";
 import { signal } from "ulive";
@@ -47,7 +47,7 @@ Plain JavaScript expressions work too — \`&&\`, the ternary operator and
 guard clauses are all valid inside JSX. Wrap a condition in a thunk so the
 signal preset re-runs just that expression when its cell changes:
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h } from "uele";
 import { useUlive } from "uele/adapters/ulive";
 import { signal } from "ulive";
@@ -80,7 +80,7 @@ document.body.append(
 \`Switch\` picks the first \`Match\` whose \`when\` is truthy, falling back to
 its own \`fallback\` when none match. \`Match\` is an alias of \`If\`.
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h, Switch, Match } from "uele";
 import { useUlive } from "uele/adapters/ulive";
 import { signal } from "ulive";
@@ -124,7 +124,7 @@ document.body.append(
 \`Dynamic\` renders whichever component it is handed and forwards the rest of
 the props. It is the tool for tabs, plugin slots and feature-flagged UI:
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h, Dynamic } from "uele";
 import { useUlive } from "uele/adapters/ulive";
 import { signal } from "ulive";

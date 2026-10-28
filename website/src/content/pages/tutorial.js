@@ -10,7 +10,7 @@ Inspired by [sinuous's getting started guide](https://sinuous.netlify.app/docs/g
 
 Start with a 3×3 grid of cells:
 
-\`\`\`jsx
+\`\`\`jsx live
 import { h, For } from "uele";
 
 const EMPTY = null;
@@ -41,7 +41,7 @@ document.body.append(
 
 Make the board reactive with signals, track whose turn it is, and fill cells on click:
 
-\`\`\`jsx
+\`\`\`jsx live
 import { h, For } from "uele";
 import { signal, computed, effect, write, read } from "uele/reactive";
 
@@ -81,7 +81,7 @@ document.body.append(
 
 Add a \`winner\` signal and a \`checkWinner()\` helper:
 
-\`\`\`jsx
+\`\`\`jsx live
 import { h, For } from "uele";
 import { signal, computed, effect, write, read } from "uele/reactive";
 
@@ -149,7 +149,7 @@ document.body.append(
 
 Add status messages, disable the board after the game ends, and style it:
 
-\`\`\`jsx
+\`\`\`jsx live
 import { h, For, Switch, Match } from "uele";
 import { signal, computed, effect, write, read } from "uele/reactive";
 

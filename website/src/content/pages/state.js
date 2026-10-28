@@ -34,7 +34,7 @@ const [region, setRegion] = useLive(initialValue);
 
 ## A counter
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h, useLive } from "uele";
 
 const [count, setCount] = useLive(0);
@@ -59,7 +59,7 @@ created once and never touched again.
 Bind an input's \`onInput\` to a setter and the region re-renders on every
 keystroke:
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h, useLive } from "uele";
 
 const [name, setName] = useLive("stranger");
@@ -83,7 +83,7 @@ something changes. With a signal preset you do not rebuild anything: hold the
 state in a \`signal(defaultValue)\` and bind it as a prop, class or style cell —
 uele patches just that attribute or text node:
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h } from "uele";
 import { useUlive } from "uele/adapters/ulive";
 import { signal } from "ulive";
@@ -117,7 +117,7 @@ document.body.append(
 Setters work from anywhere — timers, fetches, sockets. Here an interval
 drives a region once per second:
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h, useLive } from "uele";
 
 const [time, setTime] = useLive(new Date().toLocaleTimeString());
@@ -136,7 +136,7 @@ document.body.append(
 Every \`useLive\` call is independent. Build as many regions as the UI needs —
 each setter only touches its own markers:
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h, useLive } from "uele";
 
 const [a, setA] = useLive(0);

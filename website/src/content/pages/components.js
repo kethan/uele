@@ -8,7 +8,7 @@ plain JavaScript.
 
 ## Your first component
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h } from "uele";
 
 const Greeting = ({ name }) => (
@@ -31,7 +31,7 @@ document.body.append(
 Everything you pass in JSX lands in the single props object, including
 \`children\`. Components compose exactly like DOM elements.
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h } from "uele";
 
 const Card = ({ title, children }) => (
@@ -71,7 +71,7 @@ document.body.append(<App />);
 Components run once and return real nodes. State that changes over time lives
 in a \`useLive\` region (covered in depth on the next page):
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h, useLive } from "uele";
 
 const Counter = ({ start = 0, step = 1 }) => {
@@ -105,7 +105,7 @@ fully independent.
 A component may be \`async\`. The returned promise is itself a valid child, so
 uele renders nothing (or a placeholder) until it resolves:
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h } from "uele";
 
 const UserCard = async ({ id }) => {
@@ -139,7 +139,7 @@ document.body.append(
 \`Dynamic\` renders whatever component it is handed, forwarding the rest of
 the props — useful for tabs, layouts and feature flags.
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h, Dynamic } from "uele";
 
 const Notice = ({ tone, children }) => (

@@ -27,7 +27,7 @@ Here is a complete, interactive counter. It uses only what ships in the core
 bundle — change the code on the left and the preview on the right updates as
 you type.
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h, useLive } from "uele";
 
 const [count, setCount] = useLive(0);
