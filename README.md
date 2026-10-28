@@ -1495,3 +1495,7 @@ MIT
 ## Optional DOM props for live apps
 
 Install `useProps()` from `uele/props` to enable `show`, `text`, `data`, `aria`, `bindValue`, `bindChecked`, `listen` and `use`. Supports main and lite, with region-based cleanup. See [the reference](docs/PROPS.md) and [live composer example](examples/live-props.jsx).
+
+## Additional signal presets from the requested top-11 set
+
+Added `useReflex`, `useReactively`, `useAnod`, `useLiteSignal`, `useRescriptSignals`, `useMaverick` and `useOby` as optional adapters. Existing Alien Signals, Preact Signals, S-js and Vue presets are reused; Vue 3.6 RC has a dedicated compatibility test run, not a duplicate adapter. See [setup, scheduling and lifecycle details](docs/TOP_SIGNALS.md).

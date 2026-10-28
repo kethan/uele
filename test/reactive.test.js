@@ -11,6 +11,13 @@ import { Suspense, ErrorBoundary, Await, Portal, Title } from 'uele/flow';
 import { createRouter, useRouter, Link, Router, navigate } from 'uele/router';
 
 const PRESETS = [
+	['reflex', 'uele/adapters/reflex', 'useReflex', true],
+	['reactively', 'uele/adapters/reactively', 'useReactively', true],
+	['anod', 'uele/adapters/anod', 'useAnod', true],
+	['lite-signal', 'uele/adapters/lite-signal', 'useLiteSignal', true],
+	['rescript-signals', 'uele/adapters/rescript-signals', 'useRescriptSignals', true],
+	['maverick', 'uele/adapters/maverick', 'useMaverick', true],
+	['oby', 'uele/adapters/oby', 'useOby', true],
 	['ulive', 'uele/adapters/ulive', 'useUlive', true],
 	['preact', 'uele/adapters/preact', 'usePreactSignals', true],
 	['vue', 'uele/adapters/vue', 'useVue', true],

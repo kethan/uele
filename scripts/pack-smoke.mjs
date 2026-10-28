@@ -42,13 +42,27 @@ const tarball = runNpm(['pack', '--pack-destination', work], root).trim().split(
 
 	writeFileSync(
 		join(work, 'check.mjs'),
-		`const specs = ['uele', 'uele/lite', 'uele/jsx-runtime', 'uele/jsx-dev-runtime', 'uele/adapters/preact', 'uele/props', 'uele/diffs/swapdom', 'uele/diffs/spect', 'uele/diffs/snabbdom', 'uele/diffs/stage0', 'uele/diffs/heckel', 'uele/diffs/list-difference', 'uele/ui', 'uele/reactive', 'uele/flow', 'uele/router', 'uele/hooks', 'uele/themes'];
+		`const specs = ['uele', 'uele/lite', 'uele/jsx-runtime', 'uele/jsx-dev-runtime', 'uele/adapters/preact', 'uele/adapters/reflex', 'uele/adapters/reactively', 'uele/adapters/anod', 'uele/adapters/lite-signal', 'uele/adapters/rescript-signals', 'uele/adapters/maverick', 'uele/adapters/oby', 'uele/props', 'uele/diffs/swapdom', 'uele/diffs/spect', 'uele/diffs/snabbdom', 'uele/diffs/stage0', 'uele/diffs/heckel', 'uele/diffs/list-difference', 'uele/ui', 'uele/reactive', 'uele/flow', 'uele/router', 'uele/hooks', 'uele/themes'];
 for (const spec of specs) {
 	const mod = await import(spec);
 	const keys = Object.keys(mod).sort();
 	if (!keys.length) throw new Error(spec + ' exported nothing');
 	console.log('ok', spec, keys.join(','));
 }
+
+for (const slug of ['reflex', 'reactively', 'anod', 'lite-signal', 'rescript-signals', 'maverick', 'oby']) {
+  const mod = await import('uele/adapters/' + slug);
+  const install = Object.values(mod).find((value) => typeof value === 'function');
+  const target = install({});
+  const cell = target.signal(1);
+  let seen;
+  const stop = target.effect(() => { seen = target.get(cell); });
+  target.set(cell, 2);
+  if (seen !== 2) throw new Error(slug + ' did not update synchronously');
+  stop(); target.set(cell, 3);
+  if (seen !== 2) throw new Error(slug + ' did not dispose');
+}
+
 const { h, api } = await import('uele');
 const { h: liteH } = await import('uele/lite');
 const { jsx, Fragment } = await import('uele/jsx-runtime');
@@ -59,7 +73,7 @@ console.log('ok shared module instance, Fragment is the main h');
 `
 	);
 
-	runNpm(['install', join(work, tarball), '@preact/signals-core', 'swapdom', '--no-audit', '--no-fund', '--silent'], work); // the two presets exercised above
+	runNpm(['install', join(work, tarball), '@preact/signals-core', 'swapdom', '@volynets/reflex', '@reactively/core', 'anod', '@zakkster/lite-signal', 'rescript-signals', '@rescript/runtime', '@maverick-js/signals', 'oby', '--no-audit', '--no-fund', '--silent'], work); // explicitly install the optional peers exercised above
 	const installed = join(work, 'node_modules', 'uele');
 	const files = readdirSync(installed);
 	console.log('published entries:', files.join(', '));
@@ -74,13 +88,27 @@ console.log('ok shared module instance, Fragment is the main h');
 		join(work, 'check.cjs'),
 		`// plain CommonJS consumers must get the full surface (a '.js' CJS build inside a
 // \"type\": \"module\" package resolves as ESM and yields an empty module - caught here)
-const specs = ['uele', 'uele/lite', 'uele/jsx-runtime', 'uele/jsx-dev-runtime', 'uele/adapters/preact', 'uele/props', 'uele/diffs/swapdom', 'uele/diffs/spect', 'uele/diffs/snabbdom', 'uele/diffs/stage0', 'uele/diffs/heckel', 'uele/diffs/list-difference', 'uele/ui', 'uele/reactive', 'uele/flow', 'uele/router', 'uele/hooks', 'uele/themes'];
+const specs = ['uele', 'uele/lite', 'uele/jsx-runtime', 'uele/jsx-dev-runtime', 'uele/adapters/preact', 'uele/adapters/reflex', 'uele/adapters/reactively', 'uele/adapters/anod', 'uele/adapters/lite-signal', 'uele/adapters/rescript-signals', 'uele/adapters/maverick', 'uele/adapters/oby', 'uele/props', 'uele/diffs/swapdom', 'uele/diffs/spect', 'uele/diffs/snabbdom', 'uele/diffs/stage0', 'uele/diffs/heckel', 'uele/diffs/list-difference', 'uele/ui', 'uele/reactive', 'uele/flow', 'uele/router', 'uele/hooks', 'uele/themes'];
 for (const spec of specs) {
 	const mod = require(spec);
 	const keys = Object.keys(mod).filter((k) => k !== 'default' && k !== '__esModule').sort();
 	if (!keys.length) throw new Error(spec + ' (require) exported nothing');
 	console.log('ok require', spec, keys.join(','));
 }
+
+for (const slug of ['reflex', 'reactively', 'anod', 'lite-signal', 'rescript-signals', 'maverick', 'oby']) {
+  const mod = require('uele/adapters/' + slug);
+  const install = Object.values(mod).find((value) => typeof value === 'function');
+  const target = install({});
+  const cell = target.signal(1);
+  let seen;
+  const stop = target.effect(() => { seen = target.get(cell); });
+  target.set(cell, 2);
+  if (seen !== 2) throw new Error(slug + ' did not update synchronously');
+  stop(); target.set(cell, 3);
+  if (seen !== 2) throw new Error(slug + ' did not dispose');
+}
+
 const uele = require('uele');
 if (typeof uele.h !== 'function' || typeof uele.api !== 'function' && typeof uele.api !== 'object') throw new Error('require surface is not callable');
 if (uele.Fragment !== uele.h && typeof uele.Fragment !== 'undefined') throw new Error('Fragment must be the shared h');

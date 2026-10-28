@@ -101,9 +101,17 @@ const jsx = (name) => resolve("uele", {
 const peers = new Set([
 	'ulive', '@preact/signals-core', '@vue/reactivity', 'usignal', 'alien-signals', 's-js', 'mobx', 'rxjs',
 	'nanostores', '@tanstack/store', 'solid-js', 'swapdom', 'udomdiff', 'domdiff', 'morphdom', 'nanomorph',
-	'fast-array-diff'
+	'fast-array-diff', '@volynets/reflex', '@reactively/core', '@zakkster/lite-signal', 'rescript-signals', '@maverick-js/signals', 'oby', 'anod'
 ]);
 const presetFiles = [
+	'adapters/reflex.js',
+	'adapters/reactively.js',
+	'adapters/lite-signal.js',
+	'adapters/rescript-signals.js',
+	'adapters/maverick.js',
+	'adapters/oby.js',
+	'adapters/anod.js',
+
 	'props/index.js',
 	'router/index.js',
 	'flow/index.js',
@@ -142,9 +150,20 @@ const presetFiles = [
 
 
 ];
+// These libraries publish ESM-only entries (Anod has no require condition at all).
+// Inline them in the CJS twins so require() remains usable on Node 18/20.
+// Their source ESM presets still consume the user's optional peer at runtime.
+const cjsBundledPeers = new Set([
+	'@reactively/core', 'anod', '@zakkster/lite-signal', 'rescript-signals',
+	'@rescript/runtime', '@maverick-js/signals', 'oby'
+]);
 const presetsConfig = presetFiles.map((file) => ({
 	input: file,
-	external: (id) => id === 'uele' || id.startsWith('uele/') || peers.has(id) || id.startsWith('solid-js/'),
+	external: (id) => {
+		if ([...cjsBundledPeers].some((peer) => id === peer || id.startsWith(peer + '/'))) return false;
+		return id === 'uele' || id.startsWith('uele/') || [...peers].some((peer) => id === peer || id.startsWith(peer + '/'));
+	},
+	plugins: [node(), commonjs()],
 	output: {
 		file: file.replace(/\.js$/, '.cjs'),
 		format: 'cjs',

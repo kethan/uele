@@ -565,3 +565,15 @@ Independent node-identity implementations inspired by [js-diff-benchmark](https:
 - `uele/diffs/stage0` - `useStage0()`
 - `uele/diffs/heckel` - `useHeckel()`
 - `uele/diffs/list-difference` - `useListDifference()`
+
+## Additional top-11 benchmark libraries
+
+- `uele/adapters/reflex` - `useReflex()` (optional peer: `@volynets/reflex`)
+- `uele/adapters/reactively` - `useReactively()` (optional peer: `@reactively/core`)
+- `uele/adapters/lite-signal` - `useLiteSignal()` (optional peer: `@zakkster/lite-signal`)
+- `uele/adapters/rescript-signals` - `useRescriptSignals()` (optional peer: `rescript-signals`)
+- `uele/adapters/maverick` - `useMaverick()` (optional peer: `@maverick-js/signals`)
+- `uele/adapters/oby` - `useOby()` (optional peer: `oby`)
+- `uele/adapters/anod` - `useAnod()` (optional peer: `anod`)
+
+For package installation, callable-cell wrappers, scheduling, lite-signal registry ownership and Vue 3.6 RC compatibility, see [TOP_SIGNALS.md](TOP_SIGNALS.md).
