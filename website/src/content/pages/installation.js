@@ -109,27 +109,6 @@ The package exposes several entry points for different job sizes:
 Every live example in these docs is compiled in your browser with Babel using
 exactly the automatic-runtime settings above, then executed in a sandboxed
 iframe whose import map resolves \`uele\` to a locally bundled copy of the
-library — no network requests, no build step, nothing to install.
-
-### Two execution engines
-
-Each playground header has a **Built-in / Sandpack** switch:
-
-- **Built-in (default):** a srcdoc iframe with an opaque origin and a data-URL
-  import map. Completely offline, instant to boot, and the engine behind every
-  executable example in this site's test suite.
-- **Sandpack:** the same CodeSandbox bundler that powers sandpack.codesandbox.io,
-  self-hosted under \`/sandpack/\` — no request ever leaves your origin. The
-  editor code is still compiled with the Babel settings above, and every module
-  (\`uele\`, its adapters and diff presets, \`ulive\`, \`udomdiff\`, Preact
-  signals) is injected as a virtual \`node_modules\` package, so examples run
-  with zero npm-registry access. Use it to preview how the code behaves inside
-  a real webpack packager with workers, an error overlay and module boundaries.
-  The choice is remembered per browser.
-
-> Sandpack needs workers and a same-origin iframe, so its frame runs with
-> broader sandbox flags than the built-in runner; switching back restores the
-> opaque-origin sandbox. The 65 MB bundler is copied from
-> \`@codesandbox/sandpack-client\` at install time
-> (\`npm run vendor:sandpack\`) and is never committed to the repository.
+library — no network requests, no build step, nothing to install. The iframe
+runs at an opaque origin, so nothing can reach your network or storage.
 `;

@@ -3,6 +3,9 @@
 // origin, so the whole runtime travels inside the srcdoc as a data-URL import
 // map instead of a network fetch — no CORS, no server requirements. Console
 // output and errors are forwarded to the parent and rendered in a console panel.
+//
+// Babel standalone (~3 MB) is lazy-loaded only the first time a playground
+// actually compiles — doc pages themselves stay light.
 
 import { h } from "./uele.js";
 import { VENDOR_MODULES, CORE_SPECS } from "./vendor-manifest.js";
@@ -109,8 +112,7 @@ const IFRAME_STYLE = `
   a { color: #635bff; }
 `;
 
-const CONSOLE_HOOK = `
-<script>
+const CONSOLE_HOOK = `<script>
 (function () {
   var fmt = function (v) {
     if (v === null) return "null";
@@ -143,7 +145,7 @@ const CONSOLE_HOOK = `
     send("error", ["Unhandled promise rejection: " + (e.reason && e.reason.message ? e.reason.message : String(e.reason))]);
   });
 })();
-<\/script>`;
+</script>`;
 
 async function buildSrcdoc(transformed) {
   const importMap = JSON.stringify(await loadImportMap());
@@ -151,14 +153,14 @@ async function buildSrcdoc(transformed) {
 <html>
   <head>
     <meta charset="utf-8" />
-    <script type="importmap">${importMap}<\/script>
+    <script type="importmap">${importMap}</script>
     <style>${IFRAME_STYLE}</style>
     ${CONSOLE_HOOK}
   </head>
   <body>
     <script type="module">
 ${transformed}
-    <\/script>
+    </script>
   </body>
 </html>`;
 }
@@ -168,9 +170,6 @@ const lineCount = (code) => code.split("\n").length;
 // every live playground registers a disposer so route changes can tear down
 // iframe message listeners, pending debounces and the iframe itself
 const instances = new Set();
-
-// localStorage key remembering which execution engine the visitor picked
-const RUNNER_KEY = "uele:playground-runner";
 
 export function destroyAllPlaygrounds() {
   for (const dispose of instances) dispose();
@@ -182,18 +181,6 @@ export function createPlayground({ code, title = "Live example", tall = false } 
   let timer = 0;
   let logs = [];
   let disposed = false;
-
-  // Two execution engines share one iframe: the built-in srcdoc runner
-  // (default, fully offline and covered by the linkedom test suites) and the
-  // self-hosted Sandpack bundler (lazy-loaded, see lib/sandpack.js).
-  let storedMode = null;
-  try {
-    storedMode = localStorage.getItem(RUNNER_KEY);
-  } catch {
-    /* storage unavailable (private mode / linkedom) */
-  }
-  let mode = storedMode === "sandpack" ? "sandpack" : "uele";
-  let sandpackRunner = null;
 
   /* -- editor ------------------------------------------------------- */
   const gutter = h("div", { class: "gutter", "aria-hidden": "true" });
@@ -226,15 +213,11 @@ export function createPlayground({ code, title = "Live example", tall = false } 
   });
 
   /* -- preview + console -------------------------------------------- */
-  // The built-in runner stays in an opaque-origin sandbox. Sandpack's
-  // bundler spawns Web Workers, which an opaque origin cannot construct, so
-  // the Sandpack mode widens the flags while it owns the frame.
-  const SANDBOX_BUILTIN = "allow-scripts allow-modals";
-  const SANDBOX_SANDPACK =
-    "allow-scripts allow-modals allow-forms allow-popups allow-same-origin";
+  // Opaque-origin sandbox: no network, no workers, no same-origin access.
+  // Fully offline and covered by the linkedom test suites.
   const frame = h("iframe", {
     title: `${title} preview`,
-    sandbox: SANDBOX_BUILTIN,
+    sandbox: "allow-scripts allow-modals",
     loading: "lazy",
   });
 
@@ -246,7 +229,10 @@ export function createPlayground({ code, title = "Live example", tall = false } 
       return;
     }
     for (const entry of logs) {
-      const line = h("div", { class: `console-line ${entry.level === "error" ? "error" : entry.level === "warn" ? "warn" : ""}` });
+      const line = h(
+        "div",
+        { class: `console-line ${entry.level === "error" ? "error" : entry.level === "warn" ? "warn" : ""}` }
+      );
       line.append(h("span", { class: "level" }, entry.level), document.createTextNode(entry.text));
       consoleEl.append(line);
     }
@@ -324,100 +310,29 @@ export function createPlayground({ code, title = "Live example", tall = false } 
     frame.srcdoc = srcdoc;
   };
 
-  /* -- Sandpack engine (lazy, self-hosted bundler) ------------------ */
-  const setStatus = (state) => {
-    statusDot.style.background =
-      state === "error" ? "var(--red)" : state === "ok" ? "var(--green)" : "var(--amber)";
-    statusDot.title = state;
-  };
-  const pushLog = (entry) => {
-    logs.push(entry);
-    if (logs.length > 60) logs.shift();
-    renderConsole();
-  };
-  const runSandpack = async () => {
-    try {
-      frame.setAttribute("sandbox", SANDBOX_SANDPACK);
-      if (!sandpackRunner) {
-        setStatus("loading");
-        const mod = await import("./sandpack.js");
-        sandpackRunner = await mod.createSandpackRunner({
-          frame,
-          getCode: () => editor.value,
-          onStatus: setStatus,
-          onLog: pushLog,
-        });
-        if (disposed || mode !== "sandpack") return;
-      }
-      logs = [];
-      renderConsole();
-      await sandpackRunner.run(transformJSX);
-    } catch (err) {
-      setStatus("error");
-      pushLog({ level: "error", text: `Sandpack failed to start: ${err.message}` });
-    }
-  };
-  const activeRun = () => (mode === "sandpack" ? runSandpack() : run());
-
   const scheduleRun = () => {
     syncGutter();
     clearTimeout(timer);
-    timer = setTimeout(activeRun, 450);
+    timer = setTimeout(run, 450);
   };
-  editor.addEventListener("input", scheduleRun);
 
   const reset = () => {
     editor.value = initialCode;
     syncGutter();
-    activeRun();
+    run();
   };
 
-  const btnBuiltin = h(
-    "button",
-    { class: "runner-btn", type: "button", onclick: () => switchMode("uele") },
-    "Built-in"
-  );
-  const btnSandpack = h(
-    "button",
-    { class: "runner-btn", type: "button", onclick: () => switchMode("sandpack") },
-    "Sandpack"
-  );
-  const runnerSwitch = h(
-    "div",
-    { class: "runner-switch", role: "group", "aria-label": "Execution engine" },
-    btnBuiltin,
-    btnSandpack
-  );
-  const updateToggle = () => {
-    btnBuiltin.classList.toggle("active", mode === "uele");
-    btnSandpack.classList.toggle("active", mode === "sandpack");
-    btnBuiltin.setAttribute("aria-pressed", String(mode === "uele"));
-    btnSandpack.setAttribute("aria-pressed", String(mode === "sandpack"));
+  // boots the editor input listener and runs the first compile.
+  // deferred until the playground enters the viewport when lazy.
+  const start = () => {
+    if (started) return;
+    started = true;
+    editor.addEventListener("input", scheduleRun);
+    queueMicrotask(() => {
+      if (!disposed) run();
+    });
   };
-  const switchMode = (next) => {
-    if (next === mode) return;
-    mode = next;
-    try {
-      localStorage.setItem(RUNNER_KEY, mode);
-    } catch {
-      /* storage unavailable */
-    }
-    updateToggle();
-    logs = [];
-    renderConsole();
-    if (mode === "sandpack") {
-      frame.setAttribute("sandbox", SANDBOX_SANDPACK);
-      runSandpack();
-    } else {
-      if (sandpackRunner) {
-        sandpackRunner.dispose();
-        sandpackRunner = null;
-      }
-      frame.setAttribute("sandbox", SANDBOX_BUILTIN);
-      run();
-    }
-  };
-  updateToggle();
+  let started = false;
 
   const head = h(
     "div",
@@ -425,9 +340,8 @@ export function createPlayground({ code, title = "Live example", tall = false } 
     statusDot,
     document.createTextNode(title),
     h("span", { class: "spacer" }),
-    runnerSwitch,
     h("button", { class: "btn ghost", type: "button", onclick: reset, title: "Restore the original example" }, "Reset"),
-    h("button", { class: "btn primary", type: "button", onclick: activeRun }, "Run")
+    h("button", { class: "btn primary", type: "button", onclick: run }, "Run")
   );
 
   const root = h(
@@ -447,19 +361,29 @@ export function createPlayground({ code, title = "Live example", tall = false } 
     disposed = true;
     clearTimeout(timer);
     window.removeEventListener("message", onMessage);
-    if (sandpackRunner) {
-      sandpackRunner.dispose();
-      sandpackRunner = null;
-    }
     frame.srcdoc = "";
     instances.delete(dispose);
   };
   instances.add(dispose);
 
-  // run once mounted, using whichever engine the visitor last selected
-  queueMicrotask(() => {
-    if (!disposed) activeRun();
-  });
+  // Lazy-load: only compile when the playground enters (or nears) the viewport.
+  // linkedom and older browsers have no IntersectionObserver — run immediately.
+  if (typeof IntersectionObserver !== "undefined") {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            observer.disconnect();
+            start();
+          }
+        }
+      },
+      { rootMargin: "300px" }
+    );
+    observer.observe(root);
+  } else {
+    start();
+  }
 
-  return { root, run: activeRun, reset, editor, dispose };
+  return { root, run, reset, editor, dispose, start };
 }
