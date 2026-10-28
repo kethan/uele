@@ -21,6 +21,12 @@ const jsx = (tag, props = {}) => {
 export { jsx, jsx as jsxs, jsx as jsxDev, jsx as jsxDEV, h as Fragment, h as createElement };
 `;
 
+
+// Every playground iframe installs the preact signals preset so that
+// uele/reactive (signal, computed, effect, write, read) works out of the box.
+// Tutorials and examples import from uele/reactive without installing a preset
+// themselves — this preamble handles it for them.
+const PRESET_PREAMBLE = "import { usePreactSignals } from \"uele/adapters/preact\"; usePreactSignals();\n";
 const toBase64 = (source) => {
   const bytes = new TextEncoder().encode(source);
   let binary = "";
@@ -217,7 +223,7 @@ export function createPlayground({ code, title = "Live example", tall = false, s
   // Fully offline and covered by the linkedom test suites.
   const frame = h("iframe", {
     title: `${title} preview`,
-    sandbox: "allow-scripts allow-modals",
+    sandbox: "allow-scripts allow-modals allow-forms",
     loading: "lazy",
   });
 
@@ -290,7 +296,7 @@ export function createPlayground({ code, title = "Live example", tall = false, s
     try {
       statusDot.style.background = "var(--amber)";
       statusDot.title = "compiling…";
-      const transformed = await transformJSX(source);
+      const transformed = await transformJSX(PRESET_PREAMBLE + source);
       if (disposed || seq !== runSeq) return; // a newer run superseded this one
       srcdoc = await buildSrcdoc(transformed);
       if (disposed || seq !== runSeq) return;
@@ -322,12 +328,14 @@ export function createPlayground({ code, title = "Live example", tall = false, s
     run();
   };
 
-  // Do NOT auto-compile on mount. Babel is only loaded when the user
-  // clicks "Run" or starts typing — pages stay light until then.
+  // Auto-compile on mount; Babel is lazy-loaded on first compile.
   const start = () => {
     if (started) return;
     started = true;
     editor.addEventListener("input", scheduleRun);
+    queueMicrotask(() => {
+      if (!disposed) run();
+    });
   };
   let started = false;
 
@@ -364,8 +372,10 @@ export function createPlayground({ code, title = "Live example", tall = false, s
   };
   instances.add(dispose);
 
-  // Do not auto-compile on mount. Babel loads only when the user clicks
-  // "Run" or types in the editor — pages stay light until then.
+  // Auto-compile on mount — Babel loads lazily on first compile.
+  queueMicrotask(() => {
+    if (!disposed) start();
+  });
 
   return { root, run, reset, editor, dispose, start };
 }
