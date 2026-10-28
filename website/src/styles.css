@@ -3,7 +3,8 @@
    Clean, professional, lightweight. No Sandpack, no bloat.
    ============================================================ */
 
-:root {
+:root,
+[data-theme="light"] {
   /* palette — deep indigo / slate with a crisp cyan accent */
   --indigo: #4f46e5;
   --indigo-dark: #4338ca;
@@ -18,6 +19,24 @@
   --line: #e2e8f0;
   --line-2: #cbd5e1;
   --bg: #f8fafc;
+
+  /* uele/themes design tokens (light) — picked up by uele/ui primitives */
+  --uele-bg: #ffffff;
+  --uele-surface: #ffffff;
+  --uele-surface-hover: #f8fafc;
+  --uele-text: #0f172a;
+  --uele-text-muted: #64748b;
+  --uele-border: #e2e8f0;
+  --uele-danger: #dc2626;
+  --uele-success: #16a34a;
+  --uele-warning: #d97706;
+  --uele-info: #0284c7;
+  --uele-ring: rgba(79, 70, 229, 0.35);
+  --uele-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --uele-shadow-md: 0 4px 16px rgba(15, 23, 42, 0.10);
+  --uele-shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.16);
+
+  /* site palette */
   --panel: #ffffff;
   --panel-hover: #f8fafc;
   --code-bg: #0f172a;
@@ -26,6 +45,38 @@
   --green: #10b981;
   --red: #ef4444;
   --amber: #f59e0b;
+  --radius: 10px;
+}
+
+[data-theme="dark"] {
+  --bg: #0b1220;
+  --panel: #111827;
+  --code-bg: #020617;
+  --ink: #f1f5f9;
+  --ink-2: #cbd5e1;
+  --ink-3: #94a3b8;
+  --line: #1f2937;
+  --line-2: #334155;
+
+  --uele-bg: #0b1220;
+  --uele-surface: #111827;
+  --uele-surface-hover: #1f2937;
+  --uele-text: #f1f5f9;
+  --uele-text-muted: #94a3b8;
+  --uele-border: #1f2937;
+  --uele-danger: #f87171;
+  --uele-success: #4ade80;
+  --uele-warning: #fbbf24;
+  --uele-info: #38bdf8;
+  --uele-ring: rgba(96, 165, 250, 0.45);
+  --uele-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --uele-shadow-md:  0 4px 16px rgba(0, 0, 0, 0.45);
+  --uele-shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
+
+  --panel: #111827;
+  --panel-hover: #1f2937;
+  --code-bg: #020617;
+}
   --radius: 10px;
   --radius-sm: 6px;
   --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 4px 12px -4px rgb(0 0 0 / 0.06);
@@ -51,6 +102,7 @@ body {
   font-size: 16px;
   line-height: 1.7;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 a { color: var(--indigo); text-decoration: none; }
@@ -383,6 +435,16 @@ td code { white-space: normal; }
   width: 8px; height: 8px; border-radius: 50%;
   background: var(--green);
   box-shadow: 0 0 0 3px rgb(16 185 129 / 0.15);
+}
+.size-badge {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--indigo-soft);
+  color: var(--indigo-dark);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
 }
 .playground-head .spacer { margin-left: auto; }
 

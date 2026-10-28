@@ -6,9 +6,10 @@
   "description": "uele documentation site with live code playground",
   "scripts": {
     "bundle": "node scripts/bundle.mjs",
-    "postinstall": "node scripts/bundle.mjs",
-    "dev": "node scripts/bundle.mjs && vite --host 0.0.0.0",
-    "build": "node scripts/bundle.mjs && vite build",
+    "example-sizes": "node scripts/example-sizes.mjs",
+    "postinstall": "node scripts/bundle.mjs && node scripts/example-sizes.mjs",
+    "dev": "node scripts/bundle.mjs && node scripts/example-sizes.mjs && vite --host 0.0.0.0",
+    "build": "node scripts/bundle.mjs && node scripts/example-sizes.mjs && vite build",
     "preview": "vite preview --host 0.0.0.0",
     "check-examples": "node scripts/check-examples.mjs",
     "check-pipeline": "node scripts/check-playground-pipeline.mjs",

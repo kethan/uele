@@ -176,7 +176,7 @@ export function destroyAllPlaygrounds() {
   instances.clear();
 }
 
-export function createPlayground({ code, title = "Live example", tall = false } = {}) {
+export function createPlayground({ code, title = "Live example", tall = false, sizeLabel } = {}) {
   const initialCode = code;
   let timer = 0;
   let logs = [];
@@ -322,8 +322,7 @@ export function createPlayground({ code, title = "Live example", tall = false } 
     run();
   };
 
-  // boots the editor input listener and runs the first compile.
-  // deferred until the playground enters the viewport when lazy.
+  // runs the first compile on mount; Babel is lazy-loaded inside run().
   const start = () => {
     if (started) return;
     started = true;
@@ -339,6 +338,7 @@ export function createPlayground({ code, title = "Live example", tall = false } 
     { class: "playground-head" },
     statusDot,
     document.createTextNode(title),
+    sizeLabel && h("span", { class: "size-badge" }, sizeLabel),
     h("span", { class: "spacer" }),
     h("button", { class: "btn ghost", type: "button", onclick: reset, title: "Restore the original example" }, "Reset"),
     h("button", { class: "btn primary", type: "button", onclick: run }, "Run")
@@ -366,24 +366,10 @@ export function createPlayground({ code, title = "Live example", tall = false } 
   };
   instances.add(dispose);
 
-  // Lazy-load: only compile when the playground enters (or nears) the viewport.
-  // linkedom and older browsers have no IntersectionObserver — run immediately.
-  if (typeof IntersectionObserver !== "undefined") {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            observer.disconnect();
-            start();
-          }
-        }
-      },
-      { rootMargin: "300px" }
-    );
-    observer.observe(root);
-  } else {
-    start();
-  }
+  // run once mounted — Babel is lazy-loaded on first compile, so pages stay light.
+  queueMicrotask(() => {
+    if (!disposed) start();
+  });
 
   return { root, run, reset, editor, dispose, start };
 }

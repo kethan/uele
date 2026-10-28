@@ -2,4 +2,5 @@ node_modules
 dist-site
 public/uele.js
 public/vendor
+src/example-sizes.js
 *.local

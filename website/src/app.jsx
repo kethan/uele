@@ -10,6 +10,7 @@ import { NAV, ALL_PAGES, nextPrev } from "./content/nav.js";
 import { PAGES } from "./content/pages/index.js";
 import { EXAMPLES } from "./content/examples.js";
 import { HERO_CODE, FEATURES, TEASER } from "./content/home.js";
+import { EXAMPLE_SIZES, formatSize } from "./example-sizes.js";
 import { renderMarkdown } from "./lib/markdown.js";
 import { createPlayground, destroyAllPlaygrounds } from "./lib/playground.js";
 import { highlight } from "./lib/highlight.js";
@@ -20,7 +21,7 @@ const REPO_URL = "https://github.com/kethan/uele";
 const currentSlug = () => location.hash.replace(/^#\/?/, "").split("/")[0] || "";
 
 /* --------------------------------------------------------------- header */
-const Header = ({ active }) => {
+const Header = ({ active, theme, toggleTheme }) => {
   const links = [
     { href: "#/introduction", slug: "introduction", label: "Docs" },
     { href: "#/examples", slug: "examples", label: "Examples" },
@@ -53,6 +54,15 @@ const Header = ({ active }) => {
         <a class="always" href={REPO_URL} target="_blank" rel="noopener">
           GitHub ↗
         </a>
+        <button
+          class="btn ghost"
+          type="button"
+          onClick={toggleTheme}
+          title="Toggle dark theme"
+          aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+        >
+          {theme === "dark" ? "☀️" : "🌙"}
+        </button>
       </nav>
     </header>
   );
@@ -110,6 +120,7 @@ const HomePage = () => {
   const heroPlayground = createPlayground({
     code: HERO_CODE,
     title: "Playground — edit me",
+    sizeLabel: formatSize(EXAMPLE_SIZES.hero),
   });
 
   const teaserBlock = (
@@ -175,7 +186,7 @@ const DocPage = ({ slug }) => {
   return (
     <article class="doc-page">
       <h1>{page.title}</h1>
-      {renderMarkdown(page.markdown)}
+      {renderMarkdown(page.markdown, slug)}
       <div class="pager">
         {prev ? (
           <a href={`#/${prev.slug}`} class="prev">
@@ -213,6 +224,7 @@ const ExamplesPage = () => (
           code: ex.code,
           title: "Live preview",
           tall: ex.tall,
+          sizeLabel: formatSize(EXAMPLE_SIZES[ex.id]),
         });
         const toggle = (
           <button class="btn toggle-code" type="button">
@@ -273,11 +285,32 @@ const viewFor = (slug) => {
   return { slug, wide: false, el: <NotFound slug={slug} /> };
 };
 
+let writeTheme = () => {};
+
 const App = () => {
   // Route state is a pair of signals seeded with the first view; the
   // hashchange handler swaps them, and thunk regions re-render on write.
   const slug = signal(currentSlug());
   const route = signal(viewFor(read(slug)));
+
+  // Theme: persists in localStorage, reflected as data-theme on <html>.
+  let storedTheme = "light";
+  try {
+    storedTheme = localStorage.getItem("uele-theme") || "light";
+  } catch {
+    /* storage unavailable (linkedom / private mode) */
+  }
+  const theme = signal(storedTheme);
+  writeTheme = (t) => {
+    write(theme, t);
+    try {
+      localStorage.setItem("uele-theme", t);
+    } catch {
+      /* storage unavailable */
+    }
+    document.documentElement.setAttribute("data-theme", t);
+  };
+  document.documentElement.setAttribute("data-theme", read(theme));
 
   window.addEventListener("hashchange", () => {
     destroyAllPlaygrounds();
@@ -289,7 +322,11 @@ const App = () => {
 
   return (
     <div class="app-root">
-      <Header active={() => read(slug)} />
+      <Header
+        active={() => read(slug)}
+        theme={read(theme)}
+        toggleTheme={() => writeTheme(read(theme) === "dark" ? "light" : "dark")}
+      />
       <div
         class="backdrop"
         onClick={() => document.body.classList.remove("nav-open")}
