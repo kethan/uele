@@ -5,17 +5,17 @@
  *     import { mountTodos } from './s-js.jsx';
  *     mountTodos(document.body);
  *
- * Signals come from s-js; `useSjs()` wires uele to them (called for you by
+ * Signals come from s-js; `sjs()` wires uele to them (called for you by
  * `TodoApp`/`mountTodos`). Everything below the actions is the same JSX you
  * would write with any other preset.
  */
 import { For } from 'uele';
 import { Form, Row, Card, Stack, Button, Input, Checkbox, Label } from 'uele/ui';
-import { useSjs } from 'uele/adapters/sjs';
+import { sjs } from 'uele/signals/sjs';
 import S from 's-js';
 
 export const TodoApp = () => {
-	useSjs();
+	sjs();
 	// s-js needs an owner for the computations below, otherwise it warns that they
 	// can never be disposed (S.root also hands back a dispose function)
 	return S.root(() => {
@@ -24,7 +24,7 @@ export const TodoApp = () => {
 		const filter = S.data('all');
 		const remaining = S(() => todos().filter((t) => !t.done).length);
 		// read `filter` eagerly: a lazy read inside .filter() is skipped on an empty list,
-		// and the derived value would never subscribe to it
+		// and the computed value would never subscribe to it
 		const visible = S(() => {
 			const f = filter();
 			return todos().filter((t) => (f === 'all' ? true : f === 'active' ? !t.done : t.done));

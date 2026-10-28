@@ -44,7 +44,6 @@ export default defineConfig({
 			{ find: /^uele\/flow$/, replacement: src('./flow/index.js') },
 			{ find: /^uele\/reactive$/, replacement: src('./reactive/index.js') },
 			{ find: /^uele\/ui$/, replacement: src('./ui/index.js') },
-			{ find: /^uele\/adapters\/(.*)$/, replacement: src('./adapters/$1.js') },
 			{ find: /^uele\/diffs\/(.*)$/, replacement: src('./diffs/$1.js') },
 			{ find: /^usub\/tiny$/, replacement: src('./lite/dist/index.es.js') },
 			{ find: /^usub$/, replacement: src('./dist/index.es.js') },
@@ -68,7 +67,7 @@ export default defineConfig({
 			'test/realtime.test.js', 'test/props.test.js', 'test/lite.test.js',
 			'test/jsx.test.tsx', 'test/signals.conformance.test.js', 'test/signals.libraries.test.js',
 			'test/diff.conformance.test.js', 'test/diff.transitions.test.js', 'test/bundle-identity.test.js', 'test/presets.test.js', 'test/ui.test.js', 'test/ui.test.jsx', 'test/examples.test.js',
-			'test/readme.test.jsx', 'test/authoring.test.jsx', 'test/flow.test.jsx', 'test/reactive.test.js', 'test/docs.test.js', 'test/facade.test.js'
+			'test/ownership.test.js', 'test/ui.teardown.test.jsx', 'test/readme.test.jsx', 'test/authoring.test.jsx', 'test/flow.test.jsx', 'test/reactive.test.js', 'test/cjs.ownership.test.js', 'test/docs.test.js', 'test/facade.test.js'
 		],
 		...gcArgv,
 	}

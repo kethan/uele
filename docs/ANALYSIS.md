@@ -309,18 +309,18 @@ assertions do not apply here), plus the defects they caught:
 
 ---
 
-## 11. Preset layer: one-call interop (`adapters/*`, `diffs/*`)
+## 11. Preset layer: one-call interop (`signals/*`, `diffs/*`)
 
-`usePreactSignals()` and friends - one import, one call configures the whole `api` landscape:
+`preactSignals()` and friends - one import, one call configures the whole `api` landscape:
 
-* 11 signal presets (`adapters/ulive` .. `adapters/solid`) and 8 diff presets (`diffs/builtin` ..
+* 11 signal presets (`signals/ulive` .. `signals/solid`) and 8 diff presets (`diffs/builtin` ..
   `diffs/rebuild`), each a self-contained module with the library as an OPTIONAL PEER dependency.
 * Every preset assigns a COMPLETE reactivity surface: unused hooks are explicitly cleared, so switching
   presets can never leave a stale `api.any`/`api.effect` behind (pinned by `test/presets.test.js`).
-* Presets accept an optional target: `usePreactSignals(liteApi)` configures `lite`'s tiny core.
+* Presets accept an optional target: `preactSignals(liteApi)` configures `lite`'s tiny core.
 * Build: the hand-written `.js` sources are the ESM surface; rollup emits standalone `.cjs` twins
   (no shared chunks - a chunk outside the published dirs broke `require()` in the pack gate and was fixed).
-* Surface: `exports` wildcards `"./adapters/*"` and `"./diffs/*"` (types/import/require), 17 optional
+* Surface: `exports` wildcards `"./signals/*"` and `"./diffs/*"` (types/import/require), 17 optional
   peers, d.ts for all 19. Examples: `docs/PRESETS.md` (generated from the presets' own docblocks).
 * `test/presets.test.js` drives every preset end to end (21 tests: 11 adapters x live signal updates,
   8 engines x keyed grow/shrink/reorder/clear, target + switching semantics) and the suite also runs
@@ -341,11 +341,11 @@ assertions do not apply here), plus the defects they caught:
   * `h()` treated `style: null` as an object (`typeof null === 'object'`) and threw — fixed in both
     `src` and `lite` (`isObject` now rejects null) and covered by a test.
   * Derived values must read every dependency **eagerly**: `todos.filter(t => filter === …)` never
-    reads `filter` on an empty list, so the derived value never subscribes to it (ulive and friends
+    reads `filter` on an empty list, so the computed value never subscribes to it (ulive and friends
     capture dependencies on the first run). Every example now reads the filter first, with a comment.
   * `solid-js` resolves to its **no-op server build** under Node's export condition — the example
     pins `solid-js/dist/solid.js`, and `subscribe()`-based stores (tanstack) do not emit
-    synchronously, so derived stores replay their current value to new subscribers.
+    synchronously, so computed stores replay their current value to new subscribers.
 * **Choice tables** for both preset families (README + `docs/PRESETS.md`): install size (npm
   unpacked), preset size (gzip, measured), read/write API, reactive thunks vs subscribe path, and a
   one-line "pick it when". All eight engines satisfy the same contract over 42 250 transitions.
@@ -355,7 +355,7 @@ assertions do not apply here), plus the defects they caught:
   `.setState()`, or a setter function) — passing the cell as `value`/`checked` works too.
 * **Version 1.0.0.** 1079 tests (source) + 1023 (built ESM) + 945 (built CJS), 100 % coverage on all
   four entry points, sizes/types/pack green, and `import` + `require` verified on the installed
-  tarball for `uele`, `uele/lite`, both jsx runtimes, `uele/adapters/*`, `uele/diffs/*` and `uele/ui`.
+  tarball for `uele`, `uele/lite`, both jsx runtimes, `uele/signals/*`, `uele/diffs/*` and `uele/ui`.
 
 ## 13. Authoring layer, flow, router and JSX-only docs
 
@@ -367,7 +367,7 @@ signal library is installed**, and **the docs should show JSX only**.
   utility written against them runs on ulive, preact, vue, usignal, alien-signals, s-js, mobx and
   solid; on the subscribe-only stores (rxjs, nanostores, `@tanstack/store`) `canEffect()`/`canCompute()`
   report the missing capability instead of failing at runtime. Every preset gained the five *authoring*
-  hooks (`signal`, `derived`, `set`, `batch`, `untracked`) next to the four it already had.
+  hooks (`signal`, `computed`, `set`, `batch`, `untracked`) next to the four it already had.
 * **`uele/flow`** — `Await`, `Suspense`, `ErrorBoundary`, `Portal`, `Title`. None of them starts an
   effect of its own: each reactive part is a *function child*, which uele renders as a thunk (re-run on
   change, disposed with the node), with a one-shot fallback for presets without an effect runner — so

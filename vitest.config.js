@@ -40,6 +40,8 @@ export default defineConfig({
 			{ find: /^react\/jsx-runtime$/, replacement: src('./jsx-runtime/index.ts') },
 			{ find: /^uele\/jsx-runtime$/, replacement: src('./jsx-runtime/index.ts') },
 			{ find: /^uele\/jsx-dev-runtime$/, replacement: src('./jsx-dev-runtime/index.ts') },
+			{ find: /^uele\/setup$/, replacement: src('./setup/index.js') },
+			{ find: /^uele\/signals\/(.*)$/, replacement: src('./signals/$1.js') },
 			{ find: /^uele\/props$/, replacement: src('./props/index.js') },
 			{ find: /^uele$/, replacement: src('./src/index.js') },
 			{ find: /^uele\/router$/, replacement: src('./router/index.js') },
@@ -48,7 +50,6 @@ export default defineConfig({
 			{ find: /^uele\/ui$/, replacement: src('./ui/index.js') },
 			{ find: /^uele\/hooks$/, replacement: src('./hooks/index.js') },
 			{ find: /^uele\/themes$/, replacement: src('./themes/index.js') },
-			{ find: /^uele\/adapters\/(.*)$/, replacement: src('./adapters/$1.js') },
 			{ find: /^uele\/diffs\/(.*)$/, replacement: src('./diffs/$1.js') },
 		]
 	},
@@ -69,7 +70,7 @@ export default defineConfig({
 			include: [
 				'src/**/*.js', 'lite/index.js', 'jsx-runtime/index.ts', 'jsx-dev-runtime/index.ts',
 				'ui/index.js', 'hooks/index.js', 'themes/index.js', 'reactive/index.js',
-				'flow/index.js', 'router/index.js', 'adapters/*.js', 'diffs/*.js'
+				'props/internal.js', 'setup/index.js', 'flow/index.js', 'router/index.js', 'signals/*.js', 'diffs/*.js'
 			],
 			exclude: ['**/dist/**'],
 			reporter: ['text'],
@@ -90,7 +91,7 @@ export default defineConfig({
 				'reactive/index.js': { statements: 100, branches: 100, functions: 100, lines: 100 },
 				'flow/index.js': { statements: 100, branches: 100, functions: 100, lines: 100 },
 				'router/index.js': { statements: 100, branches: 100, functions: 100, lines: 100 },
-				'adapters/*.js': { statements: 100, branches: 100, functions: 100, lines: 100 },
+				'signals/*.js': { statements: 100, branches: 100, functions: 100, lines: 100 },
 				'diffs/*.js': { statements: 100, branches: 100, functions: 100, lines: 100 }
 			}
 		}

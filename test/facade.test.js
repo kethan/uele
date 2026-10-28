@@ -4,10 +4,10 @@
  */
 import { describe, it, expect, afterEach } from 'vitest';
 import { api } from 'uele';
-import { usePreactSignals } from 'uele/adapters/preact';
-import { useRxjs } from 'uele/adapters/rxjs';
+import { preactSignals } from 'uele/signals/preact';
+import { rxjs } from 'uele/signals/rxjs';
 import { signal, computed, read, write, effect, untracked, isCell, canCompute, canEffect, batch, active } from 'uele/reactive';
-import { HOOKS } from 'uele/adapters/util';
+import { HOOKS } from '../signals/internal.js';
 
 const empty = { ...HOOKS, is: undefined, get: undefined };
 const saved = { ...api };
@@ -16,7 +16,7 @@ afterEach(() => Object.assign(api, saved));
 
 describe('uele/reactive on a preset with an effect runner', () => {
 	it('creates, derives, reads, writes and runs effects', () => {
-		usePreactSignals();
+		preactSignals();
 		expect(canEffect()).toBe(true);
 		expect(canCompute()).toBe(true);
 		const n = signal(1);
@@ -49,7 +49,7 @@ describe('uele/reactive reports what a preset cannot do', () => {
 	});
 
 	it('names the capability a subscribe-only preset lacks', () => {
-		useRxjs();
+		rxjs();
 		expect(canEffect()).toBe(false);
 		expect(canCompute()).toBe(false);
 		expect(() => computed(() => 1)).toThrow(/'computed'/);
@@ -61,7 +61,7 @@ describe('uele/reactive reports what a preset cannot do', () => {
 	});
 
 	it('exposes the configured api for advanced use', () => {
-		usePreactSignals();
+		preactSignals();
 		expect(active()).toBe(api);
 	});
 });

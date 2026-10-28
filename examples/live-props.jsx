@@ -1,9 +1,9 @@
 /** Simulated live presence + draft composer. Install a signal adapter before mounting. */
 import { h } from 'uele';
 import { signal, read, write } from 'uele/reactive';
-import { useProps, autoScroll } from 'uele/props';
+import { appProps, autoScroll } from 'uele/props';
 
-useProps();
+appProps();
 
 export function LiveComposer() {
 	const online = signal(true), draft = signal(''), typing = signal(false);

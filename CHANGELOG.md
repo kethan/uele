@@ -120,8 +120,8 @@ solid, and the subscribe-only rxjs/nanostores/tanstack where applicable).
   `npm test` via `test/a11y.test.jsx`, so a11y regressions fail locally
   without a browser — it immediately caught the `Checkbox`/`Textarea`
   labelling fixes above.
-- **`uele/adapters/signals` — `@webreflection/signals` is the twelfth signal
-  preset:** `useSignals()` wires WebReflection's Preact-like `Signal`
+- **`uele/signals/signals` — `@webreflection/signals` is the twelfth signal
+  preset:** `signals()` wires WebReflection's Preact-like `Signal`
   implementation (same author as `usignal`). The adapter swallows effect
   return values, which that library would otherwise invoke as cleanups (uele
   callbacks may return nodes). Ships with types, optional-peer wiring, a
@@ -160,14 +160,14 @@ solid, and the subscribe-only rxjs/nanostores/tanstack where applicable).
 - **`uele/hooks` (new subpath):** `useToggle`, `useDisclosure`, `useCounter`,
   `useControllable`, `usePrevious`, `useList`, `useHistory`, `useAsync`,
   `useDebounce`/`useDebounceFn`, `useThrottle`/`useThrottleFn`, `useInterval`,
-  `useTimeout`, `useCountdown`, `useStopwatch`, `useNow`/`useClock`,
+  `useTimeout`, `useCountdown`, `useStopwatch`, `useNow`/`useNow`,
   `useLocalStorage`, `useSessionStorage`, `useMediaQuery`, `useOnline`,
   `useWindowSize`, `useEventListener`, `useKeyPress`, `useHotkey`,
   `useClickOutside`, `useHover`, `useFocus`, `useClipboard`, `useFetch`,
   `useWebSocket`, `useEventSource`, `useBroadcastChannel`, `useGeolocation`,
   `useDocumentVisibility`, `useWindowFocus`, `useScrollPosition`,
   `useScrollLock`, `useFocusTrap`, `useFullscreen`, `useBreakpoint`,
-  `useColorScheme`/`useDarkMode`, `useQueryParam`, `useCookie`, `useIdle`,
+  `useColorScheme`/`useColorScheme`, `useQueryParam`, `useCookie`, `useIdle`,
   `useLongPress`, `useSwipe`, `useAnimationFrame`, `useInView`, `useTitle`,
   `useLatest`, `useIsMounted`, `useId`, `usePagination`, `useOTP`,
   `useForm`, `useSignal`, `useComputed`, `useEffect`.
@@ -196,6 +196,6 @@ solid, and the subscribe-only rxjs/nanostores/tanstack where applicable).
 
 Releases before this changelog was introduced — see the git history and
 tags on GitHub for details. Highlights of the 0.10 line: the eleven signal
-presets (`uele/adapters/*`), eight diff engines (`uele/diffs/*`), the
+presets (`uele/signals/*`), eight diff engines (`uele/diffs/*`), the
 `uele/reactive` authoring layer, `uele/flow` and `uele/router`, and the
 keyed-diff conformance suite (42 250 list transitions).

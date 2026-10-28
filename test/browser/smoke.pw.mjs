@@ -21,7 +21,11 @@ async function boot(page) {
 		if (m.type() === 'error') errors.push(m.text());
 	});
 	await page.goto(HARNESS);
-	await expect(page.getByTestId('gallery')).toBeVisible();
+	try {
+		await expect(page.getByTestId('gallery')).toBeVisible();
+	} catch (error) {
+		throw new Error(`Harness failed to boot. Browser errors:\n${errors.join('\n') || '(none captured)'}`, { cause: error });
+	}
 	return errors;
 }
 

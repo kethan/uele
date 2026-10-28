@@ -6,9 +6,10 @@
  * whichever preset is installed.
  *
  *     import { mountDashboard } from './dashboard.jsx';
- *     mountDashboard(document.body);
+ *     const app = mountDashboard(document.body);
+ *     // At teardown: app.dispose(); app.remove();
  */
-import { usePreactSignals } from 'uele/adapters/preact';
+import { preactSignals } from 'uele/signals/preact';
 import { signal, computed } from '@preact/signals-core';
 import {
 	AppShell, Navbar, Stat, Grid, DataTable, SearchInput, Dialog, Button,
@@ -25,18 +26,18 @@ const USERS = [
 ];
 
 export const DashboardApp = () => {
-	usePreactSignals();
+	preactSignals();
 	const theme = signal(themes.light);
 	const query = signal('');
 	const filtered = computed(() => USERS.filter((u) => u.name.toLowerCase().includes(query.value.toLowerCase())));
 	const settingsOpen = signal(false);
-	const [clock] = useNow(1000);
+	const { now: clock, dispose } = useNow(1000);
 	const commands = [
 		{ label: 'Toggle theme', hint: 'Appearance', onSelect: () => (theme.value = theme.value === themes.dark ? themes.light : themes.dark) },
 		{ label: 'Open settings', hint: 'Dialog', onSelect: () => (settingsOpen.value = true) }
 	];
 
-	return (
+	const app = (
 		<ThemeProvider theme={theme}>
 			<AppShell
 				header={
@@ -85,6 +86,7 @@ export const DashboardApp = () => {
 			</AppShell>
 		</ThemeProvider>
 	);
+	return Object.assign(app, { dispose });
 };
 
 export const mountDashboard = (target = document.body) => {

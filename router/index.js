@@ -19,6 +19,7 @@
  * every `<a href="/…">` inside the element into a client-side navigation.
  */
 import { h, add } from 'uele';
+import { onTeardown } from '../props/internal.js';
 import { signal, read, write } from 'uele/reactive';
 
 /* ----------------------------------------------------------- path matching */
@@ -88,37 +89,47 @@ export const createRouter = () => {
 /* -------------------------------------------------------------- the hook */
 
 /**
- * `const [view, linkProps] = useRouter(app, initial)`
+ * `const { view, props, navigate, dispose } = useRouter(app, initial)`
  *
  * - `view` is a cell holding the current route's rendered content (`initial`
  *   until the first navigation resolves, and `notFound` when nothing matches
  *   or a handler throws).
- * - `linkProps` is spread on the element that contains your `<a href="/…">`
+ * - `props` is spread on the element that contains your `<a href="/…">`
  *   links; external and `target`-ed links are left alone.
  *
- * Navigation happens on `popstate` (back/forward) and through `navigate()`.
+ * The returned navigate() resolves this view. Module-level navigate() updates
+ * history and notifies every router. Dispose standalone hooks when their owner ends;
+ * Router components do this automatically when discarded by the renderer.
  */
 export const useRouter = (app, initial = '', notFound = null) => {
 	const view = signal(initial);
 	let current = typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/';
 
+	let disposed = false, latest = 0;
 	const navigate = (path) => {
+		if (disposed) return Promise.resolve();
+		const token = ++latest;
 		current = path;
-		const url = new URL(path, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
-		return Promise.resolve(app.fetch(new Request(url)))
-			.then((result) => write(view, result === undefined ? notFound : result))
-			.catch(() => write(view, notFound));
+		let response;
+		try {
+			const url = new URL(path, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
+			response = app.fetch(new Request(url));
+		} catch (error) { response = Promise.reject(error); }
+		return Promise.resolve(response)
+			.then((result) => { if (token === latest) write(view, result === undefined ? notFound : result); })
+			.catch(() => { if (token === latest) write(view, notFound); });
 	};
 
+	const sync = () => navigate(window.location.pathname + window.location.search);
 	if (typeof window !== 'undefined') {
-		const sync = () => navigate(window.location.pathname + window.location.search);
 		window.addEventListener('popstate', sync);
 		sync(); // resolve the route we are already on
 	}
 
-	/** spread on the element that holds your links: `<main {...linkProps()}>` */
-	const linkProps = () => ({
+	/** spread on the element that holds your links: `<main {...props}>` */
+	const props = {
 		onclick: (event) => {
+			if (disposed) return;
 			const anchor = event.target?.closest?.('a');
 			if (!anchor) return;
 			const href = anchor.getAttribute('href');
@@ -127,9 +138,13 @@ export const useRouter = (app, initial = '', notFound = null) => {
 			if (href !== current) window.history.pushState(null, '', href);
 			navigate(href);
 		}
-	});
-
-	return [view, linkProps, navigate];
+	};
+	const dispose = () => {
+		if (disposed) return;
+		disposed = true; latest++;
+		if (typeof window !== 'undefined') window.removeEventListener('popstate', sync);
+	};
+	return { view, props, navigate, dispose };
 };
 
 /** push a new url and notify every mounted router */
@@ -139,14 +154,14 @@ export const navigate = (path) => {
 	window.dispatchEvent(new PopStateEvent('popstate'));
 };
 
-/** `<Link to="/about">About</Link>` — a plain anchor, intercepted by linkProps */
+/** `<Link to="/about">About</Link>` — a plain anchor, intercepted by router.props */
 export const Link = ({ to, children, ...props } = {}) => h('a', { ...props, href: to }, children);
 
 /**
- * `<Router app={app} fallback={…} notFound={…} />` — renders the live view
+ * `<Router app={app} initial={…} notFound={…} />` — renders the live view
  * in place, with link interception on the wrapper.
  */
 export const Router = ({ app, initial = '', notFound = null, ...props } = {}) => {
-	const [view, linkProps] = useRouter(app, initial, notFound);
-	return h('div', { ...props, ...linkProps() }, view);
+	const router = useRouter(app, initial, notFound);
+	return h('div', { ...props, ...router.props }, router.view, onTeardown(router.dispose));
 };

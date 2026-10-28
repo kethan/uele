@@ -1,7 +1,7 @@
 import * as main from 'uele';
 import * as lite from 'uele/lite';
-import { useProps, AppProps } from 'uele/props';
-useProps(); useProps(main); useProps(lite);
+import { appProps, AppProps } from 'uele/props';
+appProps(); appProps(main); appProps(lite);
 const props: AppProps = { show: true, aria: { busy: false }, bindValue: ['hi', (value) => value.toUpperCase()], use: () => () => {} };
 main.h('input', props);
 

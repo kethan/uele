@@ -1,1 +1,1 @@
-export declare function useSpect<T extends object>(target?: T): T;
+export declare function spect<T extends object>(target?: T): T;

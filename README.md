@@ -67,20 +67,21 @@ api.get = (v) => v.value;
 13. [Themes (`uele/themes`)](#themes-uelethemes)
 14. [Presets: one-call interop](#presets-one-call-interop)
 15. [Write once, run on any preset (`uele/reactive`)](#write-once-run-on-any-preset-uelereactive)
-16. [Flow components (`uele/flow`)](#flow-components-ueleflow)
-17. [Routing (`uele/router`)](#routing-uelerouter)
-18. [How it works](#how-it-works)
-19. [Authoring guides](#authoring-guides) — [a plugin](#write-a-plugin),
+16. [Object and array state with ustor](#object-and-array-state-with-ustor)
+17. [Flow components (`uele/flow`)](#flow-components-ueleflow)
+18. [Routing (`uele/router`)](#routing-uelerouter)
+19. [How it works](#how-it-works)
+20. [Authoring guides](#authoring-guides) — [a plugin](#write-a-plugin),
     [a signal adapter](#write-a-signal-adapter), [a diff engine](#write-a-diff-engine)
-20. [Which one should I use?](#which-one-should-i-use)
-21. [Best practices](#best-practices)
-22. [Cleanup Support](#cleanup-support)
-23. [Other Settings](#other-settings) — [any other reactive library](#for-any-other-reactive-library),
+21. [Which one should I use?](#which-one-should-i-use)
+22. [Best practices](#best-practices)
+23. [Cleanup Support](#cleanup-support)
+24. [Other Settings](#other-settings) — [any other reactive library](#for-any-other-reactive-library),
     [SVG and MathML](#svg-and-mathml)
-24. [Testing, types and size](#testing-types-and-size)
-25. [Errors](#errors)
-26. [Thanks and Inspiration](#thanks-and-inspiration)
-27. [License](#license)
+25. [Testing, types and size](#testing-types-and-size)
+26. [Errors](#errors)
+27. [Thanks and Inspiration](#thanks-and-inspiration)
+28. [License](#license)
 
 ### Counter
 
@@ -114,7 +115,7 @@ app; paste it into JSFiddle or CodePen):
 </script>
 ```
 
-A full URL works for every subpath — `https://esm.sh/uele/lite`, `…/uele/ui`, `…/uele/adapters/preact` — and
+A full URL works for every subpath — `https://esm.sh/uele/lite`, `…/uele/ui`, `…/uele/signals/preact` — and
 the CDN rewrites the plain `'uele'` imports inside them, so they all land on **one** copy of the runtime:
 `api`, `props` and `h` are shared, exactly as under a bundler. An import map is only sugar — it buys back the
 bare `uele` specifiers:
@@ -133,8 +134,8 @@ bare `uele` specifiers:
 Two rules once it is more than a fiddle: **pin the major** (`uele@1`, not bare `uele`) so every specifier
 resolves to the same version, and leave the query string alone — `?bundle` or `?external=uele` inlines a
 *second* copy of the runtime, and then the `api` you configure is not the `api` that `uele/ui` renders through.
-Presets need nothing installed locally either: `import { usePreactSignals } from
-"https://esm.sh/uele/adapters/preact"` pulls its library from the CDN.
+Presets need nothing installed locally either: `import { preactSignals } from
+"https://esm.sh/uele/signals/preact"` pulls its library from the CDN.
 
 JSX is the one thing a CDN cannot do for you — a browser does not compile `<div />`. Without a build step use
 `h` (below), or [`htm`](https://github.com/developit/htm) for tagged templates
@@ -674,7 +675,7 @@ Copy, paste, run — the whole app in JSX (this is the exact code `test/readme.t
 
 ```jsx
 import { For } from "uele";
-import { usePreactSignals } from "uele/adapters/preact";
+import { preactSignals } from "uele/signals/preact";
 import { signal } from "@preact/signals-core";
 import {
 	Form,
@@ -687,7 +688,7 @@ import {
 	Label,
 } from "uele/ui";
 
-usePreactSignals(); // one call, whole api configured
+preactSignals(); // one call, whole api configured
 
 const TodoApp = () => {
 	const text = signal("");
@@ -748,8 +749,7 @@ independent instances.
 
 ## UI primitives
 
-`uele/ui` is a Radix-style catalogue of **45+ headless primitives** (85 exports
-with aliases) over `h()`. They are accessible by default (roles, `aria-*`,
+`uele/ui` is a Radix-style catalogue of **100+ headless primitives and helpers** over `h()`. They are accessible by default (roles, `aria-*`,
 keyboard where it matters), carry `data-state`/`data-*` styling hooks, read the
 `--uele-*` theme variables from [`uele/themes`](#themes-uelethemes) with
 light-theme fallbacks, and every prop is live — pass a signal from **any**
@@ -778,36 +778,35 @@ too — JSX is just nicer.
 
 **Forms** — `Form` `Field` `Label` `FieldHint` `FieldError` `Button` `Input`
 `Textarea` `Checkbox` `Radio` `RadioGroup` `Switch` `Slider` `Select` `Option`
-`Combobox` `Rating` `NumberInput` `SearchInput` `OTPInput` (aliases `PinInput`,
-`OTP`) `TagInput` `FileInput` `Dropzone`
+`Combobox` `Rating` `NumberInput` `SearchInput` `OTPInput` `TagInput` `FileInput` `Dropzone`
 
 **Layout** — `Card` `Stack` `Row` `Grid` `Container` `Center` `Spacer`
-`Separator` (`Divider`) `AspectRatio` `ScrollArea`
+`Separator` `AspectRatio` `ScrollArea`
 
 **Typography** — `Heading` `Text` `Link` `Kbd` `Code` `Blockquote` `List`
 `ListItem`
 
 **Data display** — `Badge` `Avatar` `Skeleton` `Spinner` `Alert` `Progress`
 `Stat` `Empty` `Table` `TableHead` `TableBody` `TableRow` `TableHeader`
-`TableCell` (aliases `Thead` `Tbody` `Th` `Td`)
+`TableCell`
 
 **Navigation & disclosure** — `Breadcrumb` (+ `BreadcrumbItem` `BreadcrumbLink`
 `BreadcrumbSeparator`) `Pagination` (+ the pure `paginationRange` helper)
 `Tabs` `TabList` `Tab` `TabPanel` `Accordion` `AccordionItem` `Collapsible`
 `Stepper` `Carousel`
 
-**Overlays & feedback** — `Dialog` `Drawer` (`Sheet`) `Popover` `Tooltip` `Menu`
-(`DropdownMenu`) `MenuItem` `Toast` `Toaster`
+**Overlays & feedback** — `Dialog` `Drawer` `Popover` `Tooltip` `Menu`
+`MenuItem` `Toast` `Toaster`
 
 **Everyday & real-world** — `Toggle` `ToggleGroup` `SegmentedControl`
 `MultiSelect` `Listbox` `PasswordInput` `ColorPicker` `Calendar` `DatePicker`
-`TimeAgo` (`RelativeTime`) `CountdownTimer` `AvatarGroup` `InputGroup`
+`TimeAgo` `CountdownTimer` `AvatarGroup` `InputGroup`
 `CopyButton` `StatusDot` `VisuallyHidden` `SkipLink`
 
 **Data-heavy & app chrome** — `DataTable` (sortable, pageable) `Tree`
-(`TreeView`) `VirtualList` `InfiniteScroll` `CommandPalette` (`Command`)
-`ContextMenu` `NavigationMenu` `HoverCard` `AlertDialog` (`ConfirmDialog`)
-`SplitPane` (`Resizable`) `Editable` `Lightbox` (`Gallery`) `FileList`
+`VirtualList` `InfiniteScroll` `CommandPalette`
+`ContextMenu` `NavigationMenu` `HoverCard` `AlertDialog`
+`SplitPane` `Editable` `Lightbox` `FileList`
 `Wizard` `Toolbar` `Navbar` `AppShell` `Timeline`
 
 `Drawer` is anchored to its edge, `Dialog` locks body scroll and closes on a
@@ -869,51 +868,44 @@ end by `test/ui.primitives.test.jsx`, `test/ui.test.js` and `test/ui.test.jsx`
 
 ## Hooks (`uele/hooks`)
 
-Sixty-plus useful hooks, written once against `uele/reactive`, so they run on
-every preset (the DOM/timer ones need no effect runner at all):
+Setup-time composables, written against the main `uele/reactive` API. They are
+ordinary functions, not React hooks: there is no implicit mount/unmount lifecycle.
+Use primitives from `uele/reactive` and behavior from `uele/hooks`:
 
 ```js
-import {
-	useToggle, useCounter, useLocalStorage, usePagination, useOTP, useForm,
-} from "uele/hooks";
+import { signal, computed, read, write } from "uele/reactive";
+import { useToggle, useCounter, useLocalStorage, useWindowSize } from "uele/hooks";
 
-const [on, toggle] = useToggle(false);
+const { value: enabled, toggle } = useToggle(false);
 const { count, inc } = useCounter(0, { min: 0, max: 10 });
-const [name, setName] = useLocalStorage("name", "Ada");
-const pager = usePagination({ total: 95, pageSize: 10 });
-const otp = useOTP(6, { onComplete: (code) => submit(code) });
+const preferences = useLocalStorage("name", "Ada");
+const viewport = useWindowSize();
+
+console.log(read(count), read(viewport.size));
+// Connect these to your actual teardown path:
+preferences.dispose(); // preserves saved data; remove() deletes it
+viewport.dispose();
 ```
 
-**State** — `useSignal` `useComputed` `useEffect` `useToggle` (`useBoolean`)
-`useDisclosure` `useCounter` `useControllable` `usePrevious` `useList`
-(`useArray`) `useHistory` (undo/redo) `useAsync` `useId`
-**Timers & debounce** — `useDebounce` `useDebounceFn` `useInterval`
-`useTimeout` `useCountdown`
-**Browser & DOM** — `useLocalStorage` `useSessionStorage` `useMediaQuery`
-`useOnline` `useWindowSize` `useEventListener` `useKeyPress` `useHotkey`
-`useClickOutside` `useHover` `useFocus` `useClipboard`
-`useIntersectionObserver` `useResizeObserver`
-**Composite logic** — `usePagination` (+ pure `paginationRange`) `useOTP`
-(`usePinInput`) `useForm` (per-field cells, validation, submit)
+Multi-value hooks return **named objects**. Resource-owning hooks expose an
+explicit, terminal, idempotent **`dispose()`**. State-only hooks do not invent
+empty disposers. `stop`/`pause`/`disconnect`/`close` are reusable domain controls;
+`dispose()` ends ownership and prevents restarting resource actions.
 
-**Realtime & clocks** — `useWebSocket` `useEventSource` (SSE)
-`useBroadcastChannel` (cross-tab) `useFetch` (abortable, on `useAsync`)
-`useNow` (`useClock`) `useStopwatch` `useThrottle` `useThrottleFn`
+**State and logic:** `useToggle`, `useDisclosure`, `useCounter`, `useControllable`,
+`usePrevious`, `useList`, `useHistory`, `useAsync`, `useId`, `usePagination`, `useOTP`, `useForm`.
 
-**Browser APIs** — `useGeolocation` `useDocumentVisibility` `useWindowFocus`
-`useScrollPosition` `useScrollLock` `useFocusTrap` `useFullscreen`
-`useBreakpoint` `useColorScheme` (`useDarkMode`, pairs with `uele/themes`)
-`useQueryParam` `useCookie` `useIdle` `useLongPress` `useSwipe`
-`useAnimationFrame` `useInView` `useTitle` `useLatest` `useIsMounted`
+**Scheduling:** `useDebounce`, `useThrottle`, `useDebounceFn`, `useThrottleFn`,
+`useInterval`, `useTimeout`, `useCountdown`, `useNow`, `useStopwatch`, `useAnimationFrame`.
 
-Transports and observers degrade gracefully when the browser API is absent
-(SSR, jsdom, old browsers): status cells stay `closed`/false and sends are
-no-ops. Covered by `test/hooks.test.js` and `test/hooks.realtime.test.js` —
-the realtime transports are tested against stubbed globals, never a network.
+**Browser and resources:** storage, media queries, online state, window size,
+keyboard/events, focus/hover, clipboard, observers, fullscreen, color schemes,
+query params, cookies, idle/press/swipe, title, geolocation, transports and fetch.
 
-Hooks return cells you can render directly (`{count}`), teardown functions, or
-small objects of both; observers and storage degrade gracefully when the
-browser API is absent. Covered by `test/hooks.test.js`.
+There are no duplicate primitive wrappers or synonym aliases, and no fake
+`useIsMounted` lifecycle. See [docs/HOOKS.md](docs/HOOKS.md) for canonical names,
+return shapes, disposal, cancellation and typing. Browser-specific hooks degrade
+when the required API is absent; transport tests use stubs, not network services.
 
 ## Themes (`uele/themes`)
 
@@ -950,7 +942,7 @@ with it (persisted, toggleable). `cssVars(theme)` gives the
 `--uele-*` map, `ThemeStyle` renders it as a reactive `<style>` element, and
 `useTheme()` is the state hook (`toggle()` flips light/dark). The same module
 ships the class helpers Radix apps pair with themes — `cx(...)` for joining
-maybe-reactive class values and a `cva`-style `variants()` / `styled()`:
+maybe-reactive class values and a `variants`-style `variants()` / `styled()`:
 
 ```js
 import { variants, styled } from "uele/themes";
@@ -969,21 +961,58 @@ Covered by `test/themes.test.jsx`.
 
 ## Presets: one-call interop
 
-Instead of wiring the `api` object by hand, import a preset and call it:
+Configure once at startup with explicit, tree-shakeable imports:
 
 ```js
-import { usePreactSignals } from "uele/adapters/preact";
+import { configure } from "uele/setup";
+import { preactSignals } from "uele/signals/preact";
+import { stage0 } from "uele/diffs/stage0";
+import { appProps } from "uele/props";
 
-usePreactSignals(); // that is the whole setup
+configure({
+  signals: preactSignals,
+  diff: stage0,
+  props: [appProps]
+});
 ```
 
-There is one preset per supported signal library (`uele/adapters/*` - 11 of them, `ulive` to
-`solid-js`) and per diff engine (`uele/diffs/*` - 8, the built-in marker walk through `swapdom`,
-`morphdom` and `fast-array-diff`). Every preset assigns the complete surface - unused hooks are cleared, so
-switching presets can never leave stale configuration behind - accepts an optional target
-(`usePreactSignals(liteApi)` configures `uele/lite`), and treats the signal/diff library as an
-optional peer dependency: install the one you use, nothing else is pulled in. All of them are documented with
-runnable examples in [docs/PRESETS.md](docs/PRESETS.md) and driven end to end by `test/presets.test.js`.
+Pass the installers themselves, **not** `preactSignals()` or `stage0()`.
+`configure()` only coordinates the existing installers; there are no plugin objects,
+registries or auto-imported dependencies. Omitted categories stay unchanged. Prop packs
+run in order; later handlers replace earlier handlers with the same name.
+
+For lite, pass the renderer module as the second argument:
+
+```js
+import * as lite from "uele/lite";
+configure({ signals: preactSignals, diff: stage0, props: [appProps] }, lite);
+```
+
+The helper is optional. Direct installation remains the smallest path:
+
+```js
+preactSignals();
+stage0();
+appProps();
+// Explicit lite targets without the helper:
+preactSignals(lite.api);
+stage0(lite.api);
+appProps(lite);
+```
+
+Signal integrations live at `uele/signals/*`, with one canonical installer per library.
+Signal and diff installers accept an API; prop packs accept a renderer.
+`configure()` hides that plumbing behind one renderer target. Old adapter paths and
+`use…` installer names have been removed before the first production release.
+
+Configure before creating state or rendering. This is shared startup configuration,
+not an isolated app factory or a safe way to switch libraries for existing cells.
+`uele/reactive` remains the authoring facade for the **main** API; it does not follow
+lite configuration. For lite, use your signal library directly or `lite.api`.
+
+No core bundle bytes are added. Only importing `uele/setup` adds its small coordinator.
+See [docs/API.md](docs/API.md) for naming and migration, [docs/PRESETS.md](docs/PRESETS.md)
+for presets, and [docs/ADAPTERS.md](docs/ADAPTERS.md) for writing your own.
 
 ## Write once, run on any preset (`uele/reactive`)
 
@@ -1022,6 +1051,72 @@ talk to any cell shape; `canEffect()`/`canCompute()` are the two feature detecti
 subscribe-only store has no effect runner — ask instead of guessing). `uele/ui`, `uele/flow` and
 `uele/router` are all built on this layer, which is why they work with every preset.
 
+## Object and array state with ustor
+
+[UStor](https://github.com/kethan/ustor) is an optional state layer for nested
+objects, mutable arrays, and computed getters. It uses the same signal engine as
+uele; it does not add another engine or become a required uele dependency.
+The examples/tests use published `ustor@0.3.0`.
+
+```sh
+npm install uele ustor @preact/signals-core
+```
+
+Configure both libraries once, before creating stores. Uele consistently names
+its hook **`computed`**, matching UStor 0.3.0:
+
+<!-- ustor-example:start -->
+```js
+import { api, h } from 'uele';
+import { preactSignals } from 'uele/signals/preact';
+import { store, api as storeApi } from 'ustor';
+
+preactSignals();
+const { signal, get, set, is, computed } = api;
+Object.assign(storeApi, { signal, get, set, is, computed, getComputed: get });
+
+const state = store({
+  count: 0,
+  get double() { return this.count * 2; }
+});
+
+const app = h('section', null,
+  h('button', { onclick: () => state.count++ }, 'Increment'),
+  h('output', { 'data-count': '' }, () => state.count),
+  h('output', { 'data-double': '' }, state.$double)
+);
+document.body.append(app);
+```
+<!-- ustor-example:end -->
+
+**Live binding:** use a thunk such as `() => state.count` or a native cell such
+as `state.$count`. Passing `state.count` directly is a plain-value snapshot.
+
+Nested writes and array mutations work without replacing the entire state:
+
+```js
+const cart = store({
+  items: [],
+  get total() {
+    return this.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  }
+});
+cart.items.push({ id: 'book', name: 'Book', price: 12, quantity: 1 });
+cart.items[0].quantity = 2;
+console.log(cart.total); // 24
+```
+
+See [the runnable counter and keyed-cart examples](examples/ustor/README.md),
+including region teardown, and [the integration notes](docs/USTOR.md).
+Vue needs `shallowRef` on the UStor side to avoid double-wrapping array proxies;
+[the Vue recipe](examples/ustor/README.md#vue-use-a-shallow-container-for-ustor-values)
+is covered by the keyed-row identity tests.
+
+Object schemas are sealed; replace a containing object to change its shape.
+Use fresh input per request/app, and do not switch engines while stores are live.
+Store integration does not create automatic component ownership or a store-wide
+disposal API. The examples explicitly tear down their uele regions.
+
 ## Flow components (`uele/flow`)
 
 ```jsx
@@ -1046,9 +1141,11 @@ import { Suspense, Await, ErrorBoundary, Portal, Title } from "uele/flow";
 `Await` takes a promise, a thunk or a cell (a cell re-resolves whenever it changes, and a late response
 never overwrites a newer one). `Suspense` shows its fallback until the async children resolve.
 `ErrorBoundary` catches a synchronous throw _and_ a rejected promise, keeps rendering the fallback and
-calls `onError`. `Portal` moves its children into another container and leaves a comment marker where it
-was. Every one of them is signal-agnostic: the reactive parts are function children, so uele re-runs and
-disposes them — and they work on all twelve presets, not just the ones with an effect runner.
+calls `onError`. `Portal` mounts an owned region in another container and leaves an inert placeholder
+where it was used; discarding it clears the external region and its bindings. `Await` ignores late
+results after teardown, and `Title` restores the previous title unless another writer took over.
+On effect-capable presets, reactive thunks rerun; subscribe-only presets evaluate them once, while
+direct cell bindings stay live. Resource cleanup works with both kinds of engine.
 
 ## Routing (`uele/router`)
 
@@ -1056,21 +1153,23 @@ disposes them — and they work on all twelve presets, not just the ones with an
 `createRouter()` (built in, zero dependencies) or your own:
 
 ```jsx
-import { createRouter, useRouter, Link, Router } from "uele/router";
-import { usePreactSignals } from "uele/adapters/preact";
+import { createRouter, useRouter, Link, Router, navigate } from "uele/router";
+import { preactSignals } from "uele/signals/preact";
+import { appProps } from "uele/props";
 
-usePreactSignals();
+preactSignals();
+appProps();
 
 const app = createRouter();
 app.get("/", () => <h1>Home</h1>);
 app.get("/user/:id", ({ params }) => <h1>User {params.id}</h1>);
 app.get("*", () => <h1>404</h1>);
 
-// one line: the live view, click interception, and a navigate() function
+// Custom shell: use attaches the standalone hook to this element’s lifetime.
 const App = () => {
-	const [view, linkProps, navigate] = useRouter(app);
+	const { view, props, dispose } = useRouter(app);
 	return (
-		<main {...linkProps()}>
+		<main {...props} use={() => dispose}>
 			<nav>
 				<Link to="/">Home</Link>
 				<Link to="/user/42">A user</Link>
@@ -1084,9 +1183,12 @@ const App = () => {
 document.body.append(<Router app={app} />);
 ```
 
-Routes support `:params`, `*` wildcards and query strings (`request.query`); `linkProps()` intercepts
+Routes support `:params`, `*` wildcards and query strings (`request.query`); `props` intercepts
 in-app `<a href="/…">` clicks (external links, `target="_blank"` and modifier clicks fall through to the
-browser) and `navigate(path)` pushes a history entry. Because the view is just a cell, the router works
+browser). The returned `navigate(path)` resolves this view; module-level `navigate(path)` pushes
+a history entry and notifies every router. Standalone `useRouter` results have a terminal, idempotent
+`dispose()`; `<Router>` disposes automatically when its enclosing uele region discards it. Pending
+responses cannot overwrite newer navigation or update a disposed router. Because the view is just a cell, the router works
 with every signal preset — and with `uflite/nano`, where `app.fetch(request)` resolves to the raw handler
 result.
 
@@ -1114,7 +1216,7 @@ uele has no plugin registry and no build step: the extension points are plain va
 object (reactivity and diffing), the `props` Map (custom attributes) and `h` itself. So a plugin, a signal
 adapter and a diff engine are all the same thing: **a function that installs something, and optionally returns
 its own undo**. The twelve signal presets and eight diff presets that ship are written exactly that way — copy
-[adapters/preact.js](adapters/preact.js) or [diffs/swapdom.js](diffs/swapdom.js) as a starting point, and read
+[signals/preact.js](signals/preact.js) or [diffs/swapdom.js](diffs/swapdom.js) as a starting point, and read
 [docs/ADAPTERS.md](docs/ADAPTERS.md) for the pitfalls we hit writing them.
 
 ### Write a plugin
@@ -1152,11 +1254,11 @@ Use a name that cannot collide with a future HTML attribute.
 
 ```js
 import { api } from "uele";
-import { scoped, wire } from "uele/adapters/util"; // the helpers every shipped preset uses
+import { scoped, install } from "./internal.js"; // local helper: copy signals/internal.js when writing a standalone integration
 
-export const useMySignals = (target = api) => {
+export const mySignals = (target = api) => {
 	const s = scoped(myEffect); // wraps the library's effect runner for uele
-	return wire(target, {
+	return install(target, {
 		// the four hooks uele itself needs
 		is: (v) => v instanceof Cell, //   "is this one of our cells?"
 		get: (v) => v.peek(), //           read it (and subscribe, from inside an effect)
@@ -1165,7 +1267,7 @@ export const useMySignals = (target = api) => {
 		// the authoring hooks - uele/reactive builds on these, so uele/ui, uele/flow and
 		// uele/router keep working on your preset too
 		signal: (v) => new Cell(v),
-		derived: (fn) => myComputed(fn),
+		computed: (fn) => myComputed(fn),
 		set: (cell, v) => cell.set(v),
 		batch: (fn) => myBatch(fn),
 		untracked: (fn) => myUntracked(fn),
@@ -1176,13 +1278,13 @@ export const useMySignals = (target = api) => {
 ```js
 import { api as liteApi } from "uele/lite";
 
-useMySignals(); // configure the main instance (the default target)
-useMySignals(liteApi); // or the lite one
+mySignals(); // configure the main instance (the default target)
+mySignals(liteApi); // or the lite one
 ```
 
-Call it **once, before you render**: `api` is one shared object. `wire` assigns _every_ hook, clearing the ones
+Call it **once, before you render**: `api` is one shared object. `install` assigns _every_ hook, clearing the ones
 your library has no answer for, so switching presets can never leave a stale hook behind. Only `is`, `get`,
-`effect` and `cleanup` are required — skip `signal`/`derived`/`set`/`batch`/`untracked` for a subscribe-only
+`effect` and `cleanup` are required — skip `signal`/`computed`/`set`/`batch`/`untracked` for a subscribe-only
 library and `uele/reactive` will report the missing features through `canEffect()`/`canCompute()` instead of
 failing.
 
@@ -1191,7 +1293,7 @@ failing.
 ```js
 import { api } from "uele";
 
-export const useMyDiff = (target = api) => {
+export const myDiff = (target = api) => {
 	target.udom = undefined; // unset = the swapdom signature below
 	target.diff = (parent, oldNodes, newNodes, end) => {
 		const keep = new Set(newNodes);
@@ -1237,25 +1339,25 @@ preset has to pass.
 
 ## Which one should I use?
 
-### Signal presets (`uele/adapters/*`)
+### Signal presets (`uele/signals/*`)
 
 Install the library you want, call one function. Every preset is driven by the same conformance suite.
 "install size" is the npm unpacked size of the library (all published files), not its bundle cost.
 
 | preset                        | library                | install | preset | read         | write              | reactive thunks | subscribe path | notes                                                                                                                                                        |
 | ----------------------------- | ---------------------- | ------- | ------ | ------------ | ------------------ | --------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `uele/adapters/ulive`         | `ulive`                | 15 kB   | 266 B  | `cell.value` | `cell.value = v`   | yes             | no             | smallest default; the baseline uele is tested against                                                                                                        |
-| `uele/adapters/preact`        | `@preact/signals-core` | 254 kB  | 360 B  | `cell.value` | `cell.value = v`   | yes             | yes            | signals also expose `.subscribe()`; great with Preact                                                                                                        |
-| `uele/adapters/vue`           | `@vue/reactivity`      | 342 kB  | 323 B  | `cell.value` | `cell.value = v`   | yes             | no             | `ref()`/`computed()`; the effect needs `stop(runner)`                                                                                                        |
-| `uele/adapters/usignal`       | `usignal`              | 46 kB   | 333 B  | `cell.value` | `cell.value = v`   | yes             | no             | tiny; attributes a read to every enclosing effect; usignal batches, so the first paint lands on the next tick                                                |
-| `uele/adapters/alien-signals` | `alien-signals`        | 46 kB   | 288 B  | `cell()`     | `cell(v)`          | yes             | no             | plain-function signals, very fast                                                                                                                            |
-| `uele/adapters/sjs`           | `s-js`                 | 221 kB  | 379 B  | `cell()`     | `cell(v)`          | yes             | no             | classic S.js; `S.root` owns the disposer                                                                                                                     |
-| `uele/adapters/mobx`          | `mobx`                 | 4723 kB | 365 B  | `cell.get()` | `cell.set(v)`      | yes             | no             | boxed observables; configure mobx yourself                                                                                                                   |
-| `uele/adapters/rxjs`          | `rxjs`                 | 4392 kB | 431 B  | `cell.value` | `cell.next(v)`     | no              | yes            | subscribe-only: no reactive thunks; `BehaviorSubject` reads sync                                                                                             |
-| `uele/adapters/nanostores`    | `nanostores`           | 54 kB   | 348 B  | `cell.get()` | `cell.set(v)`      | no              | yes            | subscribe-only atoms; tiny and framework-neutral                                                                                                             |
-| `uele/adapters/tanstack`      | `@tanstack/store`      | 121 kB  | 437 B  | `cell.state` | `cell.setState(v)` | no              | yes            | `Store.subscribe()` is not synchronous, so a bare `Store` paints on its first change - `new Cell(v)` (or `api.signal(v)`) from the preset paints immediately |
-| `uele/adapters/solid`         | `solid-js`             | 1051 kB | 471 B  | `cell()`     | `cell.write(v)`    | yes             | no             | client build (`solid-js/dist/solid.js`)                                                                                                                      |
-| `uele/adapters/signals`       | `@webreflection/signals` | 25 kB   | 482 B  | `cell.value` | `cell.value = v`   | yes             | no             | Preact-like API in miniature (by the `usignal` author); the library calls any effect return value as a cleanup, so the preset swallows returns            |
+| `uele/signals/ulive`         | `ulive`                | 15 kB   | 266 B  | `cell.value` | `cell.value = v`   | yes             | no             | smallest default; the baseline uele is tested against                                                                                                        |
+| `uele/signals/preact`        | `@preact/signals-core` | 254 kB  | 360 B  | `cell.value` | `cell.value = v`   | yes             | yes            | signals also expose `.subscribe()`; great with Preact                                                                                                        |
+| `uele/signals/vue`           | `@vue/reactivity`      | 342 kB  | 323 B  | `cell.value` | `cell.value = v`   | yes             | no             | `ref()`/`computed()`; the effect needs `stop(runner)`                                                                                                        |
+| `uele/signals/usignal`       | `usignal`              | 46 kB   | 333 B  | `cell.value` | `cell.value = v`   | yes             | no             | tiny; attributes a read to every enclosing effect; usignal batches, so the first paint lands on the next tick                                                |
+| `uele/signals/alien-signals` | `alien-signals`        | 46 kB   | 288 B  | `cell()`     | `cell(v)`          | yes             | no             | plain-function signals, very fast                                                                                                                            |
+| `uele/signals/sjs`           | `s-js`                 | 221 kB  | 379 B  | `cell()`     | `cell(v)`          | yes             | no             | classic S.js; `S.root` owns the disposer                                                                                                                     |
+| `uele/signals/mobx`          | `mobx`                 | 4723 kB | 365 B  | `cell.get()` | `cell.set(v)`      | yes             | no             | boxed observables; configure mobx yourself                                                                                                                   |
+| `uele/signals/rxjs`          | `rxjs`                 | 4392 kB | 431 B  | `cell.value` | `cell.next(v)`     | no              | yes            | subscribe-only: no reactive thunks; `BehaviorSubject` reads sync                                                                                             |
+| `uele/signals/nanostores`    | `nanostores`           | 54 kB   | 348 B  | `cell.get()` | `cell.set(v)`      | no              | yes            | subscribe-only atoms; tiny and framework-neutral                                                                                                             |
+| `uele/signals/tanstack`      | `@tanstack/store`      | 121 kB  | 437 B  | `cell.state` | `cell.setState(v)` | no              | yes            | `Store.subscribe()` is not synchronous, so a bare `Store` paints on its first change - `new Cell(v)` (or `api.signal(v)`) from the preset paints immediately |
+| `uele/signals/solid`         | `solid-js`             | 1051 kB | 471 B  | `cell()`     | `cell.write(v)`    | yes             | no             | client build (`solid-js/dist/solid.js`)                                                                                                                      |
+| `uele/signals/signals`       | `@webreflection/signals` | 25 kB   | 482 B  | `cell.value` | `cell.value = v`   | yes             | no             | Preact-like API in miniature (by the `usignal` author); the library calls any effect return value as a cleanup, so the preset swallows returns            |
 
 - **reactive thunks** — functions and components that re-run when their signals change (needs an effect runner).
 - **subscribe path** — driven through `.subscribe()`: works without an effect runner, but reactive
@@ -1285,20 +1387,20 @@ Five dependency-free algorithm presets inspired by
 
 | preset | installer | strategy |
 | --- | --- | --- |
-| `uele/diffs/spect` | `useSpect` | forward cursor reconciliation |
-| `uele/diffs/snabbdom` | `useSnabbdom` | double-ended keyed reconciliation |
-| `uele/diffs/heckel` | `useHeckel` | unique-token symbol table with move-aware DOM application |
-| `uele/diffs/list-difference` | `useListDifference` | indexed list matching with insertion, removal and moves |
-| `uele/diffs/stage0` | `useStage0` | longest increasing subsequence; leaves an ordered subset in place |
+| `uele/diffs/spect` | `spect` | forward cursor reconciliation |
+| `uele/diffs/snabbdom` | `snabbdom` | double-ended keyed reconciliation |
+| `uele/diffs/heckel` | `heckel` | unique-token symbol table with move-aware DOM application |
+| `uele/diffs/list-difference` | `listDifference` | indexed list matching with insertion, removal and moves |
+| `uele/diffs/stage0` | `stage0` | longest increasing subsequence; leaves an ordered subset in place |
 
 These are independent node-identity implementations, not framework wrappers or exact copies
 of the benchmark code. They preserve live-region markers and static siblings and require no
 additional package. Shared nodes are matched by object identity, not by their string representation.
 
 ```js
-import { useStage0 } from 'uele/diffs/stage0';
-useStage0(); // main entry point
-// useStage0(liteApi); // or pass the API object from uele/lite
+import { stage0 } from 'uele/diffs/stage0';
+stage0(); // main entry point
+// stage0(liteApi); // or pass the API object from uele/lite
 ```
 
 Short version: keep the **built-in** walk; reach for **swapdom** / **udomdiff** / **domdiff** for long keyed
@@ -1307,7 +1409,7 @@ lists, **morphdom** / **nanomorph** when you must preserve DOM state (focus, med
 ## Best practices
 
 - **Install one signal preset (and at most one diff preset), once, at startup.** `api` is a single shared
-  object, so a second preset of the same kind simply overwrites the first - `wire` clears every hook it does
+  object, so a second preset of the same kind simply overwrites the first - `install` clears every hook it does
   not set. Install it **before** you render: a thunk that was rendered with the default `api.effect` runs once
   and never updates.
 - **Replace, do not mutate.** A cell only notifies on a write:
@@ -1447,7 +1549,7 @@ npm run size           # fails when a bundle exceeds its byte budget
 ```
 
 Every published entry point ships its own `.d.ts` — `uele`, `uele/lite`, `uele/ui`, `uele/hooks`, `uele/themes`, `uele/flow`, `uele/router`,
-`uele/reactive`, `uele/adapters/*` and `uele/diffs/*` — so `tsc` is happy without a `@types` package. The
+`uele/reactive`, `uele/signals/*` and `uele/diffs/*` — so `tsc` is happy without a `@types` package. The
 package is `sideEffects: false` (bundlers tree-shake it) and needs **Node 18+**. Every signal and diff library
 behind a preset is an **optional peer dependency**: `npm i uele` installs two packages, and you add only the
 library you actually use.
@@ -1494,11 +1596,11 @@ MIT
 
 ## Optional DOM props for live apps
 
-Install `useProps()` from `uele/props` to enable `show`, `text`, `data`, `aria`, `bindValue`, `bindChecked`, `listen` and `use`. Supports main and lite, with region-based cleanup. See [the reference](docs/PROPS.md) and [live composer example](examples/live-props.jsx).
+Install `appProps()` from `uele/props` to enable `show`, `text`, `data`, `aria`, `bindValue`, `bindChecked`, `listen` and `use`. Supports main and lite, with region-based cleanup. See [the reference](docs/PROPS.md) and [live composer example](examples/live-props.jsx).
 
 ## Additional signal presets from the requested top-11 set
 
-Added `useReflex`, `useReactively`, `useAnod`, `useLiteSignal`, `useRescriptSignals`, `useMaverick` and `useOby` as optional adapters. Existing Alien Signals, Preact Signals, S-js and Vue presets are reused; Vue 3.6 RC has a dedicated compatibility test run, not a duplicate adapter. See [setup, scheduling and lifecycle details](docs/TOP_SIGNALS.md).
+Added `reflex`, `reactively`, `anod`, `liteSignal`, `rescriptSignals`, `maverick` and `oby` as optional adapters. Existing Alien Signals, Preact Signals, S-js and Vue presets are reused; Vue 3.6 RC has a dedicated compatibility test run, not a duplicate adapter. See [setup, scheduling and lifecycle details](docs/TOP_SIGNALS.md).
 
 ### usub 0.11.0 upgrade status
 

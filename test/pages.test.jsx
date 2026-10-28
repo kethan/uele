@@ -20,15 +20,15 @@ import { mountShop } from '../examples/pages/shop.jsx';
 import { mountChat } from '../examples/pages/chat.jsx';
 
 const PRESETS = [
-	['ulive', 'uele/adapters/ulive', 'useUlive'],
-	['preact', 'uele/adapters/preact', 'usePreactSignals'],
-	['vue', 'uele/adapters/vue', 'useVue'],
-	['usignal', 'uele/adapters/usignal', 'useUsignal'],
-	['alien-signals', 'uele/adapters/alien-signals', 'useAlienSignals'],
-	['s-js', 'uele/adapters/sjs', 'useSjs'],
-	['mobx', 'uele/adapters/mobx', 'useMobx'],
-	['solid', 'uele/adapters/solid', 'useSolid'],
-	['signals', 'uele/adapters/signals', 'useSignals']
+	['ulive', 'uele/signals/ulive', 'ulive'],
+	['preact', 'uele/signals/preact', 'preactSignals'],
+	['vue', 'uele/signals/vue', 'vue'],
+	['usignal', 'uele/signals/usignal', 'usignal'],
+	['alien-signals', 'uele/signals/alien-signals', 'alienSignals'],
+	['s-js', 'uele/signals/sjs', 'sjs'],
+	['mobx', 'uele/signals/mobx', 'mobx'],
+	['solid', 'uele/signals/solid', 'solid'],
+	['signals', 'uele/signals/signals', 'signals']
 ];
 
 const settle = () => new Promise((r) => setTimeout(r, 0)); // usignal paints on the next tick; everyone else is sync
@@ -61,9 +61,9 @@ describe('pages are unified: no signal-library imports, all uele/reactive', () =
 });
 
 describe.each([
-	['rxjs', 'uele/adapters/rxjs', 'useRxjs'],
-	['nanostores', 'uele/adapters/nanostores', 'useNanostores'],
-	['tanstack', 'uele/adapters/tanstack', 'useTanstackStore']
+	['rxjs', 'uele/signals/rxjs', 'rxjs'],
+	['nanostores', 'uele/signals/nanostores', 'nanostores'],
+	['tanstack', 'uele/signals/tanstack', 'tanstackStore']
 ])('sample pages (first paint) on subscribe-only %s', (slug, path, fn) => {
 	beforeEach(async () => {
 		document.body.innerHTML = '';

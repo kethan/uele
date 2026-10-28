@@ -1,9 +1,9 @@
 # Optional app props
 
 ```js
-import { useProps } from 'uele/props';
-useProps(); // before creating elements; requires no extra dependency
-// For lite: import * as lite from 'uele/lite'; useProps(lite);
+import { appProps } from 'uele/props';
+appProps(); // before creating elements; requires no extra dependency
+// For lite: import * as lite from 'uele/lite'; appProps(lite);
 ```
 
 Install your signal adapter first. The installer adds handlers to the target renderer's
@@ -55,7 +55,7 @@ with the same region teardown mechanism. Existing handlers returning nothing sti
   an unchanged source; update the source after changing options or recreate the select.
 - `indeterminate` is a boolean/reactive boolean DOM property, independent of `checked`.
   Combine it with `bindChecked` for select-all tables. Native clicks clear indeterminate;
-  your derived source should update as the selection changes.
+  your computed source should update as the selection changes.
 
 See [SelectionForm](../examples/selection-props.jsx) for both select modes and a
 working select-all checkbox.

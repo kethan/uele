@@ -1,1 +1,1 @@
-export declare function useHeckel<T extends object>(target?: T): T;
+export declare function heckel<T extends object>(target?: T): T;

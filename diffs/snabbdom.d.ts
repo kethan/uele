@@ -1,1 +1,1 @@
-export declare function useSnabbdom<T extends object>(target?: T): T;
+export declare function snabbdom<T extends object>(target?: T): T;

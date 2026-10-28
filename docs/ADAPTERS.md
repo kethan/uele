@@ -5,7 +5,7 @@ else — `h`, `add`, `For`, `map`, `If`, `useLive`, `uele/ui`, `uele/flow`, `uel
 against that surface, so one file is all it takes to make the whole library work with a new signal
 implementation.
 
-This guide is the collected experience of building the eleven adapters and eight diff presets that ship
+This guide is the collected experience of building the signal integrations and diff presets that ship
 with uele: the contract, a complete worked example, and the pitfalls that cost us real debugging time.
 
 * [The `api` object](#the-api-object)
@@ -47,11 +47,11 @@ Here is a complete adapter for a hypothetical library with `createCell(value)`, 
 ```js
 // mylib.js
 import { api } from 'uele';
-import { wire } from 'uele/adapters/util'; // optional helper: see below
+import { install } from './internal.js'; // optional helper: see below
 import { createCell, watch } from 'mylib';
 
-export const useMylib = (target = api) =>
-  wire(target, {
+export const mylib = (target = api) =>
+  install(target, {
     // ---- the four hooks uele itself needs ----
     is: (v) => v instanceof Cell,
     get: (v) => v.get(),
@@ -60,27 +60,30 @@ export const useMylib = (target = api) =>
 
     // ---- the authoring hooks (uele/reactive) ----
     signal: (v) => createCell(v),
-    derived: (fn) => createComputed(fn),
+    computed: (fn) => createComputed(fn),
     set: (cell, v) => cell.set(v),
     batch: (fn) => transaction(fn),
     untracked: (fn) => peek(fn)
   });
 ```
 
-That is a preset. `useMylib()` is all a user calls.
+That is a preset. `mylib()` is all a user calls.
 
-### `wire(target, hooks)` — the shared helper
+### `install(target, hooks)` — the shared helper
 
-`uele/adapters/util` exports two helpers the shipped presets use:
+`signals/internal.js` contains the shared helpers used by the shipped integrations.
+It is deliberately **not** a public package subpath. When writing a standalone integration,
+keep a local helper (the source can serve as a reference), or assign the complete hook
+surface directly. The imports below refer to that local helper:
 
 ```js
-import { scoped, wire, HOOKS } from 'uele/adapters/util';
+import { scoped, install, HOOKS } from './internal.js';
 ```
 
-* **`wire(target, hooks)`** assigns every hook you pass and **clears every hook you do not**
-  (the full list is `HOOKS`: `is`, `get`, `effect`, `cleanup`, `any`, `signal`, `derived`, `set`,
-  `batch`, `untracked`). This is what makes switching presets safe — calling `useVue()` after
-  `usePreactSignals()` cannot leave a preact `is()` behind. It returns the configured `api`.
+* **`install(target, hooks)`** assigns every hook you pass and **clears every hook you do not**
+  (the full list is `HOOKS`: `is`, `get`, `effect`, `cleanup`, `any`, `signal`, `computed`, `set`,
+  `batch`, `untracked`). This is what makes switching presets safe — calling `vue()` after
+  `preactSignals()` cannot leave a preact `is()` behind. It returns the configured `api`.
 * **`scoped(run)`** wraps a library effect runner into the `(api.effect, api.cleanup)` pair, for
   libraries whose effects accept a cleanup registration but do not expose a disposer:
 
@@ -93,17 +96,17 @@ import { scoped, wire, HOOKS } from 'uele/adapters/util';
     });
     return dispose;
   });
-  wire(api, { effect: s.effect, cleanup: s.cleanup /* …the rest of the hooks */ });
+  install(api, { effect: s.effect, cleanup: s.cleanup /* …the rest of the hooks */ });
   ```
 
-Both are optional. A preset that assigns the hooks by hand is exactly as valid — `wire` is only
+Both are optional. A preset that assigns the hooks by hand is exactly as valid — `install` is only
 convenience plus the "clear what you did not set" guarantee.
 
 ### Naming and shape
 
-* export one function: `use<Library>(target = api)` — `usePreactSignals`, `useSolid`, `useMobx`…
+* export one function: `use<Library>(target = api)` — `preactSignals`, `solid`, `mobx`…
 * accept an optional `target` so the preset can configure `uele/lite` too
-  (`usePreactSignals(liteApi)`)
+  (`preactSignals(liteApi)`)
 * keep the library import static and the dependency an **optional peerDependency** — the eleven
   libraries in this repo add nothing to the install size of an app that uses one of them
 * ship a `.d.ts` next to it, and let the build emit the `.cjs` twin (`rollup -c` does it)
@@ -117,7 +120,7 @@ cells without knowing the library** — that is what `uele/reactive`, `uele/ui`,
 | hook | signature | used by |
 | --- | --- | --- |
 | `signal(value)` | `(v) => cell` | `signal()` |
-| `derived(fn)` | `(fn) => cell` | `computed()` |
+| `computed(fn)` | `(fn) => cell` | `computed()` |
 | `set(cell, value)` | `(cell, v) => void` | `write()` |
 | `batch(fn)` | `(fn) => void` | `batch()` |
 | `untracked(fn)` | `(fn) => value` | `untracked()` |
@@ -131,7 +134,7 @@ import { computed, canCompute, canEffect } from 'uele/reactive';
 const doubled = canCompute() ? computed(() => read(count) * 2) : null; // rxjs, nanostores, tanstack
 ```
 
-Calling `computed()` with no `derived` hook throws a named error explaining which preset is missing
+Calling `computed()` with no `computed` hook throws a named error explaining which preset is missing
 what. There is no silent degradation, and no library-specific branch in user code.
 
 ## 3. A diff engine preset
@@ -145,7 +148,7 @@ what. There is no silent degradation, and no library-specific branch in user cod
 import { api } from 'uele';
 import swapdom from 'swapdom';
 
-export const useSwapdom = (target = api) => {
+export const swapdom = (target = api) => {
   target.diff = (parent, oldNodes, newNodes, end) => swapdom(parent, oldNodes, newNodes, end);
   return target;
 };
@@ -175,7 +178,7 @@ target.diff = morphAdapter((from, to) => morphdom(from, to));
 the shortest correct starting point when porting an engine:
 
 ```js
-export const useRebuild = (target = api) => {
+export const rebuild = (target = api) => {
   target.diff = (parent, oldNodes, newNodes, end) => {
     oldNodes.forEach((node) => parent.removeChild(node));
     newNodes.forEach((node) => parent.insertBefore(node, end || null));
@@ -192,7 +195,7 @@ must stay where they are.
 
 ## 4. Best practices
 
-**Assign the complete surface.** Use `wire()` (or assign and clear by hand) so a preset switch cannot
+**Assign the complete surface.** Use `install()` (or assign and clear by hand) so a preset switch cannot
 leave a stale hook behind. The single most common bug in an unfinished adapter is a leftover `is()`
 from another library that makes every cell "look foreign".
 
@@ -214,13 +217,13 @@ the shipped presets need it (s-js batch mirroring, mobx configuration) are docum
 reason.
 
 **Treat the library as an optional peer dependency** and list it in `package.json` as one, so an app
-that uses `usePreactSignals()` installs one library, not eleven.
+that uses `preactSignals()` installs one library, not eleven.
 
 **Document the library's quirks in the file's jsdoc**, not in the README: `docs/PRESETS.md` is
 generated from those blocks (`python3 scripts/gen-presets-doc.py`), so the comment *is* the doc.
 
-**Name the file after the npm package** (`adapters/alien-signals.js`, `diffs/fast-array-diff.js`) so
-`uele/adapters/<slug>` is guessable, and export `use<Slug>`.
+**Name the file after the npm package** (`signals/alien-signals.js`, `diffs/fast-array-diff.js`) so
+`uele/signals/<slug>` is guessable, and export `use<Slug>`.
 
 ## 5. The pitfalls, and how each preset handles them
 
@@ -298,7 +301,7 @@ server build.
 ### Subscribe-only libraries have no effect runner
 
 `rxjs`, `nanostores` and `@tanstack/store` can *subscribe* but cannot re-run a function. Those presets
-deliberately publish no `effect`/`derived`: cells render and update (through the subscribe path), but
+deliberately publish no `effect`/`computed`: cells render and update (through the subscribe path), but
 reactive thunks and `computed()` do not exist. Say so in the jsdoc and let `canEffect()` answer at
 runtime. Do not fake an effect runner with `subscribe` — it double-renders and, worse, makes
 `computed()` look available.
@@ -308,7 +311,7 @@ runtime. Do not fake an effect runner with `subscribe` — it double-renders and
 Any prop can be a cell, so `api.get` is called inside an effect run. It must not subscribe on its own
 (use the library's *untracked* read: `S.sample`, `untracked`, `peek`) — otherwise every attribute read
 registers a dependency of an unrelated effect. `usignal` attributes a read to every enclosing effect;
-that is documented in its preset because it changes how a user writes derived values.
+that is documented in its preset because it changes how a user writes computed values.
 
 ### Diff engines mutate the array you hand them
 
@@ -337,7 +340,7 @@ const mylib = async () => {
     signal: (v) => m.createCell(v),
     set: (cell, v) => cell.set(v),
     read: (cell) => cell.get(),
-    derived: (cell, fn) => m.createComputed(() => fn(cell.get()))
+    computed: (cell, fn) => m.createComputed(() => fn(cell.get()))
   };
 };
 export const ADAPTERS = [ulive, preact, vue, /* … */ mylib];
@@ -366,10 +369,10 @@ Then run the gate: `npm test`, `npm run test:coverage` (100% is enforced on `src
 
 ## 7. Checklist
 
-- [ ] `adapters/<slug>.js` exporting `use<Slug>(target = api)`; `.d.ts` beside it
-- [ ] `wire()` (or assign **and clear**) so no hook survives a preset switch
+- [ ] `signals/<slug>.js` exporting `use<Slug>(target = api)`; `.d.ts` beside it
+- [ ] `install()` (or assign **and clear**) so no hook survives a preset switch
 - [ ] `is` / `get` / `effect` (+ `cleanup` if the library has one)
-- [ ] authoring hooks: `signal`, `derived`, `set`, `batch`, `untracked` — or a documented reason not to
+- [ ] authoring hooks: `signal`, `computed`, `set`, `batch`, `untracked` — or a documented reason not to
 - [ ] jsdoc block: what it wires, how to read/write a cell, the library's quirks (`docs/PRESETS.md` is
       generated from it by `python3 scripts/gen-presets-doc.py`)
 - [ ] the library in `peerDependencies` **and** `peerDependenciesMeta.<pkg>.optional: true`

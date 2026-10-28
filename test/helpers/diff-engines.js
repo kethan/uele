@@ -1,8 +1,8 @@
-import { useHeckel } from '../../diffs/heckel.js';
-import { useListDifference } from '../../diffs/list-difference.js';
-import { useSpect } from '../../diffs/spect.js';
-import { useSnabbdom } from '../../diffs/snabbdom.js';
-import { useStage0 } from '../../diffs/stage0.js';
+import { heckel } from '../../diffs/heckel.js';
+import { listDifference } from '../../diffs/list-difference.js';
+import { spect } from '../../diffs/spect.js';
+import { snabbdom } from '../../diffs/snabbdom.js';
+import { stage0 } from '../../diffs/stage0.js';
 /**
  * Diff-engine adapters.
  *
@@ -270,11 +270,11 @@ export const ENGINES = [
 		keyed: false,
 		notes: 'the smallest conforming differ - useful as a reference for the contract'
 	},
-	{ name: 'spect-style', install: useSpect, keyed: true },
-	{ name: 'snabbdom-style', install: useSnabbdom, keyed: true },
-	{ name: 'stage0-style', install: useStage0, keyed: true },
-	{ name: 'heckel-style', install: useHeckel, keyed: true },
-	{ name: 'list-difference-style', install: useListDifference, keyed: true },
+	{ name: 'spect-style', install: spect, keyed: true },
+	{ name: 'snabbdom-style', install: snabbdom, keyed: true },
+	{ name: 'stage0-style', install: stage0, keyed: true },
+	{ name: 'heckel-style', install: heckel, keyed: true },
+	{ name: 'list-difference-style', install: listDifference, keyed: true },
 ];
 
 /** applies an engine to an api object (main or lite) */

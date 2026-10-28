@@ -5,23 +5,23 @@
  *     import { mountTodos } from './ulive.jsx';
  *     mountTodos(document.body);
  *
- * Signals come from ulive; `useUlive()` wires uele to them (called for you by
+ * Signals come from ulive; `ulive()` wires uele to them (called for you by
  * `TodoApp`/`mountTodos`). Everything below the actions is the same JSX you
  * would write with any other preset.
  */
 import { For } from 'uele';
 import { Form, Row, Card, Stack, Button, Input, Checkbox, Label } from 'uele/ui';
-import { useUlive } from 'uele/adapters/ulive';
+import { ulive } from 'uele/signals/ulive';
 import { signal, computed } from 'ulive';
 
 export const TodoApp = () => {
-	useUlive();
+	ulive();
 	const newTodo = signal('');
 	const todos = signal([]);
 	const filter = signal('all');
 	const remaining = computed(() => todos.value.filter((t) => !t.done).length);
 	// read `filter` eagerly: a lazy read inside .filter() is skipped on an empty list,
-	// and the derived value would never subscribe to it
+	// and the computed value would never subscribe to it
 	const visible = computed(() => {
 		const f = filter.value;
 		return todos.value.filter((t) => (f === 'all' ? true : f === 'active' ? !t.done : t.done));

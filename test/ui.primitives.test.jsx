@@ -8,8 +8,8 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { usePreactSignals } from 'uele/adapters/preact';
-import { useAlienSignals } from 'uele/adapters/alien-signals';
+import { preactSignals } from 'uele/signals/preact';
+import { alienSignals } from 'uele/signals/alien-signals';
 import { signal } from '@preact/signals-core';
 import * as UI from 'uele/ui';
 import {
@@ -23,7 +23,7 @@ import {
 } from 'uele/ui';
 
 beforeEach(() => {
-	usePreactSignals();
+	preactSignals();
 	document.body.innerHTML = '';
 });
 
@@ -528,7 +528,7 @@ describe('stepper and carousel', () => {
 
 describe('works on other signal libraries too (alien-signals)', () => {
 	it('Pagination and Tabs run unchanged on function signals', async () => {
-		useAlienSignals();
+		alienSignals();
 		const [{ signal: alienSignal }, { read }] = [await import('alien-signals'), await import('uele/reactive')];
 		const page = alienSignal(1);
 		const el = Pagination({ page, totalPages: 5 });

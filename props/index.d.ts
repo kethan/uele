@@ -17,8 +17,8 @@ export interface PropTarget {
     props: Map<string, (...args: any[]) => any>;
     r: (...args: any[]) => any;
 }
-export declare function useProps<T extends PropTarget>(target: T): T;
-export declare function useProps(): PropTarget;
+export declare function appProps<T extends PropTarget>(target: T): T;
+export declare function appProps(): PropTarget;
 
 export interface AutoScrollOptions {
     /** Distance from bottom (pixels) that counts as following. Default 48. */

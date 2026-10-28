@@ -45,12 +45,6 @@
       "default": "./jsx-dev-runtime/dist/index.es.js"
     },
     "./package.json": "./package.json",
-    "./adapters/*": {
-      "types": "./adapters/*.d.ts",
-      "import": "./adapters/*.js",
-      "require": "./adapters/*.cjs",
-      "default": "./adapters/*.js"
-    },
     "./diffs/*": {
       "types": "./diffs/*.d.ts",
       "import": "./diffs/*.js",
@@ -91,6 +85,106 @@
       "types": "./props/index.d.ts",
       "import": "./props/index.js",
       "require": "./props/index.cjs"
+    },
+    "./setup": {
+      "types": "./setup/index.d.ts",
+      "import": "./setup/index.js",
+      "require": "./setup/index.cjs"
+    },
+    "./signals/alien-signals": {
+      "types": "./signals/alien-signals.d.ts",
+      "import": "./signals/alien-signals.js",
+      "require": "./signals/alien-signals.cjs"
+    },
+    "./signals/anod": {
+      "types": "./signals/anod.d.ts",
+      "import": "./signals/anod.js",
+      "require": "./signals/anod.cjs"
+    },
+    "./signals/lite-signal": {
+      "types": "./signals/lite-signal.d.ts",
+      "import": "./signals/lite-signal.js",
+      "require": "./signals/lite-signal.cjs"
+    },
+    "./signals/maverick": {
+      "types": "./signals/maverick.d.ts",
+      "import": "./signals/maverick.js",
+      "require": "./signals/maverick.cjs"
+    },
+    "./signals/mobx": {
+      "types": "./signals/mobx.d.ts",
+      "import": "./signals/mobx.js",
+      "require": "./signals/mobx.cjs"
+    },
+    "./signals/nanostores": {
+      "types": "./signals/nanostores.d.ts",
+      "import": "./signals/nanostores.js",
+      "require": "./signals/nanostores.cjs"
+    },
+    "./signals/oby": {
+      "types": "./signals/oby.d.ts",
+      "import": "./signals/oby.js",
+      "require": "./signals/oby.cjs"
+    },
+    "./signals/preact": {
+      "types": "./signals/preact.d.ts",
+      "import": "./signals/preact.js",
+      "require": "./signals/preact.cjs"
+    },
+    "./signals/reactively": {
+      "types": "./signals/reactively.d.ts",
+      "import": "./signals/reactively.js",
+      "require": "./signals/reactively.cjs"
+    },
+    "./signals/reflex": {
+      "types": "./signals/reflex.d.ts",
+      "import": "./signals/reflex.js",
+      "require": "./signals/reflex.cjs"
+    },
+    "./signals/rescript-signals": {
+      "types": "./signals/rescript-signals.d.ts",
+      "import": "./signals/rescript-signals.js",
+      "require": "./signals/rescript-signals.cjs"
+    },
+    "./signals/rxjs": {
+      "types": "./signals/rxjs.d.ts",
+      "import": "./signals/rxjs.js",
+      "require": "./signals/rxjs.cjs"
+    },
+    "./signals/signals": {
+      "types": "./signals/signals.d.ts",
+      "import": "./signals/signals.js",
+      "require": "./signals/signals.cjs"
+    },
+    "./signals/sjs": {
+      "types": "./signals/sjs.d.ts",
+      "import": "./signals/sjs.js",
+      "require": "./signals/sjs.cjs"
+    },
+    "./signals/solid": {
+      "types": "./signals/solid.d.ts",
+      "import": "./signals/solid.js",
+      "require": "./signals/solid.cjs"
+    },
+    "./signals/tanstack": {
+      "types": "./signals/tanstack.d.ts",
+      "import": "./signals/tanstack.js",
+      "require": "./signals/tanstack.cjs"
+    },
+    "./signals/ulive": {
+      "types": "./signals/ulive.d.ts",
+      "import": "./signals/ulive.js",
+      "require": "./signals/ulive.cjs"
+    },
+    "./signals/usignal": {
+      "types": "./signals/usignal.d.ts",
+      "import": "./signals/usignal.js",
+      "require": "./signals/usignal.cjs"
+    },
+    "./signals/vue": {
+      "types": "./signals/vue.d.ts",
+      "import": "./signals/vue.js",
+      "require": "./signals/vue.cjs"
     }
   },
   "scripts": {
@@ -103,7 +197,7 @@
     "test:pack": "node scripts/pack-smoke.mjs",
     "size": "node scripts/check-size.mjs",
     "build": "npm run clean && rollup --config rollup.config.js",
-    "clean": "node -e \"const fs=require('fs');['dist','lite/dist','jsx-runtime/dist','jsx-dev-runtime/dist'].forEach((x)=>fs.rmSync(x,{recursive:true,force:true}));['adapters','diffs'].forEach((x)=>fs.readdirSync(x).filter((f)=>f.endsWith('.cjs')).forEach((f)=>fs.rmSync(x+'/'+f)));fs.readdirSync('.').filter((f)=>/^util-.*\\.js$/.test(f)).forEach((f)=>fs.rmSync(f))\"",
+    "clean": "node -e \"const fs=require('fs');['dist','lite/dist','jsx-runtime/dist','jsx-dev-runtime/dist'].forEach((x)=>fs.rmSync(x,{recursive:true,force:true}));['signals','diffs','setup'].forEach((x)=>fs.readdirSync(x).filter((f)=>f.endsWith('.cjs')).forEach((f)=>fs.rmSync(x+'/'+f)));fs.readdirSync('.').filter((f)=>/^util-.*\\.js$/.test(f)).forEach((f)=>fs.rmSync(f))\"",
     "test:bundles": "npm run build && vitest run --config vitest.bundles.esm.config.js && vitest run --config vitest.bundles.cjs.config.js",
     "pretest:browser": "node scripts/ensure-browser.mjs",
     "test:browser": "playwright test",
@@ -114,7 +208,6 @@
     "lite",
     "jsx-runtime",
     "jsx-dev-runtime",
-    "adapters",
     "diffs",
     "ui",
     "reactive",
@@ -122,7 +215,9 @@
     "router",
     "hooks",
     "themes",
-    "props"
+    "props",
+    "setup",
+    "signals"
   ],
   "devDependencies": {
     "@maverick-js/signals": "^6.0.0",
@@ -163,6 +258,7 @@
     "udomdiff": "^1.1.2",
     "ulive": "^1.0.7",
     "usignal": "^0.10.0",
+    "ustor": "^0.3.0",
     "vitest": "^5.0.5",
     "vue-reactivity-3.6": "npm:@vue/reactivity@^3.6.0-rc.12"
   },

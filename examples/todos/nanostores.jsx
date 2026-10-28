@@ -5,17 +5,17 @@
  *     import { mountTodos } from './nanostores.jsx';
  *     mountTodos(document.body);
  *
- * Signals come from nanostores; `useNanostores()` wires uele to them (called for you by
+ * Signals come from nanostores; `nanostores()` wires uele to them (called for you by
  * `TodoApp`/`mountTodos`). Everything below the actions is the same JSX you
  * would write with any other preset.
  */
 import { For } from 'uele';
 import { Form, Row, Card, Stack, Button, Input, Checkbox, Label } from 'uele/ui';
-import { useNanostores } from 'uele/adapters/nanostores';
+import { nanostores } from 'uele/signals/nanostores';
 import { atom, computed } from 'nanostores';
 
 export const TodoApp = () => {
-	useNanostores();
+	nanostores();
 	const newTodo = atom('');
 	const todos = atom([]);
 	const filter = atom('all');

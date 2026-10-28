@@ -42,7 +42,7 @@ const tarball = runNpm(['pack', '--pack-destination', work], root).trim().split(
 
 	writeFileSync(
 		join(work, 'check.mjs'),
-		`const specs = ['uele', 'uele/lite', 'uele/jsx-runtime', 'uele/jsx-dev-runtime', 'uele/adapters/preact', 'uele/adapters/reflex', 'uele/adapters/reactively', 'uele/adapters/anod', 'uele/adapters/lite-signal', 'uele/adapters/rescript-signals', 'uele/adapters/maverick', 'uele/adapters/oby', 'uele/props', 'uele/diffs/swapdom', 'uele/diffs/spect', 'uele/diffs/snabbdom', 'uele/diffs/stage0', 'uele/diffs/heckel', 'uele/diffs/list-difference', 'uele/ui', 'uele/reactive', 'uele/flow', 'uele/router', 'uele/hooks', 'uele/themes'];
+		`const specs = ['uele/setup', 'uele/signals/alien-signals', 'uele/signals/anod', 'uele/signals/lite-signal', 'uele/signals/maverick', 'uele/signals/mobx', 'uele/signals/nanostores', 'uele/signals/oby', 'uele/signals/preact', 'uele/signals/reactively', 'uele/signals/reflex', 'uele/signals/rescript-signals', 'uele/signals/rxjs', 'uele/signals/signals', 'uele/signals/sjs', 'uele/signals/solid', 'uele/signals/tanstack', 'uele/signals/ulive', 'uele/signals/usignal', 'uele/signals/vue', 'uele', 'uele/lite', 'uele/jsx-runtime', 'uele/jsx-dev-runtime', 'uele/props', 'uele/diffs/swapdom', 'uele/diffs/spect', 'uele/diffs/snabbdom', 'uele/diffs/stage0', 'uele/diffs/heckel', 'uele/diffs/list-difference', 'uele/ui', 'uele/reactive', 'uele/flow', 'uele/router', 'uele/hooks', 'uele/themes'];
 for (const spec of specs) {
 	const mod = await import(spec);
 	const keys = Object.keys(mod).sort();
@@ -50,8 +50,28 @@ for (const spec of specs) {
 	console.log('ok', spec, keys.join(','));
 }
 
+for (const [slug, [old, name]] of Object.entries({"alien-signals": ["useAlienSignals", "alienSignals"], "anod": ["useAnod", "anod"], "lite-signal": ["useLiteSignal", "liteSignal"], "maverick": ["useMaverick", "maverick"], "mobx": ["useMobx", "mobx"], "nanostores": ["useNanostores", "nanostores"], "oby": ["useOby", "oby"], "preact": ["usePreactSignals", "preactSignals"], "reactively": ["useReactively", "reactively"], "reflex": ["useReflex", "reflex"], "rescript-signals": ["useRescriptSignals", "rescriptSignals"], "rxjs": ["useRxjs", "rxjs"], "signals": ["useSignals", "signals"], "sjs": ["useSjs", "sjs"], "solid": ["useSolid", "solid"], "tanstack": ["useTanstackStore", "tanstackStore"], "ulive": ["useUlive", "ulive"], "usignal": ["useUsignal", "usignal"], "vue": ["useVue", "vue"]})) {
+  const preferred = await import('uele/signals/' + slug);
+  if (typeof preferred[name] !== 'function' || old in preferred) throw new Error(slug + ' invalid public exports');
+}
+for (const spec of ['uele/signals/internal', 'uele/signals/util', 'uele/adapters/preact']) {
+  try { await import(spec); throw new Error(spec + ' unexpectedly public'); }
+  catch (error) { if (error.code !== 'ERR_PACKAGE_PATH_NOT_EXPORTED') throw error; }
+}
+const { configure } = await import('uele/setup');
+const mainTarget = await import('uele');
+if (configure() !== mainTarget) throw new Error('setup default target differs');
+const { preactSignals } = await import('uele/signals/preact');
+configure({ signals: preactSignals });
+const hooks = await import('uele/hooks');
+const counter = hooks.useCounter(); counter.inc();
+if (mainTarget.api.get(counter.count) !== 1) throw new Error('packaged hooks do not share the active API');
+const timer = hooks.useTimeout(() => {}, 100000); timer.dispose(); timer.start();
+if (timer.active()) { timer.stop(); throw new Error('disposed hook restarted'); }
+if ('useSignal' in hooks || 'read' in hooks || 'useIsMounted' in hooks) throw new Error('removed hook exports remain');
+
 for (const slug of ['reflex', 'reactively', 'anod', 'lite-signal', 'rescript-signals', 'maverick', 'oby']) {
-  const mod = await import('uele/adapters/' + slug);
+  const mod = await import('uele/signals/' + slug);
   const install = Object.values(mod).find((value) => typeof value === 'function');
   const target = install({});
   const cell = target.signal(1);
@@ -73,7 +93,7 @@ console.log('ok shared module instance, Fragment is the main h');
 `
 	);
 
-	runNpm(['install', join(work, tarball), '@preact/signals-core', 'swapdom', '@volynets/reflex', '@reactively/core', 'anod', '@zakkster/lite-signal', 'rescript-signals', '@rescript/runtime', '@maverick-js/signals', 'oby', '--no-audit', '--no-fund', '--silent'], work); // explicitly install the optional peers exercised above
+	runNpm(['install', join(work, tarball), '@preact/signals-core', 'swapdom', '@volynets/reflex', '@reactively/core', 'anod', '@zakkster/lite-signal', 'rescript-signals', '@rescript/runtime', '@maverick-js/signals', 'oby', 'alien-signals@^3.2.1', 'mobx@^7.0.6', 'nanostores@^1.5.5', 'rxjs@^7.8.2', 's-js@^0.4.9', 'solid-js@^1.9.17', '@tanstack/store@^0.11.2', '@vue/reactivity@^3.5.44', '@webreflection/signals@^0.2.8', 'ulive@^1.0.7', 'usignal@^0.10.0', '--no-audit', '--no-fund', '--silent'], work); // explicitly install the optional peers exercised above
 	const installed = join(work, 'node_modules', 'uele');
 	const files = readdirSync(installed);
 	console.log('published entries:', files.join(', '));
@@ -88,7 +108,7 @@ console.log('ok shared module instance, Fragment is the main h');
 		join(work, 'check.cjs'),
 		`// plain CommonJS consumers must get the full surface (a '.js' CJS build inside a
 // \"type\": \"module\" package resolves as ESM and yields an empty module - caught here)
-const specs = ['uele', 'uele/lite', 'uele/jsx-runtime', 'uele/jsx-dev-runtime', 'uele/adapters/preact', 'uele/adapters/reflex', 'uele/adapters/reactively', 'uele/adapters/anod', 'uele/adapters/lite-signal', 'uele/adapters/rescript-signals', 'uele/adapters/maverick', 'uele/adapters/oby', 'uele/props', 'uele/diffs/swapdom', 'uele/diffs/spect', 'uele/diffs/snabbdom', 'uele/diffs/stage0', 'uele/diffs/heckel', 'uele/diffs/list-difference', 'uele/ui', 'uele/reactive', 'uele/flow', 'uele/router', 'uele/hooks', 'uele/themes'];
+const specs = ['uele/setup', 'uele/signals/alien-signals', 'uele/signals/anod', 'uele/signals/lite-signal', 'uele/signals/maverick', 'uele/signals/mobx', 'uele/signals/nanostores', 'uele/signals/oby', 'uele/signals/preact', 'uele/signals/reactively', 'uele/signals/reflex', 'uele/signals/rescript-signals', 'uele/signals/rxjs', 'uele/signals/signals', 'uele/signals/sjs', 'uele/signals/solid', 'uele/signals/tanstack', 'uele/signals/ulive', 'uele/signals/usignal', 'uele/signals/vue', 'uele', 'uele/lite', 'uele/jsx-runtime', 'uele/jsx-dev-runtime', 'uele/props', 'uele/diffs/swapdom', 'uele/diffs/spect', 'uele/diffs/snabbdom', 'uele/diffs/stage0', 'uele/diffs/heckel', 'uele/diffs/list-difference', 'uele/ui', 'uele/reactive', 'uele/flow', 'uele/router', 'uele/hooks', 'uele/themes'];
 for (const spec of specs) {
 	const mod = require(spec);
 	const keys = Object.keys(mod).filter((k) => k !== 'default' && k !== '__esModule').sort();
@@ -96,8 +116,30 @@ for (const spec of specs) {
 	console.log('ok require', spec, keys.join(','));
 }
 
+for (const [slug, [old, name]] of Object.entries({"alien-signals": ["useAlienSignals", "alienSignals"], "anod": ["useAnod", "anod"], "lite-signal": ["useLiteSignal", "liteSignal"], "maverick": ["useMaverick", "maverick"], "mobx": ["useMobx", "mobx"], "nanostores": ["useNanostores", "nanostores"], "oby": ["useOby", "oby"], "preact": ["usePreactSignals", "preactSignals"], "reactively": ["useReactively", "reactively"], "reflex": ["useReflex", "reflex"], "rescript-signals": ["useRescriptSignals", "rescriptSignals"], "rxjs": ["useRxjs", "rxjs"], "signals": ["useSignals", "signals"], "sjs": ["useSjs", "sjs"], "solid": ["useSolid", "solid"], "tanstack": ["useTanstackStore", "tanstackStore"], "ulive": ["useUlive", "ulive"], "usignal": ["useUsignal", "usignal"], "vue": ["useVue", "vue"]})) {
+  const preferred = require('uele/signals/' + slug);
+  if (typeof preferred[name] !== 'function' || old in preferred) throw new Error(slug + ' invalid CJS exports');
+  if (!require.resolve('uele/signals/' + slug).endsWith('.cjs')) throw new Error(slug + ' is not CJS');
+}
+for (const spec of ['uele/signals/internal', 'uele/signals/util', 'uele/adapters/preact']) {
+  try { require(spec); throw new Error(spec + ' unexpectedly public'); }
+  catch (error) { if (error.code !== 'ERR_PACKAGE_PATH_NOT_EXPORTED') throw error; }
+}
+const { configure } = require('uele/setup');
+const customTarget = { api: {}, props: new Map(), r() {} };
+if (configure({}, customTarget) !== customTarget) throw new Error('setup target differs');
+if (!require.resolve('uele/setup').endsWith('.cjs')) throw new Error('setup is not CJS');
+const { preactSignals } = require('uele/signals/preact');
+configure({ signals: preactSignals });
+const hooks = require('uele/hooks');
+const counter = hooks.useCounter(); counter.inc();
+if (require('uele').api.get(counter.count) !== 1) throw new Error('CJS hooks do not share the active API');
+const timer = hooks.useTimeout(() => {}, 100000); timer.dispose(); timer.start();
+if (timer.active()) { timer.stop(); throw new Error('CJS disposed hook restarted'); }
+if ('useSignal' in hooks || 'read' in hooks || 'useIsMounted' in hooks) throw new Error('removed CJS hook exports remain');
+
 for (const slug of ['reflex', 'reactively', 'anod', 'lite-signal', 'rescript-signals', 'maverick', 'oby']) {
-  const mod = require('uele/adapters/' + slug);
+  const mod = require('uele/signals/' + slug);
   const install = Object.values(mod).find((value) => typeof value === 'function');
   const target = install({});
   const cell = target.signal(1);
@@ -130,7 +172,20 @@ console.log('ok require() consumer');
 	console.log('type checking a consumer tsx file...');
 	writeFileSync(
 		join(work, 'app.tsx'),
-		`import { h, If, For, map, lazy, Dynamic, useLive, props, api } from 'uele';
+		`import { useCounter, useWindowSize, useAsync } from 'uele/hooks';
+import { read } from 'uele/reactive';
+const typedCounter = useCounter(0);
+const typedCount: number = read(typedCounter.count);
+const viewport = useWindowSize(); viewport.dispose();
+const task = useAsync(async (id: number) => ({ id })); task.run(1); task.dispose();
+import { configure } from 'uele/setup';
+import { preactSignals } from 'uele/signals/preact';
+import { stage0 } from 'uele/diffs/stage0';
+import { appProps } from 'uele/props';
+import * as lite from 'uele/lite';
+configure({ signals: preactSignals, diff: stage0, props: [appProps] });
+configure({ signals: preactSignals, props: [appProps] }, lite);
+import { h, If, For, map, lazy, Dynamic, useLive, props, api } from 'uele';
 
 const [live, setLive] = useLive(0);
 const items: string[] = ['a', 'b'];
@@ -166,7 +221,6 @@ export default el;
 			'--moduleResolution', 'bundler',
 			'--jsx', 'react-jsx',
 			'--jsxImportSource', 'uele',
-			'--skipLibCheck',
 			'app.tsx'
 		],
 		work

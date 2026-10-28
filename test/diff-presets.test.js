@@ -1,11 +1,11 @@
-import { useHeckel } from 'uele/diffs/heckel';
-import { useListDifference } from 'uele/diffs/list-difference';
+import { heckel } from 'uele/diffs/heckel';
+import { listDifference } from 'uele/diffs/list-difference';
 import { expect, test } from 'vitest';
-import { useSpect } from 'uele/diffs/spect';
-import { useSnabbdom } from 'uele/diffs/snabbdom';
-import { useStage0 } from 'uele/diffs/stage0';
+import { spect } from 'uele/diffs/spect';
+import { snabbdom } from 'uele/diffs/snabbdom';
+import { stage0 } from 'uele/diffs/stage0';
 
-for (const install of [useSpect, useSnabbdom, useStage0, useHeckel, useListDifference]) {
+for (const install of [spect, snabbdom, stage0, heckel, listDifference]) {
 	test(`${install.name}: clears udom, returns target and supports an unbounded region`, () => {
 		const target = { udom: () => {} };
 		expect(install(target)).toBe(target);
@@ -28,7 +28,7 @@ for (const install of [useSpect, useSnabbdom, useStage0, useHeckel, useListDiffe
 }
 
 test('Stage0-style LIS moves only one node for a rotation', () => {
-	const target = useStage0({});
+	const target = stage0({});
 	const parent = document.createElement('div');
 	const nodes = Array.from('abcd', (value) => document.createTextNode(value));
 	parent.append(...nodes);

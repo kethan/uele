@@ -6,16 +6,18 @@
  *
  *     import { useToggle, useLocalStorage, usePagination, useOTP } from "uele/hooks";
  *
- * Hooks return cells (render them directly: `{count}`), plain functions, or a
- * small object of both. DOM hooks that need an element accept the element, a
+ * Hooks return named state/action objects. Resource-owning hooks include an
+ * explicit, terminal, idempotent dispose() method. DOM hooks that need an element accept the element, a
  * `() => element` getter, a `{ current }` ref object, or return bind props /
  * a `ref` callback you spread on the element. Every listener/timer hook
- * returns (or registers) its own teardown.
+ * exposes its own teardown; no implicit component lifecycle is assumed.
  */
 import { get, is, sub } from 'uele';
-import { signal, computed, read, write, effect, batch, untracked, isCell, canEffect, canCompute } from 'uele/reactive';
+import { signal, computed, read, write, isCell, canCompute } from 'uele/reactive';
 
 /* --------------------------------------------------------------- helpers */
+
+const noop = () => {};
 
 const val = (x) => (x == null || (typeof x !== 'object' && typeof x !== 'function') ? x : get(x));
 const targetOf = (t) => {
@@ -26,17 +28,29 @@ const targetOf = (t) => {
 };
 const on = (target, event, handler, options) => {
 	const el = targetOf(target);
-	if (!el?.addEventListener) return () => {};
+	if (!el?.addEventListener) return noop;
 	el.addEventListener(event, handler, options);
 	return () => el.removeEventListener(event, handler, options);
 };
 
-/** create a cell (the React-style name for `signal` from `uele/reactive`) */
-export const useSignal = (initial) => signal(initial);
-/** derive a cell (the React-style name for `computed`) */
-export const useComputed = (fn) => computed(fn);
-/** run an effect; returns its disposer */
-export const useEffect = (fn) => effect(fn);
+// Hook-owned resources are explicit. Disposal runs once, including when cleanup throws.
+const once = (cleanup) => {
+	let current = cleanup;
+	return () => {
+		const run = current;
+		current = undefined;
+		run?.();
+	};
+};
+const owned = (result, cleanup) => {
+	let alive = true;
+	const guard = (fn, name) => (...args) => alive ? fn(...args) : name === 'run' || name === 'copy' ? Promise.resolve(undefined) : undefined;
+	for (const [name, fn] of Object.entries(result)) {
+		if (typeof fn === 'function' && !['active', 'socket', 'source', 'laps', 'values', 'isValid', 'field'].includes(name)) result[name] = guard(fn, name);
+	}
+	if (result.props) for (const name of Object.keys(result.props)) result.props[name] = guard(result.props[name], name);
+	return Object.assign(result, { dispose: once(() => { alive = false; cleanup(); }) });
+};
 
 let idSeq = 0;
 /** stable unique id: `useId()` -> `"uele-1"`, `useId("otp")` -> `"otp-2"` */
@@ -44,18 +58,16 @@ export const useId = (prefix = 'uele') => `${prefix}-${++idSeq}`;
 
 /* ------------------------------------------------------------ state hooks */
 
-/** `[on, toggle, setOn]` — a boolean cell with a flipper. */
+/** `{ value, toggle, set }` — a boolean cell with a flipper. */
 export const useToggle = (initial = false) => {
 	const onCell = signal(!!val(initial));
 	const toggle = (v) => write(onCell, typeof v === 'boolean' ? v : !read(onCell));
-	return [onCell, toggle, (v) => write(onCell, !!v)];
+	return { value: onCell, toggle, set: (v) => write(onCell, !!v) };
 };
-/** alias */
-export const useBoolean = useToggle;
 
 /** open/close state for dialogs, popovers, menus: `{ open, show, hide, toggle, setOpen }` */
 export const useDisclosure = (initial = false) => {
-	const [open, toggle, setOpen] = useToggle(initial);
+	const { value: open, toggle, set: setOpen } = useToggle(initial);
 	return { open, toggle, setOpen, show: () => setOpen(true), hide: () => setOpen(false), onOpenChange: setOpen };
 };
 
@@ -75,7 +87,7 @@ export const useCounter = (initial = 0, { min = -Infinity, max = Infinity, step 
 
 /**
  * Controlled-or-uncontrolled state, the Radix pattern:
- * `useControllable(cellOrUndefined, initial, onChange)` -> `[value, setValue]`.
+ * `useControllable(cellOrUndefined, initial, onChange)` -> `{ value, set }`.
  * Pass a writable cell to control it, `undefined` to let the hook own it.
  * `setValue` accepts a value or an updater function and always fires `onChange`.
  */
@@ -91,7 +103,7 @@ export const useControllable = (controlled, initial, onChange) => {
 		else write(inner, next);
 		onChange?.(next);
 	};
-	return [cell, setValue];
+	return { value: cell, set: setValue };
 };
 
 /** the previous value of a cell (or thunk): updates one commit behind the source */
@@ -104,7 +116,7 @@ export const usePrevious = (source) => {
 			last = v;
 		}
 	});
-	return [previous, off];
+	return owned({ previous }, off);
 };
 
 /* ------------------------------------------------------------- async/data */
@@ -118,12 +130,13 @@ export const useAsync = (fn, { immediate = false, initialData = null } = {}) => 
 	const error = signal(null);
 	const loading = signal(!!immediate);
 	let token = 0;
+	let disposed = false;
 	const run = (...args) => {
 		const mine = ++token;
 		write(loading, true);
 		write(error, null);
 		return Promise.resolve()
-			.then(() => fn(...args))
+			.then(() => disposed ? undefined : fn(...args))
 			.then(
 				(v) => (mine === token && (write(data, v), write(loading, false)), v),
 				(e) => (mine === token && (write(error, e), write(loading, false)), undefined)
@@ -131,7 +144,8 @@ export const useAsync = (fn, { immediate = false, initialData = null } = {}) => 
 	};
 	const reset = () => (token++, write(data, initialData), write(error, null), write(loading, false));
 	if (immediate) run();
-	return { data, error, loading, run, reset };
+	const cancel = () => { token++; write(loading, false); };
+	return owned({ data, error, loading, run, reset, cancel }, () => { disposed = true; cancel(); });
 };
 
 /** undo/redo history over a value: `{ value, set, undo, redo, canUndo, canRedo, clear, past, future }` */
@@ -186,8 +200,6 @@ export const useList = (initial = []) => {
 		clear: () => commit([])
 	};
 };
-/** alias */
-export const useArray = useList;
 
 /* --------------------------------------------------------- debounce/timers */
 
@@ -199,23 +211,25 @@ export const useDebounce = (source, delay = 300) => {
 		clearTimeout(timer);
 		timer = setTimeout(() => write(debounced, v), delay);
 	});
-	return [debounced, () => (clearTimeout(timer), off())];
+	return owned({ value: debounced }, () => (clearTimeout(timer), off()));
 };
 
 /** debounce any function; the wrapper also has `.cancel()` */
 export const useDebounceFn = (fn, delay = 300) => {
 	let timer;
 	let lastArgs;
+	let disposed = false;
 	const wrapped = (...args) => {
+		if (disposed) return;
 		lastArgs = args;
 		clearTimeout(timer);
-		timer = setTimeout(() => fn(...lastArgs), delay);
+		timer = setTimeout(() => { const args = lastArgs; lastArgs = null; fn(...args); }, delay);
 	};
-	wrapped.cancel = () => clearTimeout(timer);
+	wrapped.cancel = () => (clearTimeout(timer), (lastArgs = null));
 	wrapped.flush = () => {
 		if (lastArgs) (clearTimeout(timer), fn(...lastArgs), (lastArgs = null));
 	};
-	return wrapped;
+	return Object.assign(wrapped, { dispose: once(() => { disposed = true; wrapped.cancel(); }) });
 };
 
 /** `{ start, stop, reset }` around `setInterval`; auto-starts unless `delay` is null */
@@ -227,7 +241,7 @@ export const useInterval = (callback, delay = 1000) => {
 		if (delay != null) timer = setInterval(callback, delay);
 	};
 	if (delay != null) start();
-	return { start, stop, reset: start, active: () => timer != null };
+	return owned({ start, stop, reset: start, active: () => timer != null }, stop);
 };
 
 /** `{ start, stop, reset }` around `setTimeout` */
@@ -239,7 +253,7 @@ export const useTimeout = (callback, delay = 1000) => {
 		if (delay != null) timer = setTimeout(() => ((timer = null), callback()), delay);
 	};
 	if (delay != null) start();
-	return { start, stop, reset: start, active: () => timer != null };
+	return owned({ start, stop, reset: start, active: () => timer != null }, stop);
 };
 
 /** countdown timer: `{ count, running, start, pause, reset }` */
@@ -259,7 +273,7 @@ export const useCountdown = (seconds = 60, { onComplete } = {}) => {
 	};
 	const pause = () => stop();
 	const reset = (to = seconds) => (stop(), write(count, to));
-	return { count, running, start, pause, stop, reset };
+	return owned({ count, running, start, pause, stop, reset }, stop);
 };
 
 /* -------------------------------------------------------------- storage */
@@ -285,37 +299,33 @@ const storageHook = (storage, key, initial) => {
 		? on(window, 'storage', (e) => {
 				if (e.key === key) write(cell, e.newValue == null ? val(initial) : JSON.parse(e.newValue));
 			})
-		: () => {};
-	return [cell, setValue, () => (offStorage(), setValue(null))];
+		: noop;
+	return owned({ value: cell, set: setValue, remove: () => setValue(null) }, offStorage);
 };
-/** `[value, setValue, remove]` persisted to `localStorage` (JSON, cross-tab synced) */
+/** `{ value, set, remove, dispose }` persisted to `localStorage` (JSON, cross-tab synced) */
 export const useLocalStorage = (key, initial) => storageHook(typeof localStorage !== 'undefined' ? localStorage : null, key, initial);
-/** `[value, setValue, remove]` persisted to `sessionStorage` */
+/** `{ value, set, remove, dispose }` persisted to `sessionStorage` */
 export const useSessionStorage = (key, initial) => storageHook(typeof sessionStorage !== 'undefined' ? sessionStorage : null, key, initial);
 
 /* ------------------------------------------------------------ DOM / events */
 
 /** attach a listener to window, an element, a getter or a ref; returns the teardown */
-export const useEventListener = (target, event, handler, options) => on(target, event, handler, options);
+export const useEventListener = (target, event, handler, options) => owned({}, on(target, event, handler, options));
 
 /** boolean cell for a media query; follows `change` events. Safe without `matchMedia` (stays false). */
 export const useMediaQuery = (query) => {
 	const matches = signal(false);
-	if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return matches;
+	if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return owned({ matches }, noop);
 	const mql = window.matchMedia(val(query));
 	write(matches, !!mql.matches);
-	on(mql, 'change', (e) => write(matches, !!e.matches));
-	return matches;
+	return owned({ matches }, on(mql, 'change', (e) => write(matches, !!e.matches)));
 };
 
 /** boolean cell: `navigator.onLine`, kept live by `online`/`offline` events */
 export const useOnline = () => {
 	const online = signal(typeof navigator === 'undefined' ? true : !!navigator.onLine);
-	if (typeof window !== 'undefined') {
-		on(window, 'online', () => write(online, true));
-		on(window, 'offline', () => write(online, false));
-	}
-	return online;
+	const off = [on(null, 'online', () => write(online, true)), on(null, 'offline', () => write(online, false))];
+	return owned({ online }, () => off.forEach(stop => stop()));
 };
 
 /** `{ width, height }` cell for the window, kept live on `resize` */
@@ -324,25 +334,23 @@ export const useWindowSize = () => {
 		width: typeof window === 'undefined' ? 0 : window.innerWidth,
 		height: typeof window === 'undefined' ? 0 : window.innerHeight
 	});
-	if (typeof window !== 'undefined')
-		on(window, 'resize', () => write(size, { width: window.innerWidth, height: window.innerHeight }));
-	return size;
+	return owned({ size }, on(null, 'resize', () => write(size, { width: window.innerWidth, height: window.innerHeight })));
 };
 
 /**
- * `[pressed, off]` — pressed follows keydown/keyup for `key`; `handler` (optional)
+ * `{ pressed, dispose }` — pressed follows keydown/keyup for `key`; `handler` (optional)
  * fires on keydown. Matching is case-insensitive on `event.key`.
  */
 export const useKeyPress = (key, handler) => {
 	const pressed = signal(false);
 	const wanted = String(val(key)).toLowerCase();
-	const offDown = on(window, 'keydown', (e) => {
+	const offDown = on(null, 'keydown', (e) => {
 		if (e.key?.toLowerCase() === wanted) (write(pressed, true), handler?.(e));
 	});
-	const offUp = on(window, 'keyup', (e) => {
+	const offUp = on(null, 'keyup', (e) => {
 		if (e.key?.toLowerCase() === wanted) write(pressed, false);
 	});
-	return [pressed, () => (offDown(), offUp())];
+	return owned({ pressed }, () => (offDown(), offUp()));
 };
 
 /**
@@ -350,7 +358,7 @@ export const useKeyPress = (key, handler) => {
  * `mod` is meta on macOS, ctrl elsewhere. Returns the teardown.
  */
 export const useHotkey = (combo, handler) =>
-	on(window, 'keydown', (e) => {
+	owned({}, on(null, 'keydown', (e) => {
 		const parts = String(val(combo)).toLowerCase().split('+').map((p) => p.trim());
 		const key = parts[parts.length - 1];
 		const need = (name) => parts.includes(name);
@@ -362,7 +370,7 @@ export const useHotkey = (combo, handler) =>
 			&& (!need('alt') || e.altKey)
 			&& (e.key?.toLowerCase() === key || (key === 'esc' && e.key === 'Escape') || (key === 'space' && e.key === ' '));
 		if (ok) handler(e);
-	});
+	}));
 
 /** call `handler` when a pointer-down lands outside the element; returns the teardown */
 export const useClickOutside = (element, handler) => {
@@ -370,32 +378,34 @@ export const useClickOutside = (element, handler) => {
 		const el = targetOf(element);
 		if (el && !el.contains(e.target)) handler(e);
 	};
-	const off1 = on(document, 'mousedown', check);
-	const off2 = on(document, 'touchstart', check);
-	return () => (off1(), off2());
+	const off1 = on(typeof document === 'undefined' ? null : document, 'mousedown', check);
+	const off2 = on(typeof document === 'undefined' ? null : document, 'touchstart', check);
+	return owned({}, () => (off1(), off2()));
 };
 
-/** `[hovered, bindProps]` — spread `bindProps` on the element (or pass it as props) */
+/** `{ hovered, props }` — spread `bindProps` on the element (or pass it as props) */
 export const useHover = () => {
 	const hovered = signal(false);
-	return [hovered, { onmouseenter: () => write(hovered, true), onmouseleave: () => write(hovered, false) }];
+	return { hovered, props: { onmouseenter: () => write(hovered, true), onmouseleave: () => write(hovered, false) } };
 };
 
-/** `[focused, bindProps]` — spread `bindProps` on the element */
+/** `{ focused, props }` — spread `bindProps` on the element */
 export const useFocus = () => {
 	const focused = signal(false);
-	return [focused, { onfocus: () => write(focused, true), onblur: () => write(focused, false) }];
+	return { focused, props: { onfocus: () => write(focused, true), onblur: () => write(focused, false) } };
 };
 
 /** `{ copied, copy }` — clipboard write with a transient `copied` flag (1500 ms) */
 export const useClipboard = ({ timeout = 1500 } = {}) => {
 	const copied = signal(false);
+	let disposed = false;
 	let timer;
 	const copy = async (text) => {
 		const value = String(val(text));
 		try {
 			await navigator.clipboard.writeText(value);
 		} catch {
+			if (disposed) return false;
 			const area = document.createElement('textarea');
 			area.value = value;
 			document.body.append(area);
@@ -403,12 +413,13 @@ export const useClipboard = ({ timeout = 1500 } = {}) => {
 			try { document.execCommand('copy'); } catch { /* clipboard unavailable */ }
 			area.remove();
 		}
+		if (disposed) return false;
 		write(copied, true);
 		clearTimeout(timer);
 		timer = setTimeout(() => write(copied, false), timeout);
 		return true;
 	};
-	return { copied, copy };
+	return owned({ copied, copy }, () => { disposed = true; clearTimeout(timer); });
 };
 
 /**
@@ -419,34 +430,40 @@ export const useIntersectionObserver = (options) => {
 	const visible = signal(false);
 	const entry = signal(null);
 	let observer = null;
-	const disconnect = () => observer?.disconnect();
+	let generation = 0;
+	const disconnect = () => { generation++; observer?.disconnect(); observer = null; };
 	const ref = (el) => {
-		if (!el || typeof IntersectionObserver === 'undefined') return;
 		disconnect();
+		if (!el || typeof IntersectionObserver === 'undefined') return;
+		const current = generation;
 		observer = new IntersectionObserver((entries) => {
+			if (current !== generation) return;
 			const first = entries[0];
 			if (first) (write(entry, first), write(visible, !!first.isIntersecting));
 		}, options);
 		observer.observe(el);
 	};
-	return { visible, entry, ref, disconnect };
+	return owned({ visible, entry, ref, disconnect }, disconnect);
 };
 
 /** `{ size, ref, disconnect }` — element size from `ResizeObserver` (guarded like above) */
 export const useResizeObserver = () => {
 	const size = signal({ width: 0, height: 0 });
 	let observer = null;
-	const disconnect = () => observer?.disconnect();
+	let generation = 0;
+	const disconnect = () => { generation++; observer?.disconnect(); observer = null; };
 	const ref = (el) => {
-		if (!el || typeof ResizeObserver === 'undefined') return;
 		disconnect();
+		if (!el || typeof ResizeObserver === 'undefined') return;
+		const current = generation;
 		observer = new ResizeObserver((entries) => {
+			if (current !== generation) return;
 			const rect = entries[0]?.contentRect;
 			if (rect) write(size, { width: rect.width, height: rect.height });
 		});
 		observer.observe(el);
 	};
-	return { size, ref, disconnect };
+	return owned({ size, ref, disconnect }, disconnect);
 };
 
 /* ------------------------------------------------------ pagination & OTP */
@@ -473,16 +490,16 @@ export const paginationRange = (page, totalPages, siblingCount = 1) => {
  * `computed`, cells when it does — call them or render them either way.
  */
 export const usePagination = ({ total = 0, pageSize = 10, initialPage = 1, page: controlled, siblingCount = 1, onChange } = {}) => {
-	const [page, setPageRaw] = useControllable(controlled, initialPage, onChange);
+	const { value: page, set: setPageRaw } = useControllable(controlled, initialPage, onChange);
 	const totalPagesOf = () => Math.max(1, Math.ceil((val(total) || 0) / (val(pageSize) || 1)));
 	const goTo = (p) => setPageRaw(Math.min(totalPagesOf(), Math.max(1, Math.floor(p) || 1)));
-	const derived = (fn) => (canCompute() ? computed(fn) : fn);
+	const derive = (fn) => (canCompute() ? computed(fn) : fn);
 	return {
 		page,
-		totalPages: derived(totalPagesOf),
-		range: derived(() => paginationRange(val(page), totalPagesOf(), siblingCount)),
-		canPrev: derived(() => val(page) > 1),
-		canNext: derived(() => val(page) < totalPagesOf()),
+		totalPages: derive(totalPagesOf),
+		range: derive(() => paginationRange(val(page), totalPagesOf(), siblingCount)),
+		canPrev: derive(() => val(page) > 1),
+		canNext: derive(() => val(page) < totalPagesOf()),
 		goTo,
 		next: () => goTo(val(page) + 1),
 		prev: () => goTo(val(page) - 1),
@@ -508,8 +525,6 @@ export const useOTP = (length = 6, { onComplete } = {}) => {
 	const clear = () => digits.forEach((d) => write(d, ''));
 	return { digits, code, setDigit, clear, isComplete: () => digits.every((d) => !!read(d)) };
 };
-/** alias */
-export const usePinInput = useOTP;
 
 /* ------------------------------------------------------------------ forms */
 
@@ -524,6 +539,8 @@ export const useForm = ({ initialValues = {}, validate, onSubmit } = {}) => {
 	const errors = signal({});
 	const touched = signal({});
 	const submitting = signal(false);
+	let submission = 0;
+	let disposed = false;
 	const field = (name) => {
 		if (!fields.has(name)) fields.set(name, signal(initialValues[name] ?? ''));
 		return fields.get(name);
@@ -540,11 +557,13 @@ export const useForm = ({ initialValues = {}, validate, onSubmit } = {}) => {
 		const errs = runValidation();
 		if (Object.values(errs).some(Boolean)) return false;
 		write(submitting, true);
-		return Promise.resolve(onSubmit?.(values())).finally(() => write(submitting, false));
+		const current = ++submission;
+		const snapshot = values();
+		return Promise.resolve().then(() => disposed ? undefined : onSubmit?.(snapshot)).finally(() => current === submission && write(submitting, false));
 	};
-	return {
+	return owned({
 		field,
-		register: (name) => ({ model: field(name), name, onblur: () => write(touched, { ...read(touched), [name]: true }) }),
+		register: (name) => ({ model: field(name), name, onblur: () => !disposed && write(touched, { ...read(touched), [name]: true }) }),
 		values, errors, touched, submitting,
 		validate: runValidation,
 		handleSubmit,
@@ -556,20 +575,18 @@ export const useForm = ({ initialValues = {}, validate, onSubmit } = {}) => {
 			write(touched, {});
 		},
 		isValid: () => !Object.values(read(errors)).some(Boolean)
-	};
+	}, () => { disposed = true; submission++; write(submitting, false); });
 };
 
 /* ---------------------------------------------------- realtime & clocks */
 
-/** a `Date` cell ticking every `interval` ms (also `useClock`) */
+/** a `Date` cell ticking every `interval` ms with explicit disposal */
 export const useNow = (interval = 1000) => {
 	const now = signal(new Date());
 	let timer = null;
 	if (interval != null && typeof setInterval !== 'undefined') timer = setInterval(() => write(now, new Date()), interval);
-	return [now, () => timer != null && clearInterval(timer)];
+	return owned({ now }, () => timer != null && clearInterval(timer));
 };
-/** alias */
-export const useClock = useNow;
 
 /** stopwatch: `{ elapsed (seconds cell), running, start, pause, reset, lap, laps() }` */
 export const useStopwatch = () => {
@@ -585,7 +602,7 @@ export const useStopwatch = () => {
 	};
 	const pause = () => (timer != null && clearInterval(timer), (timer = null), write(running, false));
 	const reset = () => (pause(), write(elapsed, 0), (laps = []));
-	return { elapsed, running, start, pause, reset, lap: () => (laps.push(read(elapsed)), [...laps]), laps: () => [...laps] };
+	return owned({ elapsed, running, start, pause, reset, lap: () => (laps.push(read(elapsed)), [...laps]), laps: () => [...laps] }, pause);
 };
 
 /** throttle a source cell: at most one write per `interval` ms (leading edge) */
@@ -604,15 +621,17 @@ export const useThrottle = (source, interval = 300) => {
 			if (!timer) timer = setTimeout(() => ((timer = null), (last = Date.now()), write(throttled, pending)), wait);
 		}
 	});
-	return [throttled, () => (timer && clearTimeout(timer), off())];
+	return owned({ value: throttled }, () => (timer && clearTimeout(timer), off()));
 };
 
 /** throttle any function (leading edge; one trailing edge fires with the latest args); the wrapper also has `.cancel()` */
 export const useThrottleFn = (fn, interval = 300) => {
 	let last = 0;
 	let timer = null;
+	let disposed = false;
 	let pending = null; // args of the most recent throttled call, used by the trailing edge
 	const wrapped = (...args) => {
+		if (disposed) return;
 		const wait = interval - (Date.now() - last);
 		if (wait <= 0) {
 			last = Date.now();
@@ -629,7 +648,7 @@ export const useThrottleFn = (fn, interval = 300) => {
 		}
 	};
 	wrapped.cancel = () => (timer && clearTimeout(timer), (timer = null), (pending = null));
-	return wrapped;
+	return Object.assign(wrapped, { dispose: once(() => { disposed = true; wrapped.cancel(); }) });
 };
 
 /**
@@ -664,7 +683,10 @@ export const useWebSocket = (url, { onMessage, protocols, json = true } = {}) =>
 		return socket;
 	};
 	const close = () => {
-		try { socket?.close(); } catch { /* already gone */ }
+		try {
+			if (socket) { socket.onopen = socket.onclose = socket.onerror = socket.onmessage = null; socket.close(); }
+		} catch { /* already gone */ }
+		write(status, 'closed');
 		socket = null;
 	};
 	const send = (data) => {
@@ -673,7 +695,7 @@ export const useWebSocket = (url, { onMessage, protocols, json = true } = {}) =>
 		return true;
 	};
 	if (url) open();
-	return { status, lastMessage, messages, send, close, open, socket: () => socket };
+	return owned({ status, lastMessage, messages, send, close, open, socket: () => socket }, close);
 };
 
 /**
@@ -698,7 +720,11 @@ export const useEventSource = (url, { onMessage, withCredentials } = {}) => {
 			onMessage?.(data, event);
 		};
 	}
-	return { status, lastMessage, messages, close: () => (source?.close(), write(status, 'closed')), source: () => source };
+	const close = () => {
+		if (source) { source.onopen = source.onerror = source.onmessage = null; source.close(); source = null; }
+		write(status, 'closed');
+	};
+	return owned({ status, lastMessage, messages, close, source: () => source }, close);
 };
 
 /**
@@ -718,11 +744,11 @@ export const useBroadcastChannel = (name, { onMessage } = {}) => {
 			onMessage?.(event.data, event);
 		};
 	}
-	return {
+	const close = () => { if (channel) { channel.onmessage = null; channel.close(); channel = null; } };
+	return owned({
 		supported, lastMessage, messages,
-		post: (data) => (channel ? (channel.postMessage(data), true) : false),
-		close: () => channel?.close()
-	};
+		post: (data) => (channel ? (channel.postMessage(data), true) : false), close
+	}, close);
 };
 
 /** fetch JSON with loading/error state and aborts: `{ data, error, loading, run, abort }` */
@@ -734,12 +760,20 @@ export const useFetch = (url, options) => {
 		return type.includes('json') ? res.json() : res.text();
 	});
 	let controller = null;
+	let unlink = noop;
+	const abort = () => { base.cancel(); controller?.abort?.(); unlink(); unlink = noop; };
 	const run = (target, opts) => {
-		controller?.abort?.();
+		abort();
 		controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-		return base.run(target, { ...options, ...opts, signal: controller?.signal }); // hook-level options are the defaults every run starts from
+		const merged = { ...options, ...opts };
+		const external = merged.signal;
+		const work = base.run(target, { ...merged, signal: controller?.signal ?? external });
+		const off = external ? once(on(external, 'abort', abort, { once: true })) : noop;
+		unlink = off;
+		if (external?.aborted) abort();
+		return work.finally(off);
 	};
-	return { ...base, run, abort: () => controller?.abort?.() };
+	return owned({ ...base, run, abort }, () => { base.dispose(); controller?.abort?.(); unlink(); });
 };
 
 /* ------------------------------------------------------------ browser APIs */
@@ -749,51 +783,45 @@ export const useGeolocation = ({ immediate = false } = {}) => {
 	const position = signal(null);
 	const error = signal(null);
 	const loading = signal(false);
+	let generation = 0;
 	const supported = typeof navigator !== 'undefined' && !!navigator.geolocation;
 	const refresh = () => {
 		if (!supported) return;
 		write(loading, true);
+		const current = ++generation;
 		navigator.geolocation.getCurrentPosition(
-			(pos) => (write(position, pos), write(loading, false)),
-			(err) => (write(error, err), write(loading, false))
+			(pos) => current === generation && (write(position, pos), write(loading, false)),
+			(err) => current === generation && (write(error, err), write(loading, false))
 		);
 	};
 	if (immediate) refresh();
-	return { position, error, loading, refresh, supported };
+	return owned({ position, error, loading, refresh, supported }, () => { generation++; write(loading, false); });
 };
 
 /** `'visible' | 'hidden'` cell for the document, kept live */
 export const useDocumentVisibility = () => {
 	const visibility = signal(typeof document === 'undefined' ? 'visible' : document.visibilityState || 'visible');
-	if (typeof document !== 'undefined') on(document, 'visibilitychange', () => write(visibility, document.visibilityState));
-	return visibility;
+	return owned({ visibility }, on(typeof document === 'undefined' ? null : document, 'visibilitychange', () => write(visibility, document.visibilityState)));
 };
 
 /** boolean cell: whether the window currently has focus */
 export const useWindowFocus = () => {
 	const focused = signal(typeof document === 'undefined' ? true : document.hasFocus?.() ?? true);
-	if (typeof window !== 'undefined') {
-		on(window, 'focus', () => write(focused, true));
-		on(window, 'blur', () => write(focused, false));
-	}
-	return focused;
+	const off = [on(null, 'focus', () => write(focused, true)), on(null, 'blur', () => write(focused, false))];
+	return owned({ focused }, () => off.forEach(stop => stop()));
 };
 
 /** `{ x, y, direction }` scroll cell for the window */
 export const useScrollPosition = () => {
 	const pos = signal({ x: 0, y: 0, direction: 'none' });
 	let lastY = 0;
-	if (typeof window !== 'undefined') {
-		on(window, 'scroll', () => {
+	const off = on(null, 'scroll', () => {
 			const y = window.scrollY || 0;
 			write(pos, { x: window.scrollX || 0, y, direction: y > lastY ? 'down' : y < lastY ? 'up' : 'none' });
 			lastY = y;
 		}, { passive: true });
-	}
-	return pos;
+	return owned({ position: pos }, off);
 };
-/** alias */
-export const useScroll = useScrollPosition;
 
 /** body scroll lock with reference counting: `{ lock, unlock, locked }` */
 export const useScrollLock = () => {
@@ -805,11 +833,11 @@ export const useScrollLock = () => {
 		if (count > 0 && !read(locked)) (previous = document.body.style.overflow, document.body.style.overflow = 'hidden', write(locked, true));
 		else if (count <= 0 && read(locked)) (document.body.style.overflow = previous, write(locked, false));
 	};
-	return {
+	return owned({
 		locked,
 		lock: () => (count++, apply()),
 		unlock: () => (count = Math.max(0, count - 1), apply())
-	};
+	}, () => { count = 0; apply(); });
 };
 
 /**
@@ -840,7 +868,7 @@ export const useFocusTrap = () => {
 		if (typeof document !== 'undefined') document.addEventListener('keydown', handler, true);
 		container.querySelector(FOCUSABLE)?.focus?.();
 	};
-	return { ref: (el) => el && activate(el), activate, deactivate, active: () => activeTrap };
+	return owned({ ref: (el) => el ? activate(el) : deactivate(), activate, deactivate, active: () => activeTrap }, deactivate);
 };
 
 /** fullscreen over an element (or the document): `{ fullscreen, toggle, enter, exit, supported }` */
@@ -848,10 +876,10 @@ export const useFullscreen = (target) => {
 	const fullscreen = signal(false);
 	const supported = typeof document !== 'undefined' && !!document.documentElement?.requestFullscreen;
 	const sync = () => write(fullscreen, typeof document !== 'undefined' && !!document.fullscreenElement);
-	if (typeof document !== 'undefined') on(document, 'fullscreenchange', sync);
-	const enter = () => targetOf(target)?.requestFullscreen?.() || document.documentElement.requestFullscreen?.();
-	const exit = () => document.exitFullscreen?.();
-	return { fullscreen, supported, enter, exit, toggle: () => (read(fullscreen) ? exit() : enter()) };
+	const off = on(typeof document === 'undefined' ? null : document, 'fullscreenchange', sync);
+	const enter = () => targetOf(target)?.requestFullscreen?.() || (typeof document !== 'undefined' ? document.documentElement.requestFullscreen?.() : undefined);
+	const exit = () => typeof document !== 'undefined' ? document.exitFullscreen?.() : undefined;
+	return owned({ fullscreen, supported, enter, exit, toggle: () => (read(fullscreen) ? exit() : enter()) }, off);
 };
 
 /** current breakpoint name from a `{ sm: 640, md: 768, … }` map (window-width based) */
@@ -864,8 +892,7 @@ export const useBreakpoint = (breakpoints = { sm: 640, md: 768, lg: 1024, xl: 12
 		return current;
 	};
 	const breakpoint = signal(pick());
-	if (typeof window !== 'undefined') on(window, 'resize', () => write(breakpoint, pick()));
-	return breakpoint;
+	return owned({ breakpoint }, on(null, 'resize', () => write(breakpoint, pick())));
 };
 
 /**
@@ -890,18 +917,17 @@ export const useColorScheme = ({ persist = true, key = 'uele-scheme', initial } 
 		write(dark, next === 'dark');
 		try { persist && localStorage.setItem(key, next); } catch { /* private mode */ }
 	};
+	let off = noop;
 	try {
 		if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
 			const mql = window.matchMedia('(prefers-color-scheme: dark)');
-			on(mql, 'change', () => !stored() && setScheme(media()));
+			off = on(mql, 'change', () => !stored() && setScheme(media()));
 		}
 	} catch { /* a throwing matchMedia must not break the hook (media() already degrades) */ }
-	return { scheme, dark, setScheme, toggle: () => setScheme(read(scheme) === 'dark' ? 'light' : 'dark') };
+	return owned({ scheme, dark, setScheme, toggle: () => setScheme(read(scheme) === 'dark' ? 'light' : 'dark') }, () => off());
 };
-/** alias */
-export const useDarkMode = useColorScheme;
 
-/** two-way sync with one URL query param: `[value, setValue]` (pushState + popstate) */
+/** two-way sync with one URL query param: `{ value, set }` (pushState + popstate) */
 export const useQueryParam = (key, initial = '') => {
 	const readParam = () => {
 		try { return new URLSearchParams(window.location.search).get(key) ?? initial; } catch { return initial; }
@@ -916,8 +942,7 @@ export const useQueryParam = (key, initial = '') => {
 		else url.searchParams.set(key, String(next));
 		window.history.pushState(null, '', url);
 	};
-	if (typeof window !== 'undefined') on(window, 'popstate', () => write(cell, readParam()));
-	return [cell, setValue];
+	return owned({ value: cell, set: setValue }, on(null, 'popstate', () => write(cell, readParam())));
 };
 
 /** cookie value cell: reads on create, `setValue(v, days)` writes, `setValue(null)` deletes */
@@ -936,7 +961,7 @@ export const useCookie = (name, initial = '') => {
 		const expires = next == null ? 'Thu, 01 Jan 1970 00:00:00 GMT' : new Date(Date.now() + days * 864e5).toUTCString();
 		document.cookie = `${name}=${encodeURIComponent(next ?? '')}; expires=${expires}; path=/`;
 	};
-	return [cell, setValue];
+	return { value: cell, set: setValue };
 };
 
 /** boolean cell: true after `timeout` ms without mouse/key/touch activity */
@@ -948,22 +973,22 @@ export const useIdle = (timeout = 60000) => {
 		clearTimeout(timer);
 		timer = setTimeout(() => write(idle, true), timeout);
 	};
-	if (typeof window !== 'undefined') for (const evt of ['mousemove', 'mousedown', 'keydown', 'touchstart']) on(window, evt, reset, { passive: true });
+	const off = ['mousemove', 'mousedown', 'keydown', 'touchstart'].map(evt => on(null, evt, reset, { passive: true }));
 	reset();
-	return idle;
+	return owned({ idle }, () => (clearTimeout(timer), off.forEach(stop => stop())));
 };
 
 /** long-press bind props: spread on an element, `handler` fires after `delay` ms held */
 export const useLongPress = (handler, delay = 500) => {
 	let timer = null;
 	const clear = () => (timer && clearTimeout(timer), (timer = null));
-	return {
+	return owned({ props: {
 		onmousedown: () => (clear(), (timer = setTimeout(handler, delay))),
 		ontouchstart: () => (clear(), (timer = setTimeout(handler, delay))),
 		onmouseup: clear,
 		onmouseleave: clear,
 		ontouchend: clear
-	};
+	} }, clear);
 };
 
 /** swipe bind props: `useSwipe({ onSwipeLeft, onSwipeRight, onSwipeUp, onSwipeDown, threshold })` */
@@ -1000,41 +1025,26 @@ export const useAnimationFrame = (callback) => {
 		frame = requestAnimationFrame(loop);
 	};
 	const stop = () => (write(running, false), frame != null && cancelAnimationFrame(frame), (frame = null));
-	return { start, stop, running };
+	return owned({ start, stop, running }, stop);
 };
-/** alias */
-export const useRaf = useAnimationFrame;
 
 /** just the boolean from `useIntersectionObserver`, for a getter/element/ref */
 export const useInView = (target, options) => {
 	const io = useIntersectionObserver(options);
 	if (target) io.ref(targetOf(target));
-	return io.visible;
+	return { visible: io.visible, dispose: io.dispose };
 };
 
-/** set `document.title` from a value/cell/thunk, restoring the old title on `restore()` */
+/** set `document.title` from a value/cell/thunk, restoring the old title on `dispose()` */
 export const useTitle = (title) => {
 	const previous = typeof document === 'undefined' ? '' : document.title;
 	const apply = (v) => { if (typeof document !== 'undefined') document.title = v == null ? '' : String(v); };
-	if (is(title) || typeof title === 'function') sub(title, apply, () => {});
-	else apply(val(title));
-	return { restore: () => apply(previous) };
+	const off = is(title) || typeof title === 'function' ? sub(title, apply, noop) : (apply(val(title)), noop);
+	return owned({}, () => (off(), apply(previous)));
 };
 
 /** a cell that always mirrors the latest value of a source (read it in callbacks) */
 export const useLatest = (source) => {
 	const latest = signal(val(source));
-	sub(source, (v) => write(latest, v));
-	return latest;
+	return owned({ latest }, sub(source, (v) => write(latest, v)));
 };
-
-/** `[mounted, isMounted]` — true from creation until `unmount()` (call it on teardown) */
-export const useIsMounted = () => {
-	const mounted = signal(true);
-	return [mounted, () => read(mounted), () => write(mounted, false)];
-};
-
-/** element-size hook with the friendlier name (same as `useResizeObserver`) */
-export const useElementSize = useResizeObserver;
-
-export { signal, computed, read, write, effect, batch, untracked, isCell, canEffect, canCompute };

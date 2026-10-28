@@ -8,7 +8,7 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { usePreactSignals } from 'uele/adapters/preact';
+import { preactSignals } from 'uele/signals/preact';
 import { signal } from '@preact/signals-core';
 import * as UI from 'uele/ui';
 import {
@@ -22,7 +22,7 @@ import {
 import { mountDashboard } from '../examples/dashboard.jsx';
 
 beforeEach(() => {
-	usePreactSignals();
+	preactSignals();
 	document.body.innerHTML = '';
 	document.body.style.overflow = '';
 });
@@ -30,14 +30,11 @@ afterEach(() => vi.useRealTimers());
 const key = (el, k, opts = {}) => el.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true, ...opts }));
 
 describe('catalogue size', () => {
-	it('now exports 120+ names with working aliases', () => {
-		expect(Object.keys(UI).length).toBeGreaterThanOrEqual(120);
-		expect(UI.Sheet).toBe(UI.Drawer);
-		expect(UI.TreeView).toBe(UI.Tree);
-		expect(UI.Gallery).toBe(UI.Lightbox);
-		expect(UI.Command).toBe(UI.CommandPalette);
-		expect(UI.RelativeTime).toBe(UI.TimeAgo);
-		expect(UI.ConfirmDialog).toBe(UI.AlertDialog);
+	it('exports canonical names, not compatibility aliases', () => {
+		for (const name of ['Drawer', 'Tree', 'Lightbox', 'CommandPalette', 'TimeAgo', 'AlertDialog'])
+			expect(UI[name]).toBeTypeOf('function');
+		for (const name of ['Sheet', 'TreeView', 'Gallery', 'Command', 'RelativeTime', 'ConfirmDialog'])
+			expect(UI).not.toHaveProperty(name);
 	});
 });
 
@@ -413,7 +410,7 @@ describe('dialog hardening, drawer, confirm', () => {
 		expect(document.body.style.overflow).toBe('');
 	});
 
-	it('Drawer is anchored to its edge, Sheet is its alias', () => {
+	it('Drawer is anchored to its edge', () => {
 		const open = signal(true);
 		const el = <Drawer model={open} side="right" title="Menu">links</Drawer>;
 		document.body.append(el);

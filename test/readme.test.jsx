@@ -6,11 +6,11 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { For } from "uele";
-import { usePreactSignals } from "uele/adapters/preact";
+import { preactSignals } from "uele/signals/preact";
 import { signal } from "@preact/signals-core";
 import { Form, Row, Card, Stack, Button, Input, Checkbox, Label } from "uele/ui";
 
-usePreactSignals(); // one call, whole api configured
+preactSignals(); // one call, whole api configured
 
 const TodoApp = () => {
   const text = signal("");

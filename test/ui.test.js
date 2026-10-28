@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { h, get } from 'uele';
-import { useUlive } from 'uele/adapters/ulive';
+import { ulive } from 'uele/signals/ulive';
 import { signal } from 'ulive';
 const g = signal;
 const s = (c, v) => (c.value = v);
@@ -70,7 +70,7 @@ describe('ui primitives — structure & defaults', () => {
 
 describe('ui primitives — live props and two-way model', () => {
 	it('value/checked display live via signals', () => {
-		useUlive();
+		ulive();
 		const v = g('hi');
 		const input = Input({ value: v });
 		expect(input.value).toBe('hi');
@@ -95,7 +95,7 @@ describe('ui primitives — live props and two-way model', () => {
 	});
 
 	it('model writes back on input/change for every cell shape', () => {
-		useUlive();
+		ulive();
 		const c1 = g('x');
 		const i1 = Input({ model: c1 });
 		i1.value = 'typed';
@@ -119,7 +119,7 @@ describe('ui primitives — live props and two-way model', () => {
 	});
 
 	it('auto-model: a writable value cell becomes the model', () => {
-		useUlive();
+		ulive();
 		const v = g('');
 		const i = Input({ value: v });
 		i.value = 'auto';
@@ -140,7 +140,7 @@ describe('ui primitives — live props and two-way model', () => {
 	});
 
 	it('Checkbox model writes checked on change', () => {
-		useUlive();
+		ulive();
 		const on = g(false);
 		const cb = Checkbox({ model: on });
 		cb.checked = true;
@@ -157,7 +157,7 @@ describe('ui primitives — live props and two-way model', () => {
 	});
 
 	it('Select model writes value on change', () => {
-		useUlive();
+		ulive();
 		const v = g('a');
 		const sel = Select({ model: v, options: ['a', 'b'] });
 		sel.value = 'b';

@@ -5,25 +5,25 @@
  *     import { mountTodos } from './tanstack.jsx';
  *     mountTodos(document.body);
  *
- * Signals come from @tanstack/store; `useTanstackStore()` wires uele to them (called for you by
+ * Signals come from @tanstack/store; `tanstackStore()` wires uele to them (called for you by
  * `TodoApp`/`mountTodos`). Everything below the actions is the same JSX you
  * would write with any other preset.
  */
 import { For } from 'uele';
 import { Form, Row, Card, Stack, Button, Input, Checkbox, Label } from 'uele/ui';
-import { useTanstackStore } from 'uele/adapters/tanstack';
-import { Cell } from 'uele/adapters/tanstack';
+import { tanstackStore } from 'uele/signals/tanstack';
+import { Cell } from 'uele/signals/tanstack';
 import { Store } from '@tanstack/store';
 
 export const TodoApp = () => {
-	useTanstackStore();
+	tanstackStore();
 	const newTodo = new Store('');
 	const todos = new Store([]);
 	const filter = new Store('all');
 	// @tanstack/store has no `computed`, and a plain Store renders empty until its
-	// first change: build derived cells on the adapter's `Cell` (a Store that
+	// first change: build computed cells on the adapter's `Cell` (a Store that
 	// replays its value to every new subscriber)
-	const derived = (read, ...deps) => {
+	const computed = (read, ...deps) => {
 		const out = new Cell(read());
 		deps.forEach((dep) => dep.subscribe(() => out.setState(read())));
 		return out;
@@ -32,9 +32,9 @@ export const TodoApp = () => {
 		const f = filter.state; // read eagerly, before the possibly empty list
 		return todos.state.filter((x) => (f === 'all' ? true : f === 'active' ? !x.done : x.done));
 	};
-	const visible = derived(select, todos, filter);
-	const remainingText = derived(() => todos.state.filter((x) => !x.done).length + ' left', todos);
-	const filterText = derived(() => 'Filter: ' + filter.state, filter);
+	const visible = computed(select, todos, filter);
+	const remainingText = computed(() => todos.state.filter((x) => !x.done).length + ' left', todos);
+	const filterText = computed(() => 'Filter: ' + filter.state, filter);
 
 	// ---- actions: plain @tanstack/store reads and writes ----
 	let seq = 0;

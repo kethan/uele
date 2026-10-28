@@ -90,14 +90,14 @@ const codeBlocks = (text, lang) => {
 
 const slugs = (folder) =>
 	readdirSync(ROOT + folder)
-		.filter((f) => f.endsWith('.js') && f !== 'util.js')
+		.filter((f) => f.endsWith('.js') && f !== 'util.js' && f !== 'internal.js')
 		.map((f) => f.slice(0, -3))
 		.sort();
 
-const hooksOf = (folder, slug) => [...read(folder + '/' + slug + '.js').matchAll(/export const (use\w+)/g)].map((m) => m[1]);
+const hooksOf = (folder, slug) => [...read(folder + '/' + slug + '.js').matchAll(/export const (\w+) =/g)].map((m) => m[1]);
 
 describe('every code snippet in the docs parses', () => {
-	const docs = ['README.md', 'docs/PRESETS.md', 'docs/ADAPTERS.md'].map((p) => [p, read(p)]);
+	const docs = ['README.md', 'docs/PRESETS.md', 'docs/ADAPTERS.md', 'docs/API.md', 'docs/HOOKS.md', 'docs/USTOR.md', 'examples/ustor/README.md'].map((p) => [p, read(p)]);
 
 	it.each(
 		docs.flatMap(([file, text]) =>
@@ -122,39 +122,38 @@ describe('every code snippet in the docs parses', () => {
 describe('docs/PRESETS.md matches the shipped presets', () => {
 	const presets = read('docs/PRESETS.md');
 
-	it.each(slugs('adapters'))('documents adapters/%s with its real hook name', (slug) => {
-		const hooks = hooksOf('adapters', slug);
+	it.each(slugs('signals'))('documents signals/%s with its preferred installer name', (slug) => {
+		const hooks = hooksOf('signals', slug);
 		expect(hooks.length).toBeGreaterThan(0);
-		hooks.forEach((hook) => expect(presets).toContain('%s/adapters/%s`' % 0 ? hook : hook));
-		expect(presets).toContain('`%s/adapters/%s` - `%s()`'.replace('%s/adapters', NAME + '/adapters').replace('%s`', slug + '`').replace('%s()', hooks[hooks.length - 1] + '()'));
+		hooks.forEach((hook) => expect(presets).toContain('`' + NAME + '/signals/' + slug + '` - `' + hook + '()`'));
 	});
 
-	it.each(slugs('diffs'))('documents diffs/%s with its real hook name', (slug) => {
+	it.each(slugs('diffs'))('documents diffs/%s with its preferred installer name', (slug) => {
 		const hook = hooksOf('diffs', slug).pop();
-		expect(presets).toContain('`%s/diffs/%s` - `%s()`'
-			.replace('%s/diffs', NAME + '/diffs').replace('%s`', slug + '`').replace('%s()', hook + '()'));
+		expect(hook).toBeTruthy();
+		expect(presets).toContain('`' + NAME + '/diffs/' + slug + '` - `' + hook + '()`');
 	});
 
 	it('every preset has a jsdoc description (the doc is generated from it)', () => {
-		[...slugs('adapters').map((s) => 'adapters/' + s + '.js'), ...slugs('diffs').map((s) => 'diffs/' + s + '.js')].forEach(
+		[...slugs('signals').map((s) => 'signals/' + s + '.js'), ...slugs('diffs').map((s) => 'diffs/' + s + '.js')].forEach(
 			(file) => {
 				const src = read(file);
 				expect(src.startsWith('/**'), file + ' starts with a jsdoc block').toBe(true);
-				expect(src).toContain(' *     import { use'); // the usage example the doc renders
+				expect(src).toContain(' *     import { ' + hooksOf(file.split('/')[0], file.split('/')[1].slice(0, -3)).pop()); // the usage example the doc renders
 			}
 		);
 	});
 
 	it('every preset ships types next to it', () => {
-		slugs('adapters').forEach((s) => expect(existsSync(ROOT + 'adapters/' + s + '.d.ts')).toBe(true));
+		slugs('signals').forEach((s) => expect(existsSync(ROOT + 'signals/' + s + '.d.ts')).toBe(true));
 		slugs('diffs').forEach((s) => expect(existsSync(ROOT + 'diffs/' + s + '.d.ts')).toBe(true));
 	});
 
 	it('every signal library is an optional peer dependency, never a real one', () => {
 		const deps = Object.keys(pkg.dependencies || {});
 		const optional = pkg.peerDependenciesMeta || {};
-		slugs('adapters').forEach((slug) => {
-			const src = read('adapters/' + slug + '.js');
+		slugs('signals').forEach((slug) => {
+			const src = read('signals/' + slug + '.js');
 			const libs = [...src.matchAll(/from '([^.'][^']*)'/g)]
 				.map((m) => m[1])
 				.filter((name) => name !== NAME && !name.startsWith(NAME + '/'));
@@ -172,14 +171,14 @@ describe('the authoring guide (docs/ADAPTERS.md)', () => {
 	const guide = read('docs/ADAPTERS.md');
 
 	it('documents every hook uele and uele/reactive use', () => {
-		const hooks = [...read('adapters/util.js').matchAll(/^\t(\w+): undefined/gm)].map((m) => m[1]);
+		const hooks = [...read('signals/internal.js').matchAll(/^\t(\w+): undefined/gm)].map((m) => m[1]);
 		hooks.forEach((hook) => expect(guide, 'the guide mentions `' + hook + '`').toContain('`' + hook + '`'));
 	});
 
 	it('points at the helpers the presets really share', () => {
-		['scoped', 'wire', 'HOOKS', 'morphAdapter'].forEach((helper) => {
+		['scoped', 'install', 'HOOKS', 'morphAdapter'].forEach((helper) => {
 			const defined =
-				read('adapters/util.js').includes('export const ' + helper) ||
+				read('signals/internal.js').includes('export const ' + helper) ||
 				read('diffs/util.js').includes('export const ' + helper);
 			expect(defined, helper + ' is exported by the shared util').toBe(true);
 			expect(guide).toContain(helper);

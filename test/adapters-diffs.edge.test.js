@@ -1,7 +1,7 @@
 /**
  * Edge coverage for the preset/diff plumbing the behavioural suites only
  * reach indirectly: `scoped` disposers (function, `{unsubscribe}`, and
- * missing), `wire` clearing stale hooks, the subscribe-only adapters'
+ * missing), `install` clearing stale hooks, the subscribe-only adapters'
  * `set`/`any`/`get` shapes called directly, nested `batch` on s-js, and
  * the `morphAdapter` node-type matrix plus each diff preset's `end`
  * handling.
@@ -9,26 +9,26 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { usePreactSignals } from 'uele/adapters/preact';
+import { preactSignals } from 'uele/signals/preact';
 import { signal, read, write, effect, batch } from 'uele/reactive';
-import { scoped, wire } from 'uele/adapters/util';
-import { useRxjs } from 'uele/adapters/rxjs';
-import { useNanostores } from 'uele/adapters/nanostores';
-import { useTanstackStore } from 'uele/adapters/tanstack';
-import { useSjs } from 'uele/adapters/sjs';
+import { scoped, install } from '../signals/internal.js';
+import { rxjs } from 'uele/signals/rxjs';
+import { nanostores } from 'uele/signals/nanostores';
+import { tanstackStore } from 'uele/signals/tanstack';
+import { sjs } from 'uele/signals/sjs';
 import { morphAdapter } from '../diffs/util.js';
-import { useRebuild } from 'uele/diffs/rebuild';
-import { useFastArrayDiff } from 'uele/diffs/fast-array-diff';
-import { useDomdiff } from 'uele/diffs/domdiff';
-import { useMorphdom } from 'uele/diffs/morphdom';
-import { useNanomorph } from 'uele/diffs/nanomorph';
+import { rebuild } from 'uele/diffs/rebuild';
+import { fastArrayDiff } from 'uele/diffs/fast-array-diff';
+import { domdiff } from 'uele/diffs/domdiff';
+import { morphdom } from 'uele/diffs/morphdom';
+import { nanomorph } from 'uele/diffs/nanomorph';
 
 beforeEach(() => {
-	usePreactSignals();
+	preactSignals();
 	document.body.innerHTML = '';
 });
 
-/* --------------------------------------------------------- adapters/util */
+/* --------------------------------------------------------- signals/util */
 
 describe('scoped() effect/cleanup plumbing', () => {
 	it('disposer calls an unsubscribe-object and runs registered cleanups', () => {
@@ -95,10 +95,10 @@ describe('scoped() effect/cleanup plumbing', () => {
 		expect(log).toEqual(['a', 'b']);
 	});
 
-	it('wire() clears hooks a library does not provide', () => {
+	it('install() clears hooks a library does not provide', () => {
 		const target = { effect: () => {}, signal: () => {} };
 		const sig = () => {};
-		wire(target, { signal: sig });
+		install(target, { signal: sig });
 		expect(target.signal).toBe(sig);
 		expect(target.effect).toBeUndefined();
 		expect(target.get).toBeUndefined();
@@ -111,7 +111,7 @@ describe('scoped() effect/cleanup plumbing', () => {
 describe('subscribe-only adapters called directly', () => {
 	it('rxjs: set() pushes through .next, any() subscribes and unsubscribes', () => {
 		const t = {};
-		useRxjs(t);
+		rxjs(t);
 		const subject = t.signal(1);
 		t.set(subject, 5);
 		expect(subject.value).toBe(5);
@@ -127,7 +127,7 @@ describe('subscribe-only adapters called directly', () => {
 
 	it('nanostores: set() writes the atom, any() follows it, non-atoms rejected', () => {
 		const t = {};
-		useNanostores(t);
+		nanostores(t);
 		const atomCell = t.signal(1);
 		t.set(atomCell, 3);
 		expect(atomCell.get()).toBe(3);
@@ -141,7 +141,7 @@ describe('subscribe-only adapters called directly', () => {
 
 	it('tanstack: set() uses setState, get() reads .state or a plain .value', () => {
 		const t = {};
-		useTanstackStore(t);
+		tanstackStore(t);
 		const store = t.signal(1);
 		t.set(store, 9);
 		expect(store.state).toBe(9);
@@ -156,7 +156,7 @@ describe('subscribe-only adapters called directly', () => {
 	});
 
 	it('s-js: nested batch flushes writes once, at the outer boundary', () => {
-		useSjs();
+		sjs();
 		const cell = signal(0);
 		let runs = 0;
 		const off = effect(() => {
@@ -288,7 +288,7 @@ describe('diff presets called directly', () => {
 
 	it('rebuild drops everything and re-inserts, with and without an anchor', () => {
 		const t = {};
-		useRebuild(t);
+		rebuild(t);
 		const parent = setup();
 		const a = text('a');
 		parent.append(a);
@@ -304,7 +304,7 @@ describe('diff presets called directly', () => {
 
 	it('fast-array-diff removes, inserts and reorders against an anchor', () => {
 		const t = {};
-		useFastArrayDiff(t);
+		fastArrayDiff(t);
 		const parent = setup();
 		const a = text('a');
 		const b = text('b');
@@ -319,7 +319,7 @@ describe('diff presets called directly', () => {
 
 	it('domdiff replaces through its options-object signature', () => {
 		const t = {};
-		useDomdiff(t);
+		domdiff(t);
 		const parent = setup();
 		const a = text('a');
 		parent.append(a);
@@ -329,7 +329,7 @@ describe('diff presets called directly', () => {
 	});
 
 	it('morphdom and nanomorph write morphed nodes back into the new list', () => {
-		for (const install of [useMorphdom, useNanomorph]) {
+		for (const install of [morphdom, nanomorph]) {
 			const t = {};
 			install(t);
 			const parent = setup();

@@ -7,7 +7,7 @@ export declare const Await: (props?: {
 	fallback?: Renderable;
 	catch?: (error: any) => Renderable;
 }) => Node;
-export declare const Suspense: (props?: { fallback?: Renderable; children?: MaybeFn<Renderable> }) => Node;
+export declare const Suspense: (props?: { fallback?: Renderable; children?: MaybeFn<Renderable>; catch?: (error: any) => Renderable }) => Node;
 export declare const ErrorBoundary: (props?: {
 	children?: MaybeFn<Renderable>;
 	fallback?: Renderable | ((error: any) => Renderable);

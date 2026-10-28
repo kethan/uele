@@ -5,17 +5,17 @@
  *     import { mountTodos } from './rxjs.jsx';
  *     mountTodos(document.body);
  *
- * Signals come from rxjs; `useRxjs()` wires uele to them (called for you by
+ * Signals come from rxjs; `rxjs()` wires uele to them (called for you by
  * `TodoApp`/`mountTodos`). Everything below the actions is the same JSX you
  * would write with any other preset.
  */
 import { For } from 'uele';
 import { Form, Row, Card, Stack, Button, Input, Checkbox, Label } from 'uele/ui';
-import { useRxjs } from 'uele/adapters/rxjs';
+import { rxjs } from 'uele/signals/rxjs';
 import { BehaviorSubject, combineLatest, map, distinctUntilChanged } from 'rxjs';
 
 export const TodoApp = () => {
-	useRxjs();
+	rxjs();
 	const newTodo = new BehaviorSubject('');
 	const todos = new BehaviorSubject([]);
 	const filter = new BehaviorSubject('all');

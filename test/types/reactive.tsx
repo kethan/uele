@@ -43,8 +43,8 @@ const app: RouterApp = createRouter();
 app.get('/', () => 'home');
 app.get('/user/:id', ({ params, query, path, url, request }: RouteContext) => `${params.id}${path}${url}${request}${query}`);
 
-const [view, linkProps, go] = useRouter(app, '…', <h1>404</h1>);
-const spread: LinkProps = linkProps();
+const { view, props: linkProps, navigate: go } = useRouter(app, '…', <h1>404</h1>);
+const spread: LinkProps = linkProps;
 const done: Promise<void> = go('/user/1');
 const link: Node = Link({ to: '/about', children: 'About' });
 const shell: Node = Router({ app, initial: '…', notFound: <h1>404</h1> });

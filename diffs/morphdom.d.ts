@@ -1,1 +1,1 @@
-export declare function useMorphdom<T extends object>(target?: T): T;
+export declare function morphdom<T extends object>(target?: T): T;

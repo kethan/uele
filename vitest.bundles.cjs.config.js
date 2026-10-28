@@ -45,7 +45,6 @@ export default defineConfig({
 			{ find: /^uele\/flow$/, replacement: src('./flow/index.cjs') },
 			{ find: /^uele\/reactive$/, replacement: src('./reactive/index.cjs') },
 			{ find: /^uele\/ui$/, replacement: src('./ui/index.cjs') },
-			{ find: /^uele\/adapters\/(.*)$/, replacement: src('./adapters/$1.cjs') },
 			{ find: /^uele\/diffs\/(.*)$/, replacement: src('./diffs/$1.cjs') },
 			{ find: /^usub\/tiny$/, replacement: src('./test/helpers/cjs-lite.js') },
 			{ find: /^usub$/, replacement: src('./test/helpers/cjs-ele.js') },
@@ -70,11 +69,11 @@ export default defineConfig({
 			'test/jsx.test.tsx', 'test/signals.conformance.test.js', 'test/signals.libraries.test.js',
 			'test/diff.conformance.test.js', 'test/diff.transitions.test.js', 'test/bundle-identity.test.js', 'test/presets.test.js',
 			// the suites that mix `ele` with `ele/ui`, `ele/flow`, `ele/router` or
-			// `ele/adapters/*` are left out on purpose: under this config the built CJS
+			// `ele/signals/*` are left out on purpose: under this config the built CJS
 			// files' internal `require('ele')` lands in a second module cache (vitest-only -
 			// real Node unifies by path, which scripts/pack-smoke asserts). They run against
 			// the built ESM output instead.
-			'test/docs.test.js'
+			'test/cjs.ownership.test.js', 'test/docs.test.js'
 		],
 		...gcArgv,
 	}

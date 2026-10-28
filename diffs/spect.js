@@ -3,8 +3,8 @@
  * for uele's bounded live regions. Inspired by the algorithm family compared at
  * https://github.com/luwes/js-diff-benchmark (not a wrapper for the framework).
  *
- *     import { useSpect } from 'uele/diffs/spect';
- *     useSpect();
+ *     import { spect } from 'uele/diffs/spect';
+ *     spect();
  */
 import { api } from 'uele';
 
@@ -18,7 +18,7 @@ const reconcile = (parent, oldNodes, newNodes, end = null) => {
 	}
 };
 
-export const useSpect = (target = api) => {
+export const spect = (target = api) => {
 	target.diff = reconcile;
 	target.udom = undefined;
 	return target;

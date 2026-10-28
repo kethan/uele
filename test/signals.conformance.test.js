@@ -147,10 +147,10 @@ for (const [label, mod, apiTarget] of [
 				expect(root.textContent).toBe('4');
 			});
 
-			test('derived values recompute and propagate into the dom', () => {
-				if (!lib.derived) return expect(lib.derived).toBeUndefined();
+			test('computed values recompute and propagate into the dom', () => {
+				if (!lib.computed) return expect(lib.computed).toBeUndefined();
 				const a = lib.signal(1);
-				const b = lib.derived(a, (v) => v * 2);
+				const b = lib.computed(a, (v) => v * 2);
 				const el = h('div', null, b);
 				root.append(el);
 				expect(el.textContent).toBe(seeded(lib, '2'));

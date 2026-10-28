@@ -2,13 +2,13 @@
  * `fast-array-diff` - its LCS patch decides the ordering, the preset performs
  * the DOM moves.
  *
- *     import { useFastArrayDiff } from 'uele/diffs/fast-array-diff';
- *     useFastArrayDiff();
+ *     import { fastArrayDiff } from 'uele/diffs/fast-array-diff';
+ *     fastArrayDiff();
  */
 import { api } from 'uele';
 import { getPatch, applyPatch } from 'fast-array-diff';
 
-export const useFastArrayDiff = (target = api) => {
+export const fastArrayDiff = (target = api) => {
 	target.diff = (parent, oldNodes, newNodes, end) => {
 		const ordered = applyPatch(oldNodes, getPatch(oldNodes, newNodes));
 		const keep = new Set(ordered);

@@ -1,1 +1,1 @@
-export declare function useFastArrayDiff<T extends object>(target?: T): T;
+export declare function fastArrayDiff<T extends object>(target?: T): T;

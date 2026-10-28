@@ -3,8 +3,8 @@
  * Algorithm family: https://github.com/luwes/js-diff-benchmark
  * Keys are DOM node identities; caller-owned arrays are never modified.
  *
- *     import { useListDifference } from 'uele/diffs/list-difference';
- *     useListDifference();
+ *     import { listDifference } from 'uele/diffs/list-difference';
+ *     listDifference();
  */
 import { api } from 'uele';
 
@@ -31,7 +31,7 @@ const reconcile = (parent, oldNodes, newNodes, end = null) => {
 	}
 };
 
-export const useListDifference = (target = api) => {
+export const listDifference = (target = api) => {
 	target.diff = reconcile;
 	target.udom = undefined;
 	return target;

@@ -7,12 +7,12 @@
  */
 import { h } from 'uele';
 import { signal } from '@preact/signals-core';
-import { usePreactSignals } from 'uele/adapters/preact';
+import { preactSignals } from 'uele/signals/preact';
 import { Button, Switch, Accordion, Tabs, Dialog } from 'uele/ui';
 import { Title } from 'uele/flow';
 import { createRouter, Router, Link } from 'uele/router';
 
-usePreactSignals();
+preactSignals();
 
 const app = document.getElementById('app');
 

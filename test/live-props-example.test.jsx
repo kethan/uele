@@ -1,11 +1,11 @@
 import { afterEach, expect, test, vi } from 'vitest';
-import { useUlive } from 'uele/adapters/ulive';
+import { ulive } from 'uele/signals/ulive';
 import { useLive } from 'uele';
 import { LiveComposer } from '../examples/live-props.jsx';
 
 afterEach(() => { vi.useRealTimers(); document.body.replaceChildren(); });
 test('live composer updates connection, draft, typing and disposes heartbeat', () => {
-	useUlive(); vi.useFakeTimers();
+	ulive(); vi.useFakeTimers();
 	const app = LiveComposer();
 	const [nodes, set] = useLive([app]); document.body.append(...nodes);
 	const input = app.querySelector('input:not([type])');

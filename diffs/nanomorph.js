@@ -1,16 +1,16 @@
 /**
  * `nanomorph` - updates nodes in place (write-back handled by the adapter).
  *
- *     import { useNanomorph } from 'uele/diffs/nanomorph';
- *     useNanomorph();
+ *     import { nanomorph } from 'uele/diffs/nanomorph';
+ *     nanomorph();
  */
 import { api } from 'uele';
-import nanomorph from 'nanomorph';
+import engine from 'nanomorph';
 import { morphAdapter } from './util.js';
 
-export const useNanomorph = (target = api) => {
+export const nanomorph = (target = api) => {
 	/* istanbul ignore next -- CJS interop: the .default side only exists under require() */
-	const morph = typeof nanomorph === 'function' ? nanomorph : nanomorph.default;
+	const morph = typeof engine === 'function' ? engine : engine.default;
 	target.diff = morphAdapter(morph);
 	target.udom = undefined;
 	return target;

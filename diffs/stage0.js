@@ -3,8 +3,8 @@
  * for uele's bounded live regions. Inspired by the algorithm family compared at
  * https://github.com/luwes/js-diff-benchmark (not a wrapper for the framework).
  *
- *     import { useStage0 } from 'uele/diffs/stage0';
- *     useStage0();
+ *     import { stage0 } from 'uele/diffs/stage0';
+ *     stage0();
  */
 import { api } from 'uele';
 
@@ -36,7 +36,7 @@ const reconcile = (parent, oldNodes, newNodes, end = null) => {
 	}
 };
 
-export const useStage0 = (target = api) => {
+export const stage0 = (target = api) => {
 	target.diff = reconcile;
 	target.udom = undefined;
 	return target;
