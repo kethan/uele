@@ -1346,7 +1346,7 @@ lists, **morphdom** / **nanomorph** when you must preserve DOM state (focus, med
 `sub`/`r` return an unsubscribe function and `usub` registers subscriptions with a `FinalizationRegistry`,
 so a subscription is released once the _source_ (signal/observable) is garbage collected.
 
-Since **usub 0.9.0** (which uele depends on), disposing a subscription releases the source and the callback
+Since **usub 0.9.0**, disposing a subscription releases the source and the callback
 immediately - the effect runner's disposer is no longer parked in the registry - while the finalizer safety net
 remains for subscribe/promise/async-iterator sources. `test/memory.test.js` asserts the exact release under
 `--expose-gc`: zero retained chains, disposed or not, and it fails if any chain survives.
@@ -1499,3 +1499,7 @@ Install `useProps()` from `uele/props` to enable `show`, `text`, `data`, `aria`,
 ## Additional signal presets from the requested top-11 set
 
 Added `useReflex`, `useReactively`, `useAnod`, `useLiteSignal`, `useRescriptSignals`, `useMaverick` and `useOby` as optional adapters. Existing Alien Signals, Preact Signals, S-js and Vue presets are reused; Vue 3.6 RC has a dedicated compatibility test run, not a duplicate adapter. See [setup, scheduling and lifecycle details](docs/TOP_SIGNALS.md).
+
+### usub 0.11.0 upgrade status
+
+uele now depends on `usub@^0.11.0` (locked to 0.11.0), which fixes the observable and promise callback-retention issues. Two behavior-preserving lite-renderer simplifications keep the build within its existing size limits; no dependency patch or relaxed thresholds are included. See [verification results](docs/USUB_011_VERIFICATION.md) and [the historical investigation](docs/USUB_010_REGRESSION.md).
