@@ -77,6 +77,8 @@
   --panel-hover: #1f2937;
   --code-bg: #020617;
 }
+
+:root {
   --radius: 10px;
   --radius-sm: 6px;
   --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 4px 12px -4px rgb(0 0 0 / 0.06);

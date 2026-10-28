@@ -56,8 +56,9 @@ const sizesJs =
   JSON.stringify(sizes, null, 2) +
   ";\n" +
   "export const formatSize = (bytes) => {\n" +
+  '  if (bytes < 1024) return `~${bytes} B gzip`;\n' +
   '  const kb = bytes / 1024;\n' +
-  '  return kb < 1 ? "~<1 KB gzip" : kb < 1024 ? `~${Math.round(kb)} KB gzip` : `~${(kb / 1024).toFixed(1)} MB gzip`;\n' +
+  '  return kb < 1024 ? `~${Math.round(kb)} KB gzip` : `~${(kb / 1024).toFixed(1)} MB gzip`;\n' +
   "};\n";
 writeFileSync(resolve(outDir, "example-sizes.js"), sizesJs);
 console.log(`[example-sizes] wrote ${Object.keys(sizes).length} sizes to src/example-sizes.js`);
