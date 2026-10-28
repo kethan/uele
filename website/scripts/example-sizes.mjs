@@ -12,14 +12,17 @@
 import { gzipSync } from "node:zlib";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { resolve, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import Babel from "@babel/standalone";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "..");
 
-const { EXAMPLES } = await import(resolve(root, "src", "content", "examples.js"));
-const { HERO_CODE } = await import(resolve(root, "src", "content", "home.js"));
+// On Windows, import() requires a file:// URL, not a raw C:\... path.
+const importLocal = (p) => import(pathToFileURL(resolve(p)).href);
+
+const { EXAMPLES } = await importLocal(root + "/src/content/examples.js");
+const { HERO_CODE } = await importLocal(root + "/src/content/home.js");
 
 const gzipSize = (code) => {
   const transformed = Babel.transform(code, {
@@ -40,7 +43,7 @@ for (const ex of EXAMPLES) {
 sizes.hero = gzipSize(HERO_CODE);
 
 // size every live fence in docs pages
-const { PAGES } = await import(resolve(root, "src", "content", "pages", "index.js"));
+const { PAGES } = await importLocal(root + "/src/content/pages/index.js");
 for (const [slug, page] of Object.entries(PAGES)) {
   const fences = [...page.markdown.matchAll(/```jsx live[^\n]*\n([\s\S]*?)```/g)];
   fences.forEach((m, i) => {
