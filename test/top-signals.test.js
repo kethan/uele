@@ -65,3 +65,23 @@ for (const [slug, hook] of entries) {
 		});
 	}
 }
+
+test('Anod computed errors propagate and a later read recovers', async () => {
+	const { useAnod } = await import('../adapters/anod.js');
+	const api = useAnod({});
+	const fail = api.signal(true);
+	const error = new Error('computed failed');
+	const computed = api.derived(() => {
+		if (api.get(fail)) throw error;
+		return 42;
+	});
+	// Anod exposes structured Err records, not the original exception alone.
+	let thrown;
+	try { api.get(computed); } catch (value) { thrown = value; }
+	expect(thrown).toMatchObject({ error });
+	api.set(fail, false);
+	expect(api.get(computed)).toBe(42);
+	// The throwing computation must not leave its tracking context active.
+	const other = api.signal(7);
+	expect(api.get(other)).toBe(7);
+});
