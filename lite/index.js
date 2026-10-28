@@ -7,7 +7,7 @@ const isObject = x => !!x && typeof x === "object" && !Array.isArray(x) // null 
 const isFalsey = x => typeof x === "boolean" || x == null
 const isSVG = x => !x.includes("-") && /^(t(ext$|s)|s[vwy]|g|image)|^set|tad|ker|p(at|s)|s(to|c$|ca|k)|r(ec|cl)|ew|us|f($|e|s)|cu|n[ei]|l[ty]|[GOP]/.test(x) // https://regex101.com/r/Ck4kFp/1
 const isMATH = x => !x.includes("-") && /^(m(?!a|en|et))|nn|cs|nc|ma(l|t|c)/.test(x) // https://regex101.com/r/piylRl/1
-const isNode = x => x instanceof Node || isFalsey(x) || !isObject(x) || is(x)
+const isNode = x => x instanceof Node || !isObject(x) || is(x)
 const toNode = x => x instanceof Node ? x : isFalsey(x) ? document.createComment(x) : document.createTextNode(String(x))
 
 const Live = (sm = document.createTextNode(""), em = document.createTextNode(""), oldNodes = []) => ({
@@ -53,7 +53,7 @@ const useLive = (val, live = Live(), prev = val) => [
     v => live.replace(...add(prev = isFunction(v) ? v(prev) : v))
 ];
 
-const props = new Map([]);
+const props = new Map();
 
 const h = (tag, attrs, ...children) => {
     if (tag === h) return children;

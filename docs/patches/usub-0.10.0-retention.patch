@@ -1,0 +1,17 @@
+--- a/src/index.js
++++ b/src/index.js
+@@ -17,10 +17,12 @@
+     arg.call                         // Function (including observ-*)
+ );
+ 
++const observableStop = (subscription, cleanup) => () => subscription && (subscription.call ? subscription() : subscription.unsubscribe?.(), subscription = 0, cleanup[0]?.());
++
+ const sub = (target, next, error, cleanup, stop, unsub, fx, emit = v => next?.(get(v))) => is(target) && (
+     unsub = (unsub = target[sym]?.() || target).subscribe
+-        ? (error = unsub.subscribe(emit, error, () => (cleanup?.(), cleanup = stop)) || 1,
+-            () => error && (error.call ? error() : error.unsubscribe?.(), error = 0, cleanup?.()))
++        ? (cleanup = [cleanup], error = unsub.subscribe(emit, error, () => (cleanup[0]?.(), cleanup[0] = stop)) || 1,
++            /*@__NOINLINE__*/ observableStop(error, cleanup))
+         : (api.is(target) || target.call)
+             ? target.set && target.call?.(stop, emit) || api.any?.(target)?.(next, error, cleanup) || (fx = 1, api.effect?.(() => (emit(target), api.cleanup?.(cleanup), cleanup)))
+             : (target.then?.(v => !stop && (emit(v), cleanup?.()), error) ||
