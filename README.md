@@ -12,6 +12,16 @@ A Reactive frontend library.
 
 **module**: https://unpkg.com/uele?module
 
+### Documentation website
+
+A ReactJS.org-style docs site with a sidebar of guides and **live, editable code examples** (Babel-compiled JSX running the real uele bundle in a sandboxed iframe, no CDN needed) lives in [`website/`](website/):
+
+```bash
+cd website
+npm install
+npm run dev
+```
+
 ### Lite Version
 
 [![Badge size](https://deno.bundlejs.com/badge?q=uele/lite&treeshake=[{h}]&config={"compression":"brotli"})](https://unpkg.com/uele/lite) [![Badge size](https://deno.bundlejs.com/badge?q=uele/lite&treeshake=[{h}]&config={"compression":"gzip"})](https://unpkg.com/uele/lite)
