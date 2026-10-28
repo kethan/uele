@@ -1,7 +1,7 @@
 /**
  * Diff-engine conformance suite.
  *
- * Eight engines drive the same live-region scenarios through both entry points:
+ * All engines drive the same live-region scenarios through both entry points:
  * the built-in range replace, swapdom, udomdiff, domdiff, morphdom, nanomorph,
  * fast-array-diff and a minimal reference differ.
  *

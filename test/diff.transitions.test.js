@@ -2,7 +2,7 @@
  * Exhaustive diff transitions.
  *
  * Every ordered pair of list states over a four-node pool is pushed through
- * every `api.diff` engine (65 states -> 4 225 transitions per engine, 42 250
+ * every `api.diff` engine (65 states -> 4 225 transitions per engine, 63 375
  * per run). The contract checked after each transition is the one
  * `Live.replace` relies on:
  *

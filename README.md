@@ -1266,7 +1266,7 @@ Preact, **nanostores** if you only need subscribe-based stores, **solid** if you
 
 ### Diff engine presets (`uele/diffs/*`)
 
-Every engine satisfies the same `api.diff` contract — verified over 42 250 list-state transitions. The
+Every engine satisfies the same `api.diff` contract — verified over 63 375 list-state transitions. The
 built-in marker walk is the right answer for most apps; swap one in when you have a specific reason.
 
 | preset                       | dependency        | install | preset | strategy                                             | pick it when                                 |
@@ -1279,6 +1279,27 @@ built-in marker walk is the right answer for most apps; swap one in when you hav
 | `uele/diffs/nanomorph`       | `nanomorph`       | 85 kB   | 271 B  | morphs in place, tiny                                | choo-style apps, keep DOM state              |
 | `uele/diffs/fast-array-diff` | `fast-array-diff` | 40 kB   | 448 B  | an LCS patch decides the order, uele moves the nodes | ordered lists with few moves                 |
 | `uele/diffs/rebuild`         | `—`               | —       | 303 B  | remove all, insert all                               | tiny regions, or as a baseline in tests      |
+
+Five dependency-free algorithm presets inspired by
+[js-diff-benchmark](https://github.com/luwes/js-diff-benchmark) are also available:
+
+| preset | installer | strategy |
+| --- | --- | --- |
+| `uele/diffs/spect` | `useSpect` | forward cursor reconciliation |
+| `uele/diffs/snabbdom` | `useSnabbdom` | double-ended keyed reconciliation |
+| `uele/diffs/heckel` | `useHeckel` | unique-token symbol table with move-aware DOM application |
+| `uele/diffs/list-difference` | `useListDifference` | indexed list matching with insertion, removal and moves |
+| `uele/diffs/stage0` | `useStage0` | longest increasing subsequence; leaves an ordered subset in place |
+
+These are independent node-identity implementations, not framework wrappers or exact copies
+of the benchmark code. They preserve live-region markers and static siblings and require no
+additional package. Shared nodes are matched by object identity, not by their string representation.
+
+```js
+import { useStage0 } from 'uele/diffs/stage0';
+useStage0(); // main entry point
+// useStage0(liteApi); // or pass the API object from uele/lite
+```
 
 Short version: keep the **built-in** walk; reach for **swapdom** / **udomdiff** / **domdiff** for long keyed
 lists, **morphdom** / **nanomorph** when you must preserve DOM state (focus, media, CSS transitions).

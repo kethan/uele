@@ -555,3 +555,13 @@ mountTodos(document.body);
 `test/examples.test.js` runs all eleven through the same scenarios, so the examples cannot rot.
 Writing your own preset - a signal adapter or a diff engine - is documented in
 [ADAPTERS.md](ADAPTERS.md).
+
+## Additional dependency-free diff engines
+
+Independent node-identity implementations inspired by [js-diff-benchmark](https://github.com/luwes/js-diff-benchmark), adapted to bounded live regions. No extra peer dependencies.
+
+- `uele/diffs/spect` - `useSpect()`
+- `uele/diffs/snabbdom` - `useSnabbdom()`
+- `uele/diffs/stage0` - `useStage0()`
+- `uele/diffs/heckel` - `useHeckel()`
+- `uele/diffs/list-difference` - `useListDifference()`

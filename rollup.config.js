@@ -133,6 +133,13 @@ const presetFiles = [
 	'diffs/nanomorph.js',
 	'diffs/fast-array-diff.js',
 	'diffs/rebuild.js',
+	'diffs/spect.js',
+	'diffs/snabbdom.js',
+	'diffs/stage0.js',
+	'diffs/heckel.js',
+	'diffs/list-difference.js',
+
+
 ];
 const presetsConfig = presetFiles.map((file) => ({
 	input: file,
