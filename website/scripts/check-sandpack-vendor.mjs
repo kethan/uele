@@ -40,11 +40,25 @@ check(
   "index.html uses relative (sub-path safe) asset references"
 );
 
+// Collect every real file path under dir, so we only flag root-absolute URL
+// strings that point at actual vendored files (not sandbox FS paths or
+// arbitrary code strings that happen to contain `"/`).
+const vendoredFiles = new Set();
+const collectFiles = (d, base = "") => {
+  for (const entry of readdirSync(d)) {
+    const fullPath = join(d, entry);
+    const relPath = base ? `${base}/${entry}` : entry;
+    if (statSync(fullPath).isDirectory()) collectFiles(fullPath, relPath);
+    else vendoredFiles.add(relPath);
+  }
+};
+collectFiles(dir);
+
 // walk every JS file: the webpack publicPath must no longer point at root
 let jsFiles = 0;
 let badPublicPath = 0;
 let rootStaticRefs = 0;
-let rootAbsRefs = 0;
+let rootAbsFileRefs = 0;
 const walk = (d) => {
   for (const entry of readdirSync(d)) {
     const p = join(d, entry);
@@ -54,8 +68,12 @@ const walk = (d) => {
       const text = readFileSync(p, "utf8");
       if (text.includes('.p="/"' )) badPublicPath++;
       if (text.includes('"/static/')) rootStaticRefs++;
-      const rootAbsUrls = (text.match(/"\/(?!s\/)[a-zA-Z0-9_.-]/g) || []).length;
-      rootAbsRefs += rootAbsUrls;
+      // flag root-absolute URLs that reference actual vendored files
+      const matches = text.match(/"\/([a-zA-Z0-9_.\-/]+)"/g) || [];
+      for (const m of matches) {
+        const p2 = m.slice(2, -1); // strip leading "/" and trailing quote
+        if (!p2.startsWith("s/") && vendoredFiles.has(p2)) rootAbsFileRefs++;
+      }
     }
   }
 };
@@ -63,7 +81,7 @@ walk(dir);
 check(jsFiles > 20, `bundler JS assets present (${jsFiles} files scanned)`);
 check(badPublicPath === 0, "no webpack publicPath=\"/\" remains (sub-path workers would 404)");
 check(rootStaticRefs === 0, 'no root-absolute "/static/" asset strings remain');
-check(rootAbsRefs === 0, "no other root-absolute asset URLs remain");
+check(rootAbsFileRefs === 0, "no root-absolute URLs to vendored files remain");
 
 const require = createRequire(import.meta.url);
 const clientEntry = require.resolve("@codesandbox/sandpack-client");
@@ -79,4 +97,3 @@ check(
 
 console.log(failures.length ? `\nFAILED — ${failures.length} check(s)` : "\nOK — 0 failure(s)");
 process.exit(failures.length ? 1 : 0);
-

@@ -11,7 +11,14 @@
  *
  *   - webpack publicPath  .p="/"  -> URL of the bundler's own directory
  *   - "/static/..." asset strings -> "static/..." (relative to the iframe page)
+ *   - root-absolute URLs that point at real vendored files
+ *     (e.g. new Worker("/babel-transpiler....worker.js"), service-worker
+ *     precache entries) -> relative to the bundler page
  *   - index.html src/href and the service-worker scope get the same treatment
+ *
+ * Sandbox filesystem paths ("/package.json", "/index.js") are NOT real files
+ * in public/sandpack, so they are left untouched. "/s/..." CodeSandbox sandbox
+ * URL patterns are also skipped.
  *
  * Runtime npm installs still go to the public registry by default; the uele
  * playground runner never needs them because every module is injected as a
@@ -45,6 +52,20 @@ const PUBLIC_PATH_FIX = '.p=new URL("./",self.location.href).href';
 const SW_SCOPE = '{scope:"/"}';
 const SW_SCOPE_FIX = '{scope:new URL("./",self.location.href).pathname}';
 
+// Collect every real file path under dest, so we only relativize root-absolute
+// URL strings that point at actual vendored files (not sandbox FS paths or
+// arbitrary code strings that happen to contain `"/`).
+const vendoredFiles = new Set();
+const collectFiles = (dir, base = "") => {
+  for (const entry of readdirSync(dir)) {
+    const fullPath = join(dir, entry);
+    const relPath = base ? `${base}/${entry}` : entry;
+    if (statSync(fullPath).isDirectory()) collectFiles(fullPath, relPath);
+    else vendoredFiles.add(relPath);
+  }
+};
+collectFiles(dest);
+
 let patchedFiles = 0;
 const walk = (dir, visit) => {
   for (const entry of readdirSync(dir)) {
@@ -66,9 +87,13 @@ walk(dest, (path) => {
     text = text.split('href="/').join('href="');
     text = text.split('src="/').join('src="');
   }
-  // any other root-absolute URL string -> relative (sub-path safe).
-  // skip "/s/..." CodeSandbox sandbox URL patterns (url-generator etc.)
-  text = text.replace(/"\/(?!s\/)[a-zA-Z0-9_.-]/g, (m) => '"' + m.slice(2));
+  // Only relativize root-absolute URL strings that reference actual vendored
+  // files. "/s/..." CodeSandbox sandbox URLs and sandbox FS paths are skipped.
+  text = text.replace(/"\/([a-zA-Z0-9_.\-/]+)"/g, (m, p) => {
+    if (p.startsWith("s/")) return m;
+    if (vendoredFiles.has(p)) return `"${p}"`;
+    return m;
+  });
   if (text !== before) {
     writeFileSync(path, text);
     patchedFiles++;
