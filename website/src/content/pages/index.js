@@ -12,11 +12,19 @@ import { title as signals, markdown as signalsMd } from "./signals.js";
 import { title as diffing, markdown as diffingMd } from "./diffing.js";
 import { title as api, markdown as apiMd } from "./api.js";
 import { title as uiKit, markdown as uiKitMd } from "./ui-kit.js";
+import { title as playground, markdown as playgroundMd } from "./playground.js";
+import { title as uiComponents, markdown as uiComponentsMd } from "./ui-components.js";
+import { title as reactive, markdown as reactiveMd } from "./reactive.js";
+import { title as presets, markdown as presetsMd } from "./presets.js";
+import { title as diffs, markdown as diffsMd } from "./diffs.js";
+import { title as themes, markdown as themesMd } from "./themes.js";
+import { title as tutorial, markdown as tutorialMd } from "./tutorial.js";
 
 export const PAGES = {
   introduction: { title: introduction, markdown: introductionMd },
   installation: { title: installation, markdown: installationMd },
   "hello-world": { title: helloWorld, markdown: helloWorldMd },
+  playground: { title: playground, markdown: playgroundMd },
   elements: { title: elements, markdown: elementsMd },
   components: { title: components, markdown: componentsMd },
   state: { title: state, markdown: stateMd },
@@ -28,4 +36,10 @@ export const PAGES = {
   diffing: { title: diffing, markdown: diffingMd },
   api: { title: api, markdown: apiMd },
   "ui-kit": { title: uiKit, markdown: uiKitMd },
+  "ui-components": { title: uiComponents, markdown: uiComponentsMd },
+  reactive: { title: reactive, markdown: reactiveMd },
+  presets: { title: presets, markdown: presetsMd },
+  diffs: { title: diffs, markdown: diffsMd },
+  themes: { title: themes, markdown: themesMd },
+  tutorial: { title: tutorial, markdown: tutorialMd },
 };

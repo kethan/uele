@@ -5,6 +5,7 @@ export const NAV = [
       { slug: "introduction", title: "Introduction" },
       { slug: "installation", title: "Installation" },
       { slug: "hello-world", title: "Hello World" },
+      { slug: "playground", title: "Playground", wide: true },
     ],
   },
   {
@@ -19,17 +20,22 @@ export const NAV = [
       { slug: "async", title: "Async & Lazy" },
       { slug: "signals", title: "Signals & Presets" },
       { slug: "diffing", title: "List Diffing" },
+      { slug: "tutorial", title: "Tic-Tac-Toe Tutorial" },
     ],
   },
   {
     group: "UI Kit",
-    items: [{ slug: "ui-kit", title: "UI Kit (129 components)", wide: true }],
+    items: [{ slug: "ui-components", title: "UI Components (129 primitives)", wide: true }],
   },
   {
     group: "Reference",
     items: [
       { slug: "examples", title: "Examples Gallery", wide: true },
       { slug: "api", title: "API Reference", wide: true },
+      { slug: "reactive", title: "Reactive (signal/computed/effect)", wide: true },
+      { slug: "presets", title: "Custom Reactive Presets", wide: true },
+      { slug: "diffs", title: "Diff Engine", wide: true },
+      { slug: "themes", title: "Themes", wide: true },
     ],
   },
 ];
