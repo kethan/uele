@@ -1491,3 +1491,7 @@ stream error is ignored and the previous content (or the placeholder) stays. Sub
 ## License
 
 MIT
+
+## Optional DOM props for live apps
+
+Install `useProps()` from `uele/props` to enable `show`, `text`, `data`, `aria`, `bindValue`, `bindChecked`, `listen` and `use`. Supports main and lite, with region-based cleanup. See [the reference](docs/PROPS.md) and [live composer example](examples/live-props.jsx).

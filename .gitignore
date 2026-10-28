@@ -29,3 +29,5 @@ playwright-report
 # build artifacts of the preset layer (sources are tracked, CJS twins are generated)
 adapters/*.cjs
 diffs/*.cjs
+
+props/*.cjs

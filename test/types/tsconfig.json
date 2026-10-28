@@ -12,6 +12,7 @@
 		"types": [],
 		"paths": {
 			"uele": ["../../src/index.d.ts"],
+			"uele/props": ["../../props/index.d.ts"],
 			"uele/lite": ["../../lite/index.d.ts"],
 			"uele/jsx-runtime": ["../../jsx-runtime/index.d.ts"],
 			"uele/jsx-dev-runtime": ["../../jsx-dev-runtime/index.d.ts"],

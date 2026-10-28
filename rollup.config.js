@@ -104,6 +104,7 @@ const peers = new Set([
 	'fast-array-diff'
 ]);
 const presetFiles = [
+	'props/index.js',
 	'router/index.js',
 	'flow/index.js',
 	'reactive/index.js',

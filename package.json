@@ -86,6 +86,11 @@
       "types": "./themes/index.d.ts",
       "import": "./themes/index.js",
       "require": "./themes/index.cjs"
+    },
+    "./props": {
+      "types": "./props/index.d.ts",
+      "import": "./props/index.js",
+      "require": "./props/index.cjs"
     }
   },
   "scripts": {
@@ -115,7 +120,8 @@
     "flow",
     "router",
     "hooks",
-    "themes"
+    "themes",
+    "props"
   ],
   "devDependencies": {
     "@playwright/test": "^1.64.1",

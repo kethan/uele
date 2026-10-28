@@ -110,3 +110,9 @@ npx vite                              # then import ./examples/todos/preact.jsx
 
 The suite runs all twelve through the same scenarios (`test/examples.test.js`), so the examples cannot
 rot: add, toggle, delete, filter, clear-completed and independent instances are asserted for each one.
+
+## Optional app props
+
+[`live-props.jsx`](live-props.jsx) demonstrates reactive connection status, presence, form bindings, event options, and disposable DOM actions. Install an effect-capable signal preset before rendering. See [the prop reference](../docs/PROPS.md).
+
+[`selection-props.jsx`](selection-props.jsx) demonstrates single/multiple select binding and an indeterminate select-all checkbox. The live composer also demonstrates chat auto-scroll that respects readers scrolling up.

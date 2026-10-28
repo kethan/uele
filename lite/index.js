@@ -89,7 +89,7 @@ const h = (tag, attrs, ...children) => {
                         track(tag, r(val, v => tag.classList.toggle(prop, !!v)))
                     );
                 else if (name === 'ref' && isFunction(value)) value(tag, attrs)
-                else if (props.has(name)) props.get(name)(tag, value, name, attrs);
+                else if (props.has(name)) track(tag, props.get(name)(tag, value, name, attrs));
                 else if (name in tag && !ns) track(tag, r(value, v => tag[name] = v == null ? '' : v));
                 else track(tag, r(value, v =>
                     v == null || v === false
