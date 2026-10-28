@@ -12,6 +12,7 @@ document.body.append(
   </main>
 );`;
 
+
 export const HERO_FEATURES = [
   { label: "~45 KB", text: "gzip'd runtime — lighter than Preact and Solid" },
   { label: "Zero dependencies", text: "npm install uele and you're done" },
@@ -88,3 +89,6 @@ document.body.append(
   </main>
 );`;
 
+
+export const BUILT_WITH_UELE = `This site is built with uele — it uses uele/ui components,
+uele/themes for light/dark mode, and uele/router for client-side navigation.`;

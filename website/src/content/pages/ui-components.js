@@ -108,5 +108,9 @@ State components (Tabs, Dialog, Pagination, OTP…) follow the Radix controlled/
 
 ---
 
+> **This site is built with uele** — it uses uele/ui components, uele/themes for theming, and uele/router for navigation.
+
+---
+
 > Next: [**Reactive**](#/reactive) — signal, computed, effect and the preset system.
 `;

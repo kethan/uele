@@ -1,86 +1,187 @@
 export const title = "Themes";
 
-export const markdown = `## uele/themes — design tokens and ThemeProvider
+export const markdown = `# uele/themes — design tokens and ThemeProvider
 
-uele/themes is **Radix Themes-style**: CSS custom properties, accent colors, a \`cva\)-style \`variants\) helper, and a \`ThemeProvider\) that applies tokens to a wrapper element. uele/ui primitives read \`--uele-*\) variables with light-theme fallbacks, so swapping themes restyles everything instantly.
+uele/themes is **Radix Themes-style**: CSS custom properties, accent colors, a \`cva\`-style \`variants\` helper, and a \`ThemeProvider\` that applies tokens to a wrapper element. uele/ui primitives read \`--uele-*\` variables with light-theme fallbacks, so swapping themes restyles everything instantly.
 
-## API
+## How theming works
 
-| Export | Signature | Description |
-| --- | --- | --- |
-| \`accents\) | \`{ slate, blue, emerald, rose, amber, violet, cyan, pink, orange, teal, neutral }\) | Accent color scales |
-| \`createTheme\) | \`(options)\) → theme\) | Create a theme object |
-| \`lightTheme\) / \`darkTheme\) | \`theme\) | Built-in light and dark themes |
-| \`ThemeProvider\) | \`{ theme, children, style, ...props }\) | Applies \`--uele-*\) CSS variables |
-| \`ThemeStyle\) | \`{ theme, selector }\) | Renders tokens as \`<style>\) text |
-| \`useTheme\) | \`(initial)\) → { scheme, dark, toggle, setScheme }\) | Reactive theme hook |
-| \`cx\) | \`(...parts)\) → string\) | Class-name merger (cva-style) |
-| \`variants\) | \`(config)\) → fn\) | CVA-style variant helper |
-| \`styled\) | \`(tag, config)\) → component\) | Styled component factory |
+uele injects CSS custom properties onto a wrapper element (usually \`<body>\`) via \`ThemeProvider\`. Every uele/ui component references those variables, so changing a theme variable restyles all components at once — no rebuild needed.
 
-## Usage
+## 1. Wrap your app in ThemeProvider
 
-\`\`\`jsx live
-import { h, For } from "uele";
-import { signal, computed, effect, write, read } from "uelethemes/reactive";
+\`\`\`jsx
 import { ThemeProvider } from "uele/themes";
-import {
-  Button, Badge, StatusDot, Spinner, Toggle,
-  SegmentedControl, Stack, Row, Text,
-} from "uele/ui";
+import { lightTheme, darkTheme } from "uele/themes";
 
-const notify = signal(false);
-const view = signal("grid");
-
+// Apply a theme to the whole page
 document.body.append(
-  <ThemeProvider theme="light">
-    <Stack>
-      <Row>
-        <Button variant="solid">Solid</Button>
-        <Button variant="outline">Outline</Button>
-        <Button variant="ghost">Ghost</Button>
-        <Button variant="solid" size="sm">Small</Button>
-        <Button variant="solid" size="lg">Large</Button>
-        <Button variant="solid" disabled>Disabled</Button>
-      </Row>
-      <Row>
-        <Badge tone="success"><StatusDot /> Active</Badge>
-        <Badge tone="warning">Pending</Badge>
-        <Badge tone="danger">Failed</Badge>
-        <Badge tone="info">Info</Badge>
-        <Badge tone="neutral">Neutral</Badge>
-      </Row>
-      <Row>
-        <Spinner label="Saving" />
-        <Text>Saving your changes…</Text>
-        <Toggle model={notify}>Notify by email</Toggle>
-        <span>Toggle is {() => (read(notify) ? "on" : "off")}.</span>
-      </Row>
-      <Row>
-        <Tooltip label="Switch the layout density">
-          <SegmentedControl
-            model={view}
-            onChange={(v) => write(view, v)}
-          >
-            {("grid" === read(view) ? <button>Grid</button> : <button>List</button>)}
-            {("list" === read(view) ? <button>List</button> : <button>Grid</button>)}
-          </SegmentedControl>
-        </Tooltip>
-      </Row>
-    </Stack>
+  <ThemeProvider theme={lightTheme}>
+    <YourApp />
   </ThemeProvider>
 );
 \`\`\`
 
-## Dark mode
+Or use the \`selector\` prop to scope tokens to a specific element instead of \`:root\`:
 
-\`\`\`js
-import { useTheme } from "uele/themes";
-
-const { scheme, dark, toggle } = useTheme("light");
+\`\`\`jsx
+<ThemeProvider theme={lightTheme} selector="#app">
+  <YourApp />
+</ThemeProvider>
 \`\`\`
 
-\`useTheme\) reads \`prefers-color-scheme\), remembers an explicit override in localStorage (key \`uele-scheme\)), and returns \`scheme\) / \`dark\) cells plus a \`toggle()\) function.
+## 2. Switch themes at runtime
+
+\`\`\`jsx
+import { useTheme } from "uele/themes";
+import { lightTheme, darkTheme } from "uele/themes";
+
+const { scheme, dark, toggle, setScheme } = useTheme("light");
+
+// scheme is "light" or "dark"
+// dark is a boolean cell
+// toggle() flips between light and dark
+// setScheme("dark") forces a specific theme
+\`\`\`
+
+\`useTheme\` reads \`prefers-color-scheme\`, remembers an explicit override in localStorage (key \`uele-scheme\`), and returns reactive cells. Your UI updates automatically when the user changes their OS preference.
+
+## 3. Colors — accents and tones
+
+### Accents
+
+\`accents\` exports 11 color scales:
+
+\`\`\`js
+import { accents } from "uele/themes";
+
+accents.slate   // neutral grays
+accents.blue
+accents.emerald
+accents.rose
+accents.amber
+accents.violet
+accents.cyan
+accents.pink
+accents.orange
+accents.teal
+accents.neutral
+\`\`\`
+
+Each accent has light and dark variants. Components use the accent for \`--uele-accent\), \`--uele-accent-contrast\`, etc.
+
+### Tones
+
+Tones map to accent colors for status semantics:
+
+| Tone | Accent | Use |
+| --- | --- | --- |
+| \`success\` | emerald | Confirmation, completed actions |
+| \`warning\` | amber | Caution, attention needed |
+| \`danger\` | rose | Errors, destructive actions |
+| \`info\` | blue | Informational messages |
+| \`neutral\` | slate | Muted, secondary UI |
+
+Use \`tone\` on \`Badge\`, \`StatusDot\`, \`Button\` etc.:
+
+\`\`\`jsx
+import { Badge, Button } from "uele/ui";
+
+<Badge tone="success">Active</Badge>
+<Badge tone="danger">Failed</Badge>
+<Button variant="solid" tone="danger">Delete</Button>
+\`\`\`
+
+## 4. Component sizing and variants
+
+### Button sizes
+
+\`variant\` and \`size\` are props on most components:
+
+| Prop | Values | Default |
+| --- | --- | --- |
+| \`variant\` | \`solid\`, \`outline\`, \`ghost\` | \`solid\` |
+| \`size\` | \`sm\`, \`md\`, \`lg\` | \`md\` |
+
+\`\`\`jsx
+import { Button } from "uele/ui";
+
+<Button variant="solid" size="sm">Small solid</Button>
+<Button variant="outline" size="md">Outline medium</Button>
+<Button variant="ghost" size="lg">Ghost large</Button>
+\`\`\`
+
+### Making components look good
+
+1. **Pick one accent** for your brand (e.g. \`accents.indigo\` or \`accents.blue\`)
+2. **Set it once** via \`createTheme\` or \`ThemeProvider theme={...}\`
+3. **Use tones consistently** — \`success\` for positive, \`danger\` for destructive
+4. **Mix sizes** — \`sm\` for toolbars, \`lg\` for primary calls-to-action
+5. **Let uele/ui handle focus, hover, active states** — all components ship with keyboard navigation and ARIA built in
+
+## 5. Create a custom theme
+
+\`\`\`js
+import { createTheme } from "uele/themes";
+
+const myTheme = createTheme({
+  accent: accents.blue,
+  scaling: 100,          // base font-size multiplier (100 = 16px)
+  radius: 8,             // border-radius in px
+  gray: accents.slate,   // neutral scale
+});
+
+// Use it:
+<ThemeProvider theme={myTheme}>
+  <YourApp />
+</ThemeProvider>
+\`\`\`
+
+\`createTheme\` accepts:
+
+| Option | Type | Description |
+| --- | --- | --- |
+| \`accent\` | accent object | Primary brand color scale |
+| \`gray\` | accent object | Neutral/gray color scale |
+| \`scaling\` | number | Base font-size percentage (default 100) |
+| \`radius\` | number | Border-radius in px (default 6) |
+
+## 6. Theming primitives for your own components
+
+Use \`cssVars\` to read theme tokens in your own CSS-in-JS or styled components:
+
+\`\`\`js
+import { cssVars } from "uele/themes";
+
+const vars = cssVars(lightTheme);
+// vars = { "--uele-accent": "#2563eb", "--uele-accent-contrast": "#ffffff", ... }
+\`\`\`
+
+Or use \`ThemeStyle\` to render tokens as a \`<style>\` block:
+
+\`\`\`jsx
+import { ThemeStyle } from "uele/themes";
+
+<ThemeStyle theme={myTheme} />
+\`\`\`
+
+## 7. Built-in themes
+
+\`lightTheme\` and \`darkTheme\` are ready to use:
+
+\`\`\`jsx
+import { ThemeProvider, lightTheme, darkTheme } from "uele/themes";
+
+const [isDark, setIsDark] = useLive(false);
+
+<ThemeProvider theme={isDark ? darkTheme : lightTheme}>
+  <YourApp />
+</ThemeProvider>
+\`\`\`
+
+---
+
+> **This site is built with uele** — it uses uele/ui components, uele/themes for light/dark mode, and uele/router for client-side navigation.
 
 ---
 

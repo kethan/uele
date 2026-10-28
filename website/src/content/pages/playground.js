@@ -1,10 +1,12 @@
 export const title = "Playground";
 
-export const markdown = `A minimal, editable JSX playground. Pick an example, change the code, and watch the preview re-run in real time. Everything below runs the **real** uele bundle — no mocks, no simplified runtime.
+export const markdown = `# Playground
 
-## Minimal JSX
+A minimal, editable JSX playground. Change the code and the preview re-runs automatically. Everything below runs the **real** uele bundle — no mocks, no simplified runtime.
 
-The smallest possible uele app: one element, one live region.
+## Minimal hello world
+
+The smallest possible uele app:
 
 \`\`\`jsx live
 import { h, useLive } from "uele";
@@ -24,7 +26,7 @@ That is the whole app — no \`render()\`, no virtual DOM, no mount call. \`h("h
 
 ## With JSX components
 
-Components are just functions that return elements.
+Components are just functions that return elements:
 
 \`\`\`jsx live
 import { h, useLive } from "uele";
@@ -54,7 +56,7 @@ document.body.append(<App />);
 
 ## Try it
 
-Every example in these docs is editable — select the code, change it, and the preview re-runs automatically. The examples gallery below has complete mini-apps you can fork.
+Every example above is editable — select the code, change it, and the preview re-runs automatically. For complete mini-apps to fork, see the [Examples Gallery](#/examples).
 
 ## Size
 

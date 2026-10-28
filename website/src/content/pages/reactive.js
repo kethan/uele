@@ -2,11 +2,10 @@ export const title = "Reactive";
 
 export const markdown = `## uele/reactive — signal, computed, effect and the preset system
 
-Write a UI primitive or utility **once** and run it on any signal library. Every function here delegates to the hooks the active preset installed (\`usePreactSignals()\), …), so the same code runs on ulive, preact, vue, usignal, alien-signals, s-js, mobx or solid-js.
+Write a UI primitive or utility **once** and run it on any signal library. Every function here delegates to the hooks the active preset installed (usePreactSignals(), …), so the same code runs on ulive, preact, vue, usignal, alien-signals, s-js, mobx or solid-js.
 
-\`\`\`jsx live
-import { h, useLive } from "uele";
-import { signal, computed, effect, write, read } from "uelethemes/reactive";
+\`\`\`jsx
+import { signal, computed, effect, write, read } from "uele/reactive";
 
 const count = signal(0);
 const doubled = computed(() => read(count) * 2);
@@ -35,18 +34,18 @@ document.body.append(
 | \`isCell\` | \`(value)\` → boolean | Is this a cell of the active library? |
 | \`canEffect\` | \`() → boolean\` | Does the preset support effects? |
 | \`canCompute\` | \`() → boolean\` | Does the preset support computed? |
-| \`active\` | \`() → api\) | The raw \`api\) configuration object |
+| \`active\` | \`() → api\` | The raw \`api\` configuration object |
 
 ## Two capabilities are library-dependent
 
 Feature-detect them instead of guessing:
 
 * \`canEffect()\` — reactive thunks/effects (false for subscribe-only stores like RxJS, nanostores, @tanstack/store)
-* \`canCompute()\` — \`computed()\` (same: needs an effect runner)
+* \`canCompute()\` — \`computed()\` (needs an effect runner)
 
 ## Custom reactive (presets)
 
-The \`api\) object is how uele learns about another signal library. Adapters wrap this in a single call — for example \`usePreactSignals()\) from \`uele/adapters/preact\). The three core hooks are:
+The \`api\` object is how uele learns about another signal library. Adapters wrap this in a single call — for example \`usePreactSignals()\` from \`uele/adapters/preact\`. The three core hooks are:
 
 \`\`\`js
 import { api } from "uele";
@@ -60,20 +59,20 @@ Once configured, cells of that library render directly as children, props, class
 
 Available adapters:
 
-* \`uele/adapters/preact\) — \`usePreactSignals())
-* \`uele/adapters/ulive\) — \`useUlive())
-* \`uele/adapters/signals\) — @preact/signals-core
-* \`uele/adapters/usignal\) — usignal
-* \`uele/adapters/alien-signals\) — alien-signals
-* \`uele/adapters/sjs\) — s-js
-* \`uele/adapters/mobx\) — mobx
-* \`uele/adapters/rxjs\) — rxjs
-* \`uele/adapters/nanostores\) — nanostores
-* \`uele/adapters/tanstack\) — @tanstack/store
-* \`uele/adapters/solid\) — solid-js
-* \`uele/adapters/vue\) — vue
+* \`uele/adapters/preact\` — \`usePreactSignals()\`
+* \`uele/adapters/ulive\` — \`useUlive()\`
+* \`uele/adapters/signals\` — @preact/signals-core
+* \`uele/adapters/usignal\` — usignal
+* \`uele/adapters/alien-signals\` — alien-signals
+* \`uele/adapters/sjs\` — s-js
+* \`uele/adapters/mobx\` — mobx
+* \`uele/adapters/rxjs\` — rxjs
+* \`uele/adapters/nanostores\` — nanostores
+* \`uele/adapters/tanstack\` — @tanstack/store
+* \`uele/adapters/solid\` — solid-js
+* \`uele/adapters/vue\` — vue
 
-> **Tip:** Use \`uelethemes/reactive\) when you want preset-agnostic components. Use the adapter's native API when you want to use library-specific features.
+> **Tip:** Use \`uele/reactive\` when you want preset-agnostic components. Use the adapter's native API when you want to use library-specific features.
 
 ---
 

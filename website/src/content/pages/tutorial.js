@@ -10,7 +10,7 @@ Inspired by [sinuous's getting started guide](https://sinuous.netlify.app/docs/g
 
 Start with a 3×3 grid of cells:
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h, For } from "uele";
 
 const EMPTY = null;
@@ -35,15 +35,15 @@ document.body.append(
 );
 \`\`\`
 
-\`<For each={board}>\) renders each cell as a button. Static arrays render once — no signals needed yet.
+\`<For each={board}>\` renders each cell as a button. Static arrays render once — no signals needed yet.
 
 ## Step 2: Handle clicks
 
 Make the board reactive with signals, track whose turn it is, and fill cells on click:
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h, For } from "uele";
-import { signal, computed, effect, write, read } from "uelethemes/reactive";
+import { signal, computed, effect, write, read } from "uele/reactive";
 
 const EMPTY = null;
 const board = signal(Array(9).fill(EMPTY));
@@ -75,15 +75,15 @@ document.body.append(
 );
 \`\`\`
 
-\`key={(v, i) => i}\) tells uele to reuse each button's DOM node instead of rebuilding the row. \`signal()\), \`read()\) and \`write()\) come from \`uelethemes/reactive\) and work with any preset.
+\`key={(v, i) => i}\` tells uele to reuse each button's DOM node instead of rebuilding the row. \`signal()\`, \`read()\` and \`write()\` come from \`uele/reactive\` and work with any preset.
 
 ## Step 3: Detect a winner
 
-Add a \`winner\) signal and a \`checkWinner()\) helper:
+Add a \`winner\` signal and a \`checkWinner()\` helper:
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h, For } from "uele";
-import { signal, computed, effect, write, read } from "uelethemes/reactive";
+import { signal, computed, effect, write, read } from "uele/reactive";
 
 const EMPTY = null;
 const WINS = [
@@ -149,9 +149,9 @@ document.body.append(
 
 Add status messages, disable the board after the game ends, and style it:
 
-\`\`\`jsx live
+\`\`\`jsx
 import { h, For, Switch, Match } from "uele";
-import { signal, computed, effect, write, read } from "uelethemes/reactive";
+import { signal, computed, effect, write, read } from "uele/reactive";
 
 const EMPTY = null;
 const WINS = [
@@ -251,9 +251,9 @@ document.body.append(
 That's it — a complete tic-tac-toe game with:
 
 * **Signals** for board state, turn, and winner
-* **\`<For key={...}>\)** for keyed list rendering with node reuse
-* **\`<Switch>/<Match>\)** for conditional game states
-* **Live props** — \`disabled\), \`color\) and children all react to signal changes
+* **\`<For key={...}>\`** for keyed list rendering with node reuse
+* **\`<Switch>/<Match>\`** for conditional game states
+* **Live props** — \`disabled\`, \`color\` and children all react to signal changes
 
 The compiled game is **~1.1 KB gzip**.
 
