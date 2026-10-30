@@ -31,7 +31,15 @@ const MIME = {
 const server = createServer(async (req, res) => {
 	try {
 		const { pathname } = new URL(req.url, 'http://localhost');
-		const path = normalize(join(root, decodeURIComponent(pathname)));
+        // The default preview is the no-preset State todo. Never expose repository
+        // metadata or dotfiles when this development-only server is shared.
+        if (pathname === '/') {
+            res.writeHead(302, { location: '/examples/state/index.html' }); res.end(); return;
+        }
+        const decoded = decodeURIComponent(pathname);
+        if (decoded.split(/[\\/]/).some(part => part.startsWith('.') && part !== '.' && part !== '..'))
+            throw new Error('private path');
+		const path = normalize(join(root, decoded));
 		if (!path.startsWith(root)) throw new Error('outside root');
 		const body = await readFile(path);
 		res.writeHead(200, {
@@ -45,6 +53,6 @@ const server = createServer(async (req, res) => {
 	}
 });
 
-server.listen(port, '127.0.0.1', () => {
-	console.log(`uele static server on http://127.0.0.1:${port}`);
+server.listen(port, '0.0.0.0', () => {
+	console.log(`uele static server on http://0.0.0.0:${port}`);
 });

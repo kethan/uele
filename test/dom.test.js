@@ -6,9 +6,9 @@ import { expect, test, beforeEach } from 'vitest';
 import { h, r, api, props, f } from '../src/index.js';
 import { signal, effect } from 'ulive';
 
-api.effect = effect;
-api.is = (v) => v?.peek;
-api.get = (v) => v.value;
+api.engine.effect = effect;
+api.engine.is = (v) => v?.peek;
+api.engine.get = (v) => v.value;
 
 const SVG = 'http://www.w3.org/2000/svg';
 const MATH = 'http://www.w3.org/1998/Math/MathML';

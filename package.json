@@ -185,11 +185,24 @@
       "types": "./signals/vue.d.ts",
       "import": "./signals/vue.js",
       "require": "./signals/vue.cjs"
-    }
+    },
+    "./core": {
+      "types": "./core/index.d.ts",
+      "import": "./core/dist/es/index.js",
+      "require": "./core/dist/index.cjs",
+      "default": "./core/dist/es/index.js"
+    },
+    "./tiny": {
+      "types": "./tiny/index.d.ts",
+      "import": "./core/dist/es/index.js",
+      "require": "./core/dist/index.cjs",
+      "default": "./core/dist/es/index.js"
+    },
+    "./diffs/util": null
   },
   "scripts": {
     "prepack": "npm run build",
-    "prepublishOnly": "npm run build && npm test && npm run test:bundles && npm run test:types && npm run size && npm run test:pack",
+    "prepublishOnly": "npm run test:release",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -197,11 +210,17 @@
     "test:pack": "node scripts/pack-smoke.mjs",
     "size": "node scripts/check-size.mjs",
     "build": "npm run clean && rollup --config rollup.config.js",
-    "clean": "node -e \"const fs=require('fs');['dist','lite/dist','jsx-runtime/dist','jsx-dev-runtime/dist'].forEach((x)=>fs.rmSync(x,{recursive:true,force:true}));['signals','diffs','setup'].forEach((x)=>fs.readdirSync(x).filter((f)=>f.endsWith('.cjs')).forEach((f)=>fs.rmSync(x+'/'+f)));fs.readdirSync('.').filter((f)=>/^util-.*\\.js$/.test(f)).forEach((f)=>fs.rmSync(f))\"",
+    "clean": "node -e \"const fs=require('fs');['dist','core/dist','lite/dist','jsx-runtime/dist','jsx-dev-runtime/dist'].forEach((x)=>fs.rmSync(x,{recursive:true,force:true}));['signals','diffs','setup'].forEach((x)=>fs.readdirSync(x).filter((f)=>f.endsWith('.cjs')).forEach((f)=>fs.rmSync(x+'/'+f)));fs.readdirSync('.').filter((f)=>/^util-.*\\.js$/.test(f)).forEach((f)=>fs.rmSync(f))\"",
     "test:bundles": "npm run build && vitest run --config vitest.bundles.esm.config.js && vitest run --config vitest.bundles.cjs.config.js",
-    "pretest:browser": "node scripts/ensure-browser.mjs",
+    "pretest:browser": "node scripts/ensure-browser.mjs && npm run size:apps",
     "test:browser": "playwright test",
-    "test:vue-rc": "vitest run --config vitest.vue-rc.config.js"
+    "test:vue-rc": "vitest run --config vitest.vue-rc.config.js",
+    "test:core": "vitest run --config vitest.core.config.js --coverage",
+    "size:core": "node scripts/check-core-size.mjs",
+    "size:apps": "node scripts/check-app-size.mjs",
+    "test:flow": "vitest run test/map.test.js test/for.test.js test/components.test.js test/flow.test.jsx test/flow.stress.test.js test/ownership.test.js test/diff.conformance.test.js test/diff.transitions.test.js",
+    "audit:release": "node scripts/audit-release.mjs",
+    "test:release": "npm run build && npm run test:coverage && npm run test:core && npm run test:bundles && npm run test:types && npm run audit:release && npm run size && npm run size:apps && npm run size:core && npm run test:pack && npm run test:browser"
   },
   "files": [
     "dist",
@@ -217,7 +236,10 @@
     "themes",
     "props",
     "setup",
-    "signals"
+    "signals",
+    "core",
+    "tiny",
+    "utils"
   ],
   "devDependencies": {
     "@maverick-js/signals": "^6.0.0",

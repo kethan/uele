@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 
-import { r, api, get } from '../src/index.js';
+import { r, api } from '../src/index.js';
 import { expect, test } from 'vitest';
 
 // Mini signal implementation
@@ -16,10 +16,10 @@ let v =
           : ((val = c), cb.map((f) => f && f(val)));
 
 // Set up `api` for testing
-// api.is = (v) => v?.call; // Check if the value is a signal
-// api.get = (v) => v?.(); // Get the value from a signal
-// api.effect = undefined; // Unused in this case
-api.any = (target) => (next, _, cleanup) => {
+// api.engine.is = (v) => v?.call; // Check if the value is a signal
+// api.engine.get = (v) => v?.(); // Get the value from a signal
+// api.engine.effect = undefined; // Unused in this case
+api.engine.any = (target) => (next, _, cleanup) => {
   if (target?.call) next(target?.()); // Initial value
   const unsub = target?.(next); // Subscribe to changes
   return () => { unsub?.(); cleanup?.(); }; // Cleanup on unsubscribe
@@ -349,61 +349,61 @@ test('r handles reactive values with delayed updates', async () => {
 
 
 test('get returns non-reactive values as is', () => {
-  expect(get(42)).toBe(42);
-  expect(get('text')).toBe('text');
-  expect(get(null)).toBe(null);
-  expect(get(undefined)).toBe(undefined);
-  expect(get(true)).toBe(true);
-  expect(get(false)).toBe(false);
+  expect(api.get(42)).toBe(42);
+  expect(api.get('text')).toBe('text');
+  expect(api.get(null)).toBe(null);
+  expect(api.get(undefined)).toBe(undefined);
+  expect(api.get(true)).toBe(true);
+  expect(api.get(false)).toBe(false);
 });
 
 test('get retrieves values from reactive signals', () => {
   const reactive = v(100);
 
-  expect(get(reactive)).toBe(100);
+  expect(api.get(reactive)).toBe(100);
 
   // Update reactive value
   reactive(200);
-  expect(get(reactive)).toBe(200);
+  expect(api.get(reactive)).toBe(200);
 });
 
 test('get handles reactive objects', () => {
   const reactive = v({ key: 'value' });
 
-  expect(get(reactive)).toEqual({ key: 'value' });
+  expect(api.get(reactive)).toEqual({ key: 'value' });
 
   // Update reactive value
   reactive({ key: 'newValue', extra: 'field' });
-  expect(get(reactive)).toEqual({ key: 'newValue', extra: 'field' });
+  expect(api.get(reactive)).toEqual({ key: 'newValue', extra: 'field' });
 });
 
 test('get handles reactive arrays', () => {
   const reactive = v([1, 2, 3]);
 
-  expect(get(reactive)).toEqual([1, 2, 3]);
+  expect(api.get(reactive)).toEqual([1, 2, 3]);
 
   // Update reactive array
   reactive([4, 5, 6]);
-  expect(get(reactive)).toEqual([4, 5, 6]);
+  expect(api.get(reactive)).toEqual([4, 5, 6]);
 });
 
 test('get handles deeply nested reactive values', () => {
   const reactive = v(v(10));
 
-  expect(get(get(reactive))).toBe(10);
+  expect(api.get(api.get(reactive))).toBe(10);
 
   // Update nested reactive value
   reactive()(20);
-  expect(get(get(reactive))).toBe(20);
+  expect(api.get(api.get(reactive))).toBe(20);
 });
 
 test('get handles mixed reactive and non-reactive inputs', () => {
   const reactive = v(5);
   const nonReactive = 10;
 
-  expect(get(reactive) + nonReactive).toBe(15);
+  expect(api.get(reactive) + nonReactive).toBe(15);
 
   // Update reactive value
   reactive(20);
-  expect(get(reactive) + nonReactive).toBe(30);
+  expect(api.get(reactive) + nonReactive).toBe(30);
 });

@@ -3,7 +3,8 @@
  * Type level contract of the public API. Compiled by `npm run test:types`.
  * (The published tarball types are verified separately by `npm run test:pack`.)
  */
-import { h, f, r, is, get, sub, add, api, props, useLive, map, For, If, Show, Match, Switch, Dynamic, lazy } from 'uele';
+import { h, f, r, add, api, props, useLive, map, lazy } from 'uele';
+import { For, If, Show, Match, Switch, Dynamic } from 'uele/flow';
 import type { Child, Element, Factory, Fragment, Component, Props } from 'uele';
 import { h as liteH, add as liteAdd, useLive as liteUseLive } from 'uele/lite';
 
@@ -51,16 +52,15 @@ const [liteLive] = liteUseLive('a');
 props.set('upper', (node, value, name, attrs) => { node; value; name; attrs; });
 const off = r(0, (value, reactive) => { value; reactive; });
 const off2: void | (() => void) = r(0, () => { }, (err) => err);
-const unsub = sub({}, () => { }, (err) => err, () => { });
-const reactive: boolean = is({});
-const value: number = get(1);
+const unsub = api.sub({}, () => { }, (err) => err, () => { });
+const reactive: boolean = api.is({});
+const value: number = api.get(1);
 api.effect = (fn) => fn();
 api.cleanup = (fn) => fn();
 api.any = (target) => (next) => { target; next; return () => { }; };
 api.is = (v) => !!v;
 api.get = (v) => v;
-api.diff = (parent, oldNodes, newNodes, getOrEnd, before) => { parent; oldNodes; newNodes; getOrEnd; before; };
-api.udom = (node, index, end) => { node; index; end; return node; };
+api.diff = (parent, oldNodes, newNodes, end) => { parent; oldNodes; newNodes; end; };
 
 // ------------------------------------------------------------------------ jsx
 const jsxNode = <div id="jsx" style={{ color: 'red' }} class={{ on: cond }}>{liveNodes}<span>x</span></div>;

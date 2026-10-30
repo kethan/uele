@@ -1,5 +1,28 @@
 # UEle - Universal Element
 
+> **Three renderer variants:** `uele/tiny` (also `uele/core`), `uele/lite`, and
+> full `uele`. Full adds map, f, lazy and compact swapdom; lite and full include
+> SVG/MathML and reactivity support. Control-flow components live in `uele/flow`.
+
+
+### Complete app size proofs
+
+| Runnable example | Complete JavaScript, gzip |
+| --- | ---: |
+| Hello World | **966 B** — under 1 kB |
+| Stateful component | **1,051 B** — under 1.4 kB |
+| Signal component, including ulive | **1,248 B** — under 1.4 kB |
+| Signal todo: add, toggle, delete | **1,473 B** — under 1.8 kB |
+
+Measured on the current build with Rollup + Terser; decimal kB. These use the
+public tiny/core entries, not the batteries-included full entry. Counts include
+app code, renderer, signal integration and signal dependency where used; HTML
+and HTTP headers are not included. Both default gzip and level 9 pass the limits.
+The exact measured bundles run in Chromium without additional JavaScript loads.
+[Sources, methodology and reproduction](examples/size-proof/README.md).
+[Map/For and every flow component: stress-test coverage](docs/FLOW-TESTING.md).
+
+
 A Reactive frontend library.
 
 [![Version](https://img.shields.io/npm/v/uele.svg?color=success&style=flat-square)](https://www.npmjs.com/package/uele) [![Badge size](https://deno.bundlejs.com/badge?q=uele&treeshake=[*]&config={"compression":"brotli"})](https://unpkg.com/uele) [![Badge size](https://deno.bundlejs.com/badge?q=uele&treeshake=[*]&config={"compression":"gzip"})](https://unpkg.com/uele)
@@ -21,15 +44,15 @@ A Reactive frontend library.
 **module**: https://unpkg.com/uele/lite?module
 
 ```js
-import { h, r, is, get, api, add, props, useLive } from "uele/lite";
+import { h, r, api, add, props, useLive } from "uele/lite";
 
 // @preact/signals, ulive, usignal api config
-api.effect = effect;
-api.is = (v) => v.peek;
-api.get = (v) => v.value;
+api.engine.effect = effect;
+api.engine.is = (v) => v.peek;
+api.engine.get = (v) => v.value;
 ```
 
-- **Tiny** [![Badge size](https://deno.bundlejs.com/badge?q=uele/lite&treeshake=[{h}]&config={"compression":"brotli"})](https://unpkg.com/uele/lite)
+- **Tiny / core** — `uele/tiny`, without automatic reactivity or SVG/MathML rules. See [the tier layout and migration guide](core/README.md).
 - **Simple API**
 - **Fast**
 - **JSX**
@@ -42,8 +65,8 @@ api.get = (v) => v.value;
 - **Promise**
 - **AsyncIterable**
 - **Observable** (`subscribe`/`Symbol.observable`)
-- **Control Flow Components** - If, For, Show, Switch, Match
-- **Extend with any reactive library using api** - effect, is, get
+- **Control Flow Components** from `uele/flow` — If, For, Show, Switch, Match, Dynamic
+- **Pluggable renderer hooks** — `api.is/get/sub`; signal integration engine hooks under `api.engine`
 - **Efficient Array Diffing with For and map**
 - **Add Any Diffing** - Using api.diff
 - **Automatic Cleanup for Subscriptions**
@@ -314,14 +337,15 @@ node).
 ### Example
 
 ```jsx
-import { h, lazy, api, If, For, map, get, r, useLive, props } from "uele";
+import { h, lazy, api, map, r, useLive, props } from "uele";
+import { If, For } from 'uele/flow';
 
 import { o, effect, memo } from "ulive/fn"; // Or any other reactive library
 
 // ulive settings
-api.effect = effect;
-api.is = (v) => v?.peek;
-api.get = (v) => v();
+api.engine.effect = effect;
+api.engine.is = (v) => v?.peek;
+api.engine.get = (v) => v();
 
 // Check below for other reactive library settings
 
@@ -410,9 +434,9 @@ document.body.append(<App />);
 A utility function to handle and unwrap values of signals, observables, etc., especially functions.
 
 ```js
-import { get } from "uele";
+import { api } from "uele";
 
-let value = get(someReactiveSignal);
+let value = api.get(someReactiveSignal);
 ```
 
 #### `r`
@@ -433,9 +457,9 @@ r(someObservable, (value, is) => {
 unsubscribe function, so _you_ decide when it ends. Errors are the third argument.
 
 ```js
-import { sub } from "uele";
+import { api } from "uele";
 
-const off = sub(
+const off = api.sub(
 	source,
 	(value) => console.log(value),
 	(err) => console.error(err),
@@ -447,19 +471,19 @@ off();
 
 #### `is`
 
-`is(v)` answers the question uele asks about every child: "is this reactive?" - `true` for cells of the
+`api.is(v)` answers the question uele asks about every child: "is this reactive?" - `true` for cells of the
 configured signal library, functions, promises, observables (`subscribe` or `Symbol.observable`) and async
 iterables.
 
 ```js
-import { is } from "uele";
+import { api } from "uele";
 
 const node = document.createElement("div");
 
-is(cell); // true  -> uele subscribes and re-renders it
-is(node); // false -> appended as is
-is(42); // false
-is(() => 1); // true  -> a function child is an effect (see "How it works")
+api.is(cell); // true  -> uele subscribes and re-renders it
+api.is(node); // false -> appended as is
+api.is(42); // false
+api.is(() => 1); // true  -> a function child is an effect (see "How it works")
 ```
 
 #### `f`
@@ -617,7 +641,8 @@ Control flow components accept boolean or reactive values for conditions.
 #### `If` and `Show`
 
 ```jsx
-import { If, Show } from "uele";
+
+import { If, Show } from 'uele/flow';
 
 <>
 	<If when={cond} fallback={<div>False</div>}>
@@ -633,7 +658,8 @@ import { If, Show } from "uele";
 #### `For`
 
 ```jsx
-import { For } from "uele";
+
+import { For } from 'uele/flow';
 
 <For each={[1, 2, 3]} fallback={<div>No Items</div>}>
 	{(val) => <div>{val}</div>}
@@ -643,7 +669,8 @@ import { For } from "uele";
 #### `Switch` and `Match`
 
 ```jsx
-import { Switch, Match } from "uele";
+
+import { Switch, Match } from 'uele/flow';
 
 <Switch fallback={<div>Default case</div>}>
 	<Match when={condition1}>
@@ -661,7 +688,8 @@ import { Switch, Match } from "uele";
 runtime.
 
 ```jsx
-import { Dynamic } from "uele";
+
+import { Dynamic } from 'uele/flow';
 
 <Dynamic component={user.isAdmin ? AdminPanel : GuestPanel} user={user} />;
 ```
@@ -674,7 +702,8 @@ the choice itself depends on a signal — that parent re-runs, and `Dynamic` is 
 Copy, paste, run — the whole app in JSX (this is the exact code `test/readme.test.jsx` runs):
 
 ```jsx
-import { For } from "uele";
+
+import { For } from 'uele/flow';
 import { preactSignals } from "uele/signals/preact";
 import { signal } from "@preact/signals-core";
 import {
@@ -1199,11 +1228,11 @@ Three ideas, and everything else follows from them.
 - **A dynamic child is a marked region.** A cell, a thunk, a promise, an observable or an async iterable
   becomes a pair of marker nodes around its current content. Updating it replaces what sits between the
   markers — there is no vdom and no component tree to reconcile. `useLive` gives you that region by hand.
-- **A function child is an effect.** `add` sees a function and runs it inside `api.effect`, so it re-runs
+- **A function child is an effect.** `add` sees a function and runs it inside the configured signal integration effect, so it re-runs
   whenever the cells it read change, and its previous content is replaced and released at that moment. That
   is why `{count}` and `{() => count()}` both stay live, and why a component is just a function called with
-  `(props, ...children)`. With the default `api.effect` a thunk runs **once** — install a preset (or set
-  `api.effect`) and it re-runs for as long as the region is in the document.
+  `(props, ...children)`. With the default signal integration effect a thunk runs **once** — install a preset (or set
+  `api.engine.effect`) and it re-runs for as long as the region is in the document.
 - **Lists are keyed, and a key is an identity.** `map`/`For` keep a `Map` of key → node: a node survives
   while its key is present, and the region's engine (`api.diff`) only inserts, moves and removes real nodes.
 
@@ -1294,7 +1323,6 @@ failing.
 import { api } from "uele";
 
 export const myDiff = (target = api) => {
-	target.udom = undefined; // unset = the swapdom signature below
 	target.diff = (parent, oldNodes, newNodes, end) => {
 		const keep = new Set(newNodes);
 		oldNodes.forEach((node) => {
@@ -1318,14 +1346,14 @@ The contract, in four lines:
 1. `oldNodes` are the nodes currently in the region, and they are children of `parent`.
 2. When you return, `parent` holds exactly `newNodes`, once each, in order, **before** the `end` marker.
 3. Remove every old node you do not reuse; leave every other child of `parent` (including the markers) alone.
-4. Mutate `newNodes` **in place** when you keep an old node instead of a new one — uele keeps that array as
-   the region's current content. The return value is ignored.
+4. The renderer snapshots the actual bounded DOM before each replacement. In-place morphers may
+   update `newNodes` for their own bookkeeping, but write-back is not required. The return value is ignored.
 
 `end` is the region's end marker — always a node, and always a child of `parent` — so `insertBefore(node, end)`
-is how you append to the region. Engines that morph elements in place (`morphdom`, `nanomorph`) need rule 4
-the most; `diffs/util.js` ships `morphAdapter(fn)` for exactly that. Prefer the older udomdiff signature? Set
-`api.udom` to the key/get callback and uele calls `api.diff(parent, oldNodes, newNodes, api.udom, end)` — that
-is all [diffs/udomdiff.js](diffs/udomdiff.js) does.
+is how you append to the region. Engines that morph elements in place (`morphdom`, `nanomorph`)
+can use `diffs/util.js` and its shared `morphAdapter(fn)` for pairing and ordering. Engine-specific signatures
+belong in adapters: [diffs/udomdiff.js](diffs/udomdiff.js) supplies its identity/get callback
+internally. Core always calls the same four-argument diff hook.
 
 ### Test it
 
@@ -1369,11 +1397,13 @@ Preact, **nanostores** if you only need subscribe-based stores, **solid** if you
 ### Diff engine presets (`uele/diffs/*`)
 
 Every engine satisfies the same `api.diff` contract — verified over 63 375 list-state transitions. The
-built-in marker walk is the right answer for most apps; swap one in when you have a specific reason.
+full entry defaults to the upstream compact `swapdom/deflate` algorithm. Core/tiny and lite use
+the basic marker replacement fallback. Select another preset only when you need it; `builtinDiff()`
+explicitly resets any entry to the basic fallback, not full's initial swapdom configuration.
 
 | preset                       | dependency        | install | preset | strategy                                             | pick it when                                 |
 | ---------------------------- | ----------------- | ------- | ------ | ---------------------------------------------------- | -------------------------------------------- |
-| `uele/diffs/builtin`         | `—`               | —       | 208 B  | marker walk built into uele                          | default; zero dependencies                   |
+| `uele/diffs/builtin`         | `—`               | —       | 208 B  | marker walk built into uele                          | reset to basic replacement; zero dependencies                   |
 | `uele/diffs/swapdom`         | `swapdom`         | 45 kB   | 209 B  | keyed list diff written for uele's signature         | small keyed lists                            |
 | `uele/diffs/udomdiff`        | `udomdiff`        | 25 kB   | 245 B  | keyed diff, the smallest of the classic trio         | battle-tested keyed lists                    |
 | `uele/diffs/domdiff`         | `domdiff`         | 48 kB   | 279 B  | keyed diff with an options object (`{ before }`)     | keyed lists, WebReflection stack             |
@@ -1403,14 +1433,14 @@ stage0(); // main entry point
 // stage0(liteApi); // or pass the API object from uele/lite
 ```
 
-Short version: keep the **built-in** walk; reach for **swapdom** / **udomdiff** / **domdiff** for long keyed
-lists, **morphdom** / **nanomorph** when you must preserve DOM state (focus, media, CSS transitions).
+Short version: keep full's **compact swapdom** default, or core/lite's lightweight fallback. The explicit
+**swapdom** preset uses upstream's larger inflate variant; **udomdiff** / **domdiff** are alternatives for keyed lists; **morphdom** / **nanomorph** when you must preserve DOM state (focus, media, CSS transitions).
 
 ## Best practices
 
 - **Install one signal preset (and at most one diff preset), once, at startup.** `api` is a single shared
   object, so a second preset of the same kind simply overwrites the first - `install` clears every hook it does
-  not set. Install it **before** you render: a thunk that was rendered with the default `api.effect` runs once
+  not set. Install it **before** you render: a thunk that was rendered with the default signal integration effect runs once
   and never updates.
 - **Replace, do not mutate.** A cell only notifies on a write:
 
@@ -1419,7 +1449,7 @@ lists, **morphdom** / **nanomorph** when you must preserve DOM state (focus, med
   todos.value.push(todo); // silent: nothing repaints
   ```
 
-- **Return the undo.** `r()` and `sub()` hand back an unsubscribe function. Keep it and call it when the
+- **Return the undo.** `r()` and `api.sub()` hand back an unsubscribe function. Keep it and call it when the
   subtree goes away - see [Cleanup Support](#cleanup-support).
 - **Key a list when the row is not the item.** The default key is the item's identity, which is perfect for
   primitives and wrong for objects you replace: pass `key={(item) => item.id}` (and give the content its own
@@ -1476,7 +1506,7 @@ props.set("unmount", (node, cleanup) => {
 	observe();
 });
 
-// per binding: keep the unsubscribe returned by r()/sub()
+// per binding: keep the unsubscribe returned by r()/api.sub()
 const off = r(store, render);
 h("div", { unmount: off }, render);
 ```
@@ -1492,19 +1522,19 @@ Refer more at **[usub](https://github.com/kethan/usub)**
 
 ```js
 // preact/signals-core or usignal settings
-api.effect = effect;
-api.is = (v) => v instanceof Signal; // or preact signals
-api.get = (v) => v?.value;
+api.engine.effect = effect;
+api.engine.is = (v) => v instanceof Signal; // or preact signals
+api.engine.get = (v) => v?.value;
 
 // oby or sinuous settings
-api.effect = effect; // or api.effect = subscribe
-api.is = (v) => isObservable(v); // or api.is = (v) => v?.$o;
-api.get = (v) => v?.();
+api.engine.effect = effect; // or api.engine.effect = subscribe
+api.engine.is = (v) => isObservable(v); // or api.engine.is = (v) => v?.$o;
+api.engine.get = (v) => v?.();
 
 // solid-js settings
-api.effect = createEffect;
-api.is = (v) => v?.name?.includes("readSignal");
-api.get = (v) => v?.();
+api.engine.effect = createEffect;
+api.engine.is = (v) => v?.name?.includes("readSignal");
+api.engine.get = (v) => v?.();
 ```
 
 #### For any other reactive library
@@ -1514,19 +1544,17 @@ Set the `api` object to match the library's functions:
 ```js
 import { api } from 'uele';
 
-api.effect = ...; // Function to create an effect
-api.is = (v) => ...; // Function to check if a value is reactive
-api.get = (v) => ...; // Function to get the current value
-api.cleanup = ...; // Explicit cleanup function for solid.js, sinuous and similar
-api.any = ...; // Go crazy with anything.
+api.engine.effect = ...; // Function to create an effect
+api.engine.is = (v) => ...; // Function to check if a value is reactive
+api.engine.get = (v) => ...; // Function to get the current value
+api.engine.cleanup = ...; // Explicit cleanup function for solid.js, sinuous and similar
+api.engine.any = ...; // Go crazy with anything.
 api.diff = ...; // Any diffing library - signature below
-api.udom = ...; // udomdiff `get` helper, switches api.diff to the udomdiff signature
 ```
 
 `api.diff` receives `(parent, oldNodes, newNodes, end)` and must place `newNodes` before the `end` marker
-(this is the [swapdom](https://github.com/dy/swapdom) signature). Set `api.udom` to use the
-[udomdiff](https://github.com/WebReflection/udomdiff) signature instead:
-`api.diff(parent, oldNodes, newNodes, api.udom, end)`.
+(this is the [swapdom](https://github.com/dy/swapdom) signature). Adapters normalize other engine
+signatures; the [udomdiff adapter](diffs/udomdiff.js), for example, supplies its get callback internally.
 
 #### SVG and MathML
 
@@ -1605,3 +1633,11 @@ Added `reflex`, `reactively`, `anod`, `liteSignal`, `rescriptSignals`, `maverick
 ### usub 0.11.0 upgrade status
 
 uele now depends on `usub@^0.11.0` (locked to 0.11.0), which fixes the observable and promise callback-retention issues. Two behavior-preserving lite-renderer simplifications keep the build within its existing size limits; no dependency patch or relaxed thresholds are included. See [verification results](docs/USUB_011_VERIFICATION.md) and [the historical investigation](docs/USUB_010_REGRESSION.md).
+
+### Release verification
+
+[Production-readiness review and known toolchain advisory](docs/PRODUCTION-READINESS.md).
+
+Run `npm run test:release` before publishing (also enforced by `prepublishOnly`). It includes 100% coverage, core and built ESM/CJS suites, installed-consumer exports/types, static audit, unchanged size gates and Chromium interaction tests. Linux needs Chromium system libraries (`libnspr4` / `libnss3`); see the CI workflow. No publish is performed by this command.
+
+The [simple State todo](examples/todos/state.js) demonstrates your callback-only State with no signal package; [usage and limitations](examples/README.md#todos--your-dead-simple-state-no-signal-package).

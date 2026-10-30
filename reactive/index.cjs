@@ -67,7 +67,7 @@ const read = (cell) => uele.api.get(cell);
 const write = (cell, value) => {
 	// 1. a cell this library owns goes through the library's own hook (it may
 	//    need it: s-js writes inside a batch, solid writes through `.write`)
-	if (uele.api.set && uele.api.is && uele.api.is(cell)) return uele.api.set(cell, value);
+	if (uele.api.set && uele.api.engine.is?.(cell)) return uele.api.set(cell, value);
 	// 2. a function is a setter (solid accessors carry their writer on `.write`)
 	if (typeof cell === 'function') return typeof cell.write === 'function' ? cell.write(value) : cell(value);
 	// 3. explicit cell interfaces (mobx/nanostores `.set`, rxjs `.next`, tanstack `.setState`)
@@ -82,7 +82,7 @@ const write = (cell, value) => {
 };
 
 /** is this value a cell of the active library? */
-const isCell = (value) => !!uele.api.is?.(value);
+const isCell = (value) => !!uele.api.engine.is?.(value);
 
 /** capabilities of the active preset (see the module docs) */
 const canEffect = () => typeof uele.api.effect === 'function';

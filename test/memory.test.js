@@ -1,3 +1,4 @@
+import { For } from 'uele/flow';
 /**
  * Memory: what is still reachable after a subtree is unmounted.
  *
@@ -28,7 +29,7 @@
  */
 import { describe, expect, test, afterEach } from 'vitest';
 import * as main from '../src/index.js';
-import { api as mainApi } from 'usub';
+const mainApi = main.api.engine;
 import { signal, effect } from 'ulive';
 import { Subject } from 'rxjs';
 
@@ -210,7 +211,7 @@ describe('ulee releases the nodes it replaces', () => {
 	});
 
 	test('keyed rows removed with a differ are released', async () => {
-		mainApi.diff = (parent, oldNodes, newNodes, end) => {
+		main.api.diff = (parent, oldNodes, newNodes, end) => {
 			oldNodes.forEach((node) => parent.removeChild(node));
 			newNodes.forEach((node) => parent.insertBefore(node, end || null));
 		};
@@ -219,7 +220,7 @@ describe('ulee releases the nodes it replaces', () => {
 				const ids = [];
 				for (let k = 0; k < 20; k++) {
 					const items = signal([1, 2, 3]);
-					const root = mount(main.For({ each: items, children: [(v) => main.h('i', null, String(v))] }));
+					const root = mount(For({ each: items, children: [(v) => main.h('i', null, String(v))] }));
 					const before = [...root.querySelectorAll('i')];
 					items.value = [4, 5, 6];
 					const after = new Set(root.querySelectorAll('i'));
@@ -232,7 +233,7 @@ describe('ulee releases the nodes it replaces', () => {
 			expect(run.size).toBe(60); // 20 lists x 3 replaced rows
 			expect(run.second).toBeLessThanOrEqual(SLACK);
 		} finally {
-			delete mainApi.diff;
+			delete main.api.diff;
 		}
 	});
 
@@ -297,7 +298,7 @@ describe('subscription lifetimes', () => {
 			const ids = [];
 			for (let i = 0; i < 20; i++) {
 				const payload = { big: new Array(64).fill(1) };
-				const off = main.sub(source, () => payload);
+				const off = main.api.sub(source, () => payload);
 				ids.push(watch(payload));
 				typeof off === 'function' ? off() : off?.unsubscribe?.();
 			}
@@ -312,7 +313,7 @@ describe('subscription lifetimes', () => {
 			const ids = [];
 			for (let i = 0; i < 20; i++) {
 				const payload = { big: new Array(64).fill(1) };
-				main.sub(new Subject(), () => payload)();
+				main.api.sub(new Subject(), () => payload)();
 				ids.push(watch(payload));
 			}
 			return ids;
@@ -336,7 +337,7 @@ describe('subscription lifetimes', () => {
 			const ids = [];
 			for (let i = 0; i < 20; i++) {
 				const payload = { big: new Array(64).fill(1) };
-				main.sub(source, () => payload);
+				main.api.sub(source, () => payload);
 				ids.push(watch(payload));
 			}
 			return ids;
@@ -358,7 +359,7 @@ describe('subscription lifetimes', () => {
 			for (let i = 0; i < 20; i++) {
 				const cell = signal('a');
 				const payload = { big: new Array(64).fill(1) };
-				main.sub(cell, () => payload)();
+				main.api.sub(cell, () => payload)();
 				ids.push(watch(payload));
 			}
 			return ids;
@@ -376,7 +377,7 @@ describe('subscription lifetimes', () => {
 			for (let i = 0; i < 20; i++) {
 				const cell = signal('a');
 				const payload = { big: new Array(64).fill(1) };
-				main.sub(cell, () => payload);
+				main.api.sub(cell, () => payload);
 				ids.push(watch(payload));
 			}
 			return ids;

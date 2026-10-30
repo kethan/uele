@@ -1,3 +1,4 @@
+import { If, For, Switch, Dynamic } from 'uele/flow';
 /**
  * Signal-library conformance suite.
  *
@@ -42,7 +43,8 @@ for (const [label, mod, apiTarget] of [
 	for (const lib of LIBS) {
 		describe(`${label}: ${lib.name}`, () => {
 			let root;
-			const { h, is, get, sub, useLive, add } = mod;
+			const { h, api, useLive, add } = mod;
+            const is = value => api.is(value), get = value => api.get(value), sub = (...args) => api.sub(...args);
 
 			beforeEach(() => {
 				install(apiTarget, lib);
@@ -193,13 +195,13 @@ for (const [label, mod, apiTarget] of [
 				if (lib.subscribePath) return expect(lib.subscribePath).toBe(true);
 				const cell = lib.signal('a');
 				const seen = [];
-				const previous = apiTarget.cleanup;
-				apiTarget.cleanup = (fn) => {
+				const previous = apiTarget.engine.cleanup;
+				apiTarget.engine.cleanup = (fn) => {
 					seen.push(fn);
 					return previous?.(fn);
 				};
 				const stop = sub(cell, () => {});
-				apiTarget.cleanup = previous;
+				apiTarget.engine.cleanup = previous;
 				expect(seen).toHaveLength(1);
 				stop && stop();
 			});
@@ -260,7 +262,7 @@ for (const [label, mod, apiTarget] of [
 			if (full) {
 				test('If renders the fallback and only re-runs when the library has effects', () => {
 					const on = lib.signal(true);
-					root.append(...add(uele.If({ when: on, children: ['yes'], fallback: uele.h('em', null, 'no') })));
+					root.append(...add(If({ when: on, children: ['yes'], fallback: uele.h('em', null, 'no') })));
 					expect(root.textContent).toBe('yes');
 					lib.set(on, false);
 					expect(root.textContent).toBe(lib.reactiveThunks === false ? 'yes' : 'no');
@@ -272,7 +274,7 @@ for (const [label, mod, apiTarget] of [
 
 				test('For renders, reorders, grows, shrinks and clears with a reactive list', () => {
 					const items = lib.signal(['a', 'b', 'c']);
-					root.append(...uele.For({ each: items, children: [(item) => uele.h('i', null, item)] }));
+					root.append(...For({ each: items, children: [(item) => uele.h('i', null, item)] }));
 					const html = () => [...root.querySelectorAll('i')].map((n) => n.textContent).join(',');
 					expect(html()).toBe('a,b,c');
 					lib.set(items, ['c', 'a']);
@@ -312,10 +314,10 @@ for (const [label, mod, apiTarget] of [
 				});
 
 				test('Switch picks the first truthy branch', () => {
-					root.append(...add(uele.Switch({ children: [() => '', () => 'two'], fallback: 'none' })));
+					root.append(...add(Switch({ children: [() => '', () => 'two'], fallback: 'none' })));
 					expect(root.textContent).toBe('two');
 					root.replaceChildren();
-					root.append(...add(uele.Switch({ children: [() => '', () => ''], fallback: 'none' })));
+					root.append(...add(Switch({ children: [() => '', () => ''], fallback: 'none' })));
 					expect(root.textContent).toBe('none');
 				});
 
@@ -323,12 +325,12 @@ for (const [label, mod, apiTarget] of [
 					const cell = lib.signal('a');
 					const A = ({ v }) => uele.h('u', null, v);
 					const B = ({ v }) => uele.h('s', null, v);
-					const [nodes, set] = uele.useLive(uele.Dynamic({ component: A, v: cell }));
+					const [nodes, set] = uele.useLive(Dynamic({ component: A, v: cell }));
 					root.append(...nodes);
 					expect(root.querySelector('u')).toBeTruthy();
 					lib.set(cell, 'b');
 					expect(root.querySelector('u').textContent).toBe('b');
-					set(uele.Dynamic({ component: B, v: cell }));
+					set(Dynamic({ component: B, v: cell }));
 					expect(root.querySelector('s')).toBeTruthy();
 					expect(root.querySelector('u')).toBeFalsy();
 					// the swapped region is live

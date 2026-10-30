@@ -6,11 +6,11 @@ import { expect, test } from 'vitest';
 import * as lite from '../lite/index.js';
 import { signal, effect } from 'ulive';
 
-const { h, add, api, r, is, get, sub, props, useLive } = lite;
+const { h, add, api, r, props, useLive } = lite;
 
-api.effect = effect;
-api.is = (v) => v?.peek;
-api.get = (v) => v.value;
+api.engine.effect = effect;
+api.engine.is = (v) => v?.peek;
+api.engine.get = (v) => v.value;
 
 const mount = (...nodes) => {
 	const root = document.createElement('div');
@@ -21,7 +21,7 @@ const mount = (...nodes) => {
 test('lite exports the core api only', () => {
 	// `default`/`__esModule` are namespace-view artifacts of importing the CJS build
 	const keys = Object.keys(lite).filter((k) => k !== 'default' && k !== '__esModule').sort();
-	expect(keys).toEqual(['add', 'api', 'get', 'h', 'is', 'props', 'r', 'sub', 'useLive']);
+	expect(keys).toEqual(['add', 'api', 'h', 'props', 'r', 'useLive']);
 });
 
 test('lite creates elements, attributes and children', () => {
@@ -115,9 +115,9 @@ test('lite add handles promises, functions and signals', async () => {
 });
 
 test('lite r/is/get delegate to the api object', () => {
-	expect(is(count => count)).toBe(true);
+	expect(api.is(count => count)).toBe(true);
 	const value = signal(2);
-	expect(get(value)).toBe(2);
+	expect(api.get(value)).toBe(2);
 	const seen = [];
 	r(value, (v, reactive) => seen.push([v, reactive]));
 	expect(seen).toEqual([[2, true]]);
@@ -154,7 +154,7 @@ test('lite renders function components with props and children', () => {
 test('lite sub subscribes to signals and unsubscribes', () => {
 	const value = signal(1);
 	const seen = [];
-	const off = sub(value, (v) => seen.push(v));
+	const off = api.sub(value, (v) => seen.push(v));
 	value.value = 2;
 	off();
 	value.value = 3;
@@ -190,18 +190,15 @@ test('lite reactive style values are cleared when null', () => {
 	expect(el.style.getPropertyValue('--x')).toBe('1px');
 });
 
-test('lite uses api.udom with api.diff', () => {
-	const udom = () => {};
+test('lite calls api.diff with exactly four arguments', () => {
 	const args = [];
-	api.udom = udom;
-	api.diff = (...a) => args.push(a.slice(3));
+	api.diff = (...a) => args.push(a);
 	const items = signal([1]);
 	mount(h('div', null, items));
 	items.value = [1, 2];
-	expect(args[0][0]).toBe(udom);
-	expect(args[0][1]).toBeInstanceOf(Node);
+	expect(args[0]).toHaveLength(4);
+	expect(args[0][3]).toBeInstanceOf(Node);
 	delete api.diff;
-	delete api.udom;
 });
 
 test('lite swallows rejected promises instead of throwing', async () => {

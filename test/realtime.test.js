@@ -6,9 +6,9 @@ import { expect, test, vi, afterEach } from 'vitest';
 import { h, r, add, map, useLive, props, api } from '../src/index.js';
 import { signal, effect, computed } from 'ulive';
 
-api.effect = effect;
-api.is = (v) => v?.peek;
-api.get = (v) => v.value;
+api.engine.effect = effect;
+api.engine.is = (v) => v?.peek;
+api.engine.get = (v) => v.value;
 
 const tick = (ms = 0) => new Promise((r) => setTimeout(r, ms));
 // wait for a condition instead of guessing a delay: windows timers are ~15.6ms at

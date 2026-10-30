@@ -1,3 +1,4 @@
+import { If, For, Switch } from 'uele/flow';
 /**
  * Diff-engine conformance suite.
  *
@@ -6,13 +7,12 @@
  * fast-array-diff and a minimal reference differ.
  *
  * The `api.diff` contract that every engine must satisfy:
- *   1. it is called as `api.diff(parent, oldNodes, newNodes, end)`, and as
- *      `api.diff(parent, oldNodes, newNodes, api.udom, end)` when `api.udom` is set;
+ *   1. it is called as `api.diff(parent, oldNodes, newNodes, end)`, with exactly four arguments;
  *   2. afterwards `parent` contains exactly `newNodes`, once each, in order;
  *   3. nodes outside the region (including the `end` marker and any static
  *      siblings) are untouched;
- *   4. uele keeps the `newNodes` array as the region's current content, so an
- *      engine that keeps old nodes has to write them back into that array.
+ *   4. each update snapshots actual bounded DOM, including independently updated
+ *      nested regions and surviving nodes from in-place morphers.
  * @vitest-environment jsdom
  */
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
@@ -20,10 +20,10 @@ import * as uele from '../src/index.js';
 import * as lite from '../lite/index.js';
 import { signal, effect } from 'ulive';
 import { APIS, DEFAULT_API } from './helpers/signal-adapters.js';
-import { ENGINES, installEngine, DEFAULT_DIFF, naiveMorphEngine, morphdom } from './helpers/diff-engines.js';
+import { ENGINES, installEngine, DEFAULT_DIFF, naiveMorphEngine, morphdom, udomdiff } from './helpers/diff-engines.js';
 
-Object.assign(APIS.main, DEFAULT_DIFF, DEFAULT_API);
-Object.assign(APIS.lite, DEFAULT_DIFF, DEFAULT_API);
+Object.assign(APIS.main, DEFAULT_DIFF); Object.assign(APIS.main.engine, DEFAULT_API);
+Object.assign(APIS.lite, DEFAULT_DIFF); Object.assign(APIS.lite.engine, DEFAULT_API);
 
 const host = () => {
 	const root = document.createElement('div');
@@ -39,15 +39,15 @@ for (const [label, mod, apiTarget] of [
 
 	describe(`diff target: ${label}`, () => {
 		beforeEach(() => {
-			Object.assign(apiTarget, DEFAULT_API);
-			apiTarget.effect = effect;
-			apiTarget.is = (v) => v?.peek;
-			apiTarget.get = (v) => v.value;
+			Object.assign(apiTarget.engine, DEFAULT_API);
+			apiTarget.engine.effect = effect;
+			apiTarget.engine.is = (v) => v?.peek;
+			apiTarget.engine.get = (v) => v.value;
 		});
 
 		afterEach(() => {
 			Object.assign(apiTarget, DEFAULT_DIFF);
-			Object.assign(apiTarget, DEFAULT_API);
+			Object.assign(apiTarget.engine, DEFAULT_API);
 		});
 
 		for (const engine of ENGINES) {
@@ -164,7 +164,7 @@ for (const [label, mod, apiTarget] of [
 							{ id: 'c' }
 						]);
 						root.append(
-							...uele.For({
+							...For({
 								each: items,
 								key: (item) => item.id,
 								children: [(item) => uele.h('u', { 'data-id': item.id }, item.id)]
@@ -191,7 +191,7 @@ for (const [label, mod, apiTarget] of [
 
 					test('If and Switch update through the differ', () => {
 						const on = signal(true);
-						root.append(...uele.add(uele.If({ when: on, children: ['yes'], fallback: uele.h('em', null, 'no') })));
+						root.append(...uele.add(If({ when: on, children: ['yes'], fallback: uele.h('em', null, 'no') })));
 						expect(root.textContent).toBe('yes');
 						on.value = false;
 						expect(root.textContent).toBe('no');
@@ -200,7 +200,7 @@ for (const [label, mod, apiTarget] of [
 						const page = signal(1);
 						const branch = () => (page.value === 1 ? 'one' : page.value === 2 ? 'two' : '');
 						root.replaceChildren();
-						root.append(...uele.add(uele.Switch({ children: [branch], fallback: 'none' })));
+						root.append(...uele.add(Switch({ children: [branch], fallback: 'none' })));
 						expect(root.textContent).toBe('one');
 						page.value = 3;
 						expect(root.textContent).toBe('none');
@@ -220,7 +220,7 @@ describe('api.diff call contract', () => {
 		root = host();
 	});
 	afterEach(() => {
-		Object.assign(APIS.main, DEFAULT_DIFF, DEFAULT_API);
+		Object.assign(APIS.main, DEFAULT_DIFF); Object.assign(APIS.main.engine, DEFAULT_API);
 		root.remove();
 	});
 
@@ -239,17 +239,15 @@ describe('api.diff call contract', () => {
 		expect(end).toBe(em);
 	});
 
-	test('is called as (parent, oldNodes, newNodes, api.udom, end) when api.udom is set', () => {
+	test('passes exactly four arguments to a custom adapter', () => {
 		const calls = [];
-		const udom = (node) => node;
-		APIS.main.udom = udom;
 		APIS.main.diff = (...args) => calls.push(args);
 		const [nodes, set] = uele.useLive([uele.h('i', null, 'a')]);
 		root.append(...nodes);
 		const em = root.lastChild;
 		set([uele.h('i', null, 'b')]);
-		expect(calls[0][3]).toBe(udom);
-		expect(calls[0][4]).toBe(em);
+		expect(calls[0]).toHaveLength(4);
+		expect(calls[0][3]).toBe(em);
 	});
 
 	test('the oldNodes of the next call are the nodes it inserted', () => {
@@ -267,18 +265,19 @@ describe('api.diff call contract', () => {
 		expect(calls[1][1]).toEqual(first);
 	});
 
-	test('an engine that keeps nodes must write them back into newNodes', () => {
-		// documented requirement: uele stores the array it passed as oldNodes
+	test('an in-place morpher receives actual surviving DOM on subsequent updates', () => {
+		// No write-back is needed: the renderer snapshots the current bounded DOM.
 		const naive = { install: naiveMorphEngine(morphdom) };
 		installEngine(APIS.main, naive, { effect, is: (v) => v?.peek, get: (v) => v.value });
 		const [nodes, set] = uele.useLive([uele.h('i', null, 'a')]);
 		root.append(...nodes, 'tail');
 		set([uele.h('i', null, 'b')]);
-		// the morph happened, but uele now tracks a node that is not in the dom
+		// Repeated morphs and removal must continue to operate on the retained node.
 		expect(root.textContent).toBe('btail');
 		set([uele.h('i', null, 'c')]);
-		expect(root.textContent).toBe('btail');
-		expect(() => set([])).toThrow(/not a child of this node/i);
+		expect(root.textContent).toBe('ctail');
+		expect(() => set([])).not.toThrow();
+		expect(root.textContent).toBe('tail');
 	});
 
 	test('exceptions from a differ are not swallowed', () => {
@@ -321,7 +320,7 @@ describe('engine specifics', () => {
 		root = host();
 	});
 	afterEach(() => {
-		Object.assign(APIS.main, DEFAULT_DIFF, DEFAULT_API);
+		Object.assign(APIS.main, DEFAULT_DIFF); Object.assign(APIS.main.engine, DEFAULT_API);
 		root.remove();
 	});
 
@@ -344,11 +343,11 @@ describe('engine specifics', () => {
 		}
 	});
 
-	test('udomdiff asks the api.udom callback for every node action', () => {
+	test('udomdiff node-action callbacks remain inside its adapter', () => {
 		const actions = [];
 		installEngine(APIS.main, ENGINES[2], { effect, is: (v) => v?.peek, get: (v) => v.value });
-		const get = APIS.main.udom;
-		APIS.main.udom = (node, action) => (actions.push(action), get(node, action));
+		APIS.main.diff = (parent, oldNodes, newNodes, end) =>
+			udomdiff(parent, oldNodes, newNodes, (node, action) => (actions.push(action), node), end);
 		const [nodes, set] = uele.useLive([]);
 		root.append(...nodes);
 		set([uele.h('i', null, 'a'), uele.h('i', null, 'b')]);

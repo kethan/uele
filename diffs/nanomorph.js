@@ -1,5 +1,5 @@
 /**
- * `nanomorph` - updates nodes in place (write-back handled by the adapter).
+ * `nanomorph` - updates nodes in place; the shared adapter handles pairing and ordering.
  *
  *     import { nanomorph } from 'uele/diffs/nanomorph';
  *     nanomorph();
@@ -12,6 +12,5 @@ export const nanomorph = (target = api) => {
 	/* istanbul ignore next -- CJS interop: the .default side only exists under require() */
 	const morph = typeof engine === 'function' ? engine : engine.default;
 	target.diff = morphAdapter(morph);
-	target.udom = undefined;
 	return target;
 };

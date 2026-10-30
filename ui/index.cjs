@@ -36,7 +36,7 @@ const onTeardown = (cleanup) => {
 /* --------------------------------------------------------------- helpers */
 
 /** unwrap a maybe-reactive value (cell, thunk or plain) to its current value */
-const val = (x) => (x == null || (typeof x !== 'object' && typeof x !== 'function') ? x : uele.get(x));
+const val = (x) => (x == null || (typeof x !== 'object' && typeof x !== 'function') ? x : uele.api.get(x));
 /** jsx hands `[]` for no children; direct calls hand anything */
 const hasKids = (c) => (Array.isArray(c) ? c.length > 0 : c != null && c !== '');
 const kidsOf = (c) => (hasKids(c) ? c : null);
@@ -100,7 +100,7 @@ const model = (el, cell, event, key) => {
 	if (!cell) return;
 	el.addEventListener(event, () => reactive.write(cell, key ? el[key] : el.value));
 };
-const modelCell = (cell, fallbackProp, handler) => cell ?? (handler === undefined && uele.is(fallbackProp) ? fallbackProp : null);
+const modelCell = (cell, fallbackProp, handler) => cell ?? (handler === undefined && uele.api.is(fallbackProp) ? fallbackProp : null);
 
 let uid = 0;
 const nextId = (prefix) => `${prefix}-${++uid}`;
@@ -151,7 +151,7 @@ const Button = ({ variant, size, children, ...props } = {}) =>
 	}, children);
 
 const Input = ({ model: cell, onInput, value, children, ...props } = {}) => {
-	const el = uele.h('input', { type: 'text', ...props, value: value ?? (uele.is(cell) ? cell : null), onInput });
+	const el = uele.h('input', { type: 'text', ...props, value: value ?? (uele.api.is(cell) ? cell : null), onInput });
 	model(el, modelCell(cell, value, onInput), 'input'); // model (or a writable value) = two-way
 	return el;
 };
@@ -160,13 +160,13 @@ const Textarea = ({ model: cell, onInput, value, children, ...props } = {}) => {
 	// string children are the initial value, as in HTML; explicit value/model win
 	const kids = kidsOf(children);
 	const text = typeof kids === 'string' ? kids : (Array.isArray(kids) && kids.every((c) => typeof c === 'string') ? kids.join('') : null);
-	const el = uele.h('textarea', { ...props, value: value ?? (uele.is(cell) ? cell : null) ?? text, onInput });
+	const el = uele.h('textarea', { ...props, value: value ?? (uele.api.is(cell) ? cell : null) ?? text, onInput });
 	model(el, modelCell(cell, value, onInput), 'input');
 	return el;
 };
 
 const Checkbox = ({ model: cell, onChange, checked, label, children, ...props } = {}) => {
-	const el = uele.h('input', { type: 'checkbox', ...props, checked: checked ?? (uele.is(cell) ? cell : null), onChange });
+	const el = uele.h('input', { type: 'checkbox', ...props, checked: checked ?? (uele.api.is(cell) ? cell : null), onChange });
 	model(el, modelCell(cell, checked, onChange), 'change', 'checked');
 	// like Radio: label text (children or `label`) wraps the input in a <label>
 	const content = kidsOf(children) ?? label;
@@ -178,7 +178,7 @@ const Option = ({ children, ...props } = {}) => uele.h('option', props, children
 const Select = ({ model: cell, onChange, value, options, children, ...props } = {}) => {
 	// jsx hands an empty `[]` over when there are no children, so fall back on `options`
 	const kids = Array.isArray(children) ? (children.length ? children : null) : children ?? null;
-	const el = uele.h('select', { ...props, value: value ?? (uele.is(cell) ? cell : null), onChange }, kids ?? (options || []).map((o) =>
+	const el = uele.h('select', { ...props, value: value ?? (uele.api.is(cell) ? cell : null), onChange }, kids ?? (options || []).map((o) =>
 		typeof o === 'object' ? uele.h('option', { value: o.value }, o.label) : uele.h('option', { value: o }, o)
 	));
 	model(el, modelCell(cell, value, onChange), 'change');
@@ -240,7 +240,7 @@ const Switch = ({ model: cell, checked, onChange, onCheckedChange, label, childr
 	el.style.background = 'var(--uele-border, #e2e8f0)';
 	const paint = () => (el.style.background = on() ? 'var(--uele-accent, #2563eb)' : 'var(--uele-border, #e2e8f0)');
 	paint();
-	if (uele.is(controlled)) offPaint = uele.sub(controlled, paint, () => {});
+	if (uele.api.is(controlled)) offPaint = uele.api.sub(controlled, paint, () => {});
 	el.addEventListener('click', () => setOn(!on()));
 	return el;
 };
@@ -249,7 +249,7 @@ const Switch = ({ model: cell, checked, onChange, onCheckedChange, label, childr
 const Slider = ({ model: cell, value, min = 0, max = 100, step = 1, onChange, children, ...props } = {}) => {
 	const el = uele.h('input', {
 		type: 'range', min, max, step, ...props,
-		value: value ?? (uele.is(cell) ? cell : null),
+		value: value ?? (uele.api.is(cell) ? cell : null),
 		'aria-valuemin': min, 'aria-valuemax': max, 'aria-valuenow': () => Number(val(cell ?? value) ?? min)
 	});
 	el.addEventListener('input', () => {
@@ -874,7 +874,7 @@ const Dialog = ({ open, model: modelProp, defaultOpen = false, onOpenChange, onC
 		document.addEventListener('keydown', onKey);
 		applyLock();
 		const source = modelProp ?? open;
-		if (uele.is(source)) offSource = uele.sub(source, applyLock, () => {});
+		if (uele.api.is(source)) offSource = uele.api.sub(source, applyLock, () => {});
 	}
 	const panel = () => {
 		if (!isOpen()) return '';
@@ -1038,7 +1038,7 @@ const Toast = ({ open, model: modelProp, title, description, duration = 5000, on
 		if (duration > 0 && isOpen()) timer = setTimeout(dismiss, duration);
 	};
 	const dismiss = () => (clearTimeout(timer), setOpen(false), onClose?.());
-	const offSource = uele.is(source) ? uele.sub(source, () => arm(), () => {}) : null;
+	const offSource = uele.api.is(source) ? uele.api.sub(source, () => arm(), () => {}) : null;
 	arm();
 	return uele.h('div', { style: { display: 'contents' } }, () =>
 		isOpen()

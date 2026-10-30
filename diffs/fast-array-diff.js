@@ -22,6 +22,5 @@ export const fastArrayDiff = (target = api) => {
 			anchor = node;
 		}
 	};
-	target.udom = undefined;
 	return target;
 };

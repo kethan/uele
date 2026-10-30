@@ -64,7 +64,7 @@ export const read = (cell) => api.get(cell);
 export const write = (cell, value) => {
 	// 1. a cell this library owns goes through the library's own hook (it may
 	//    need it: s-js writes inside a batch, solid writes through `.write`)
-	if (api.set && api.is && api.is(cell)) return api.set(cell, value);
+	if (api.set && api.engine.is?.(cell)) return api.set(cell, value);
 	// 2. a function is a setter (solid accessors carry their writer on `.write`)
 	if (typeof cell === 'function') return typeof cell.write === 'function' ? cell.write(value) : cell(value);
 	// 3. explicit cell interfaces (mobx/nanostores `.set`, rxjs `.next`, tanstack `.setState`)
@@ -79,7 +79,7 @@ export const write = (cell, value) => {
 };
 
 /** is this value a cell of the active library? */
-export const isCell = (value) => !!api.is?.(value);
+export const isCell = (value) => !!api.engine.is?.(value);
 
 /** capabilities of the active preset (see the module docs) */
 export const canEffect = () => typeof api.effect === 'function';

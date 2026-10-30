@@ -1,5 +1,46 @@
 # Examples
 
+## todos — your dead-simple State (no signal package)
+
+[`todos/state.js`](todos/state.js) uses the exact getter/setter/subscriber function in
+[`state/state.js`](state/state.js). The example-only `state()` wrapper adds `.subscribe()`
+and an initial notification, which **full `uele`** already understands:
+
+```js
+import { State, state } from './state/state.js';
+const count = State(0);
+const off = count(value => console.log(value)); // subscribe; no initial notification
+count(1); // notify subscribers
+count();  // read: 1
+off();    // unsubscribe (safe to call again)
+
+import { h } from 'uele';
+const text = state('hello');
+const node = h('p', null, text); // initial value + renderer-owned subscription
+text('updated');
+
+import { mountTodos } from './todos/state.js';
+mountTodos(document.body);
+```
+
+The todo adds, toggles with strike-through, deletes, preserves keyed row nodes through
+`For`, and renders user text safely. No preset, effect runner or global API changes.
+
+Run `npm run build && node scripts/static-server.mjs` and open port 4173 to try
+[`state/index.html`](state/index.html), which loads no signal package or preset.
+This is a **full-renderer example**, separate from the tiny app-size proofs.
+
+This intentionally minimal State cannot write `undefined` (that means read), `null`
+(the supplied `.call` check throws), or functions (they mean subscribe). It has no
+dependency tracking, computed values, batching or equality suppression. Unsubscribe
+keeps zero placeholders instead of compacting its callback array: use a proper signal
+library for high-churn long-lived cells. A throwing subscriber interrupts that write's
+remaining notifications. The example does not silently change these semantics.
+
+Use renderer-owned replacement (`useLive` / `For`) to unmount: subscriptions are then
+disposed automatically. Arbitrary native `app.remove()` is not a lifecycle signal.
+See [`test/simple-state.test.js`](../test/simple-state.test.js) and the Chromium proof.
+
 ## todos — one app, twelve signal libraries
 
 [`todos/`](todos) holds the same complete todos app written for every signal preset: add, toggle with

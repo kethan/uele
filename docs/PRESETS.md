@@ -10,7 +10,9 @@ preactSignals(); // that is the whole setup
 ```
 
 Every signal preset accepts an optional target - pass the `api` exported by `uele/lite` to
-configure the tiny core instead. The signal/diff library itself is a peer dependency: install the one
+configure the lite entry instead. Its signal integration configuration lives in `lite.api.engine`;
+renderer hooks `lite.api.is/get/sub` remain generic. The new bare `uele/tiny` entry
+is distinct and needs explicit renderer-hook configuration when used reactively. The signal/diff library itself is a peer dependency: install the one
 you use (`npm i @preact/signals-core`), nothing else is pulled in.
 
 All examples below are JSX; point your bundler at the automatic runtime
@@ -443,21 +445,24 @@ Read it as `count.value`, write it as `count.value = count.value + 1` - and `uel
 
 ## Diff engine presets
 
+Full already uses compact `swapdom/deflate`. Core/tiny and lite use basic marker replacement.
+`builtinDiff()` selects that basic fallback; the explicit swapdom preset selects the inflate variant.
+
 A diff engine is chosen the same way - one call. It only changes how a list update is applied, so the
 example is the same for all of them:
 
 ### `uele/diffs/builtin` - `builtinDiff()`
 
-Back to the built-in marker walk (the default): no `api.diff`, no dependency.
+Select basic marker replacement (core/lite default): no `api.diff`, no dependency.
 
 ```jsx
-import { For } from 'uele';
+import { For } from 'uele/flow';
 import { ulive } from 'uele/signals/ulive'; // any signal preset works
 import { builtinDiff } from 'uele/diffs/builtin';
 import { signal } from 'ulive';
 
 ulive();
-builtinDiff(); // sets api.diff (and api.udom, when the engine needs it)
+builtinDiff(); // sets api.diff; engine-specific arguments stay inside the adapter
 
 const items = signal([1, 2, 3]);
 document.body.append(
@@ -472,13 +477,13 @@ document.body.append(
 `domdiff` - takes an options object instead of a node (`{ before: end }`).
 
 ```jsx
-import { For } from 'uele';
+import { For } from 'uele/flow';
 import { ulive } from 'uele/signals/ulive'; // any signal preset works
 import { domdiff } from 'uele/diffs/domdiff';
 import { signal } from 'ulive';
 
 ulive();
-domdiff(); // sets api.diff (and api.udom, when the engine needs it)
+domdiff(); // sets api.diff; engine-specific arguments stay inside the adapter
 
 const items = signal([1, 2, 3]);
 document.body.append(
@@ -493,13 +498,13 @@ document.body.append(
 `fast-array-diff` - its LCS patch decides the ordering, the preset performs the DOM moves.
 
 ```jsx
-import { For } from 'uele';
+import { For } from 'uele/flow';
 import { ulive } from 'uele/signals/ulive'; // any signal preset works
 import { fastArrayDiff } from 'uele/diffs/fast-array-diff';
 import { signal } from 'ulive';
 
 ulive();
-fastArrayDiff(); // sets api.diff (and api.udom, when the engine needs it)
+fastArrayDiff(); // sets api.diff; engine-specific arguments stay inside the adapter
 
 const items = signal([1, 2, 3]);
 document.body.append(
@@ -514,13 +519,13 @@ document.body.append(
 Heckel-style unique-token matching, independently implemented for uele. Algorithm family: https://github.com/luwes/js-diff-benchmark Map keys preserve node identity (unlike string-keyed symbol tables). DOM lists contain each node at most once, so shared tokens are unique matches.
 
 ```jsx
-import { For } from 'uele';
+import { For } from 'uele/flow';
 import { ulive } from 'uele/signals/ulive'; // any signal preset works
 import { heckel } from 'uele/diffs/heckel';
 import { signal } from 'ulive';
 
 ulive();
-heckel(); // sets api.diff (and api.udom, when the engine needs it)
+heckel(); // sets api.diff; engine-specific arguments stay inside the adapter
 
 const items = signal([1, 2, 3]);
 document.body.append(
@@ -535,13 +540,13 @@ document.body.append(
 Map-based list-difference reconciliation, independently implemented for uele. Algorithm family: https://github.com/luwes/js-diff-benchmark Keys are DOM node identities; caller-owned arrays are never modified.
 
 ```jsx
-import { For } from 'uele';
+import { For } from 'uele/flow';
 import { ulive } from 'uele/signals/ulive'; // any signal preset works
 import { listDifference } from 'uele/diffs/list-difference';
 import { signal } from 'ulive';
 
 ulive();
-listDifference(); // sets api.diff (and api.udom, when the engine needs it)
+listDifference(); // sets api.diff; engine-specific arguments stay inside the adapter
 
 const items = signal([1, 2, 3]);
 document.body.append(
@@ -553,16 +558,16 @@ document.body.append(
 
 ### `uele/diffs/morphdom` - `morphdom()`
 
-`morphdom` - updates nodes in place (the contract's write-back is handled for you by the shared adapter).
+`morphdom` - updates nodes in place; the shared adapter handles pairing and ordering.
 
 ```jsx
-import { For } from 'uele';
+import { For } from 'uele/flow';
 import { ulive } from 'uele/signals/ulive'; // any signal preset works
 import { morphdom } from 'uele/diffs/morphdom';
 import { signal } from 'ulive';
 
 ulive();
-morphdom(); // sets api.diff (and api.udom, when the engine needs it)
+morphdom(); // sets api.diff; engine-specific arguments stay inside the adapter
 
 const items = signal([1, 2, 3]);
 document.body.append(
@@ -574,16 +579,16 @@ document.body.append(
 
 ### `uele/diffs/nanomorph` - `nanomorph()`
 
-`nanomorph` - updates nodes in place (write-back handled by the adapter).
+`nanomorph` - updates nodes in place; the shared adapter handles pairing and ordering.
 
 ```jsx
-import { For } from 'uele';
+import { For } from 'uele/flow';
 import { ulive } from 'uele/signals/ulive'; // any signal preset works
 import { nanomorph } from 'uele/diffs/nanomorph';
 import { signal } from 'ulive';
 
 ulive();
-nanomorph(); // sets api.diff (and api.udom, when the engine needs it)
+nanomorph(); // sets api.diff; engine-specific arguments stay inside the adapter
 
 const items = signal([1, 2, 3]);
 document.body.append(
@@ -598,13 +603,13 @@ document.body.append(
 The smallest conforming differ: drop everything, insert everything. Fine for tiny lists and a useful baseline in tests.
 
 ```jsx
-import { For } from 'uele';
+import { For } from 'uele/flow';
 import { ulive } from 'uele/signals/ulive'; // any signal preset works
 import { rebuild } from 'uele/diffs/rebuild';
 import { signal } from 'ulive';
 
 ulive();
-rebuild(); // sets api.diff (and api.udom, when the engine needs it)
+rebuild(); // sets api.diff; engine-specific arguments stay inside the adapter
 
 const items = signal([1, 2, 3]);
 document.body.append(
@@ -619,13 +624,13 @@ document.body.append(
 Snabbdom-style node-identity reconciliation, independently implemented for uele's bounded live regions. Inspired by the algorithm family compared at https://github.com/luwes/js-diff-benchmark (not a wrapper for the framework).
 
 ```jsx
-import { For } from 'uele';
+import { For } from 'uele/flow';
 import { ulive } from 'uele/signals/ulive'; // any signal preset works
 import { snabbdom } from 'uele/diffs/snabbdom';
 import { signal } from 'ulive';
 
 ulive();
-snabbdom(); // sets api.diff (and api.udom, when the engine needs it)
+snabbdom(); // sets api.diff; engine-specific arguments stay inside the adapter
 
 const items = signal([1, 2, 3]);
 document.body.append(
@@ -640,13 +645,13 @@ document.body.append(
 Spect-style node-identity reconciliation, independently implemented for uele's bounded live regions. Inspired by the algorithm family compared at https://github.com/luwes/js-diff-benchmark (not a wrapper for the framework).
 
 ```jsx
-import { For } from 'uele';
+import { For } from 'uele/flow';
 import { ulive } from 'uele/signals/ulive'; // any signal preset works
 import { spect } from 'uele/diffs/spect';
 import { signal } from 'ulive';
 
 ulive();
-spect(); // sets api.diff (and api.udom, when the engine needs it)
+spect(); // sets api.diff; engine-specific arguments stay inside the adapter
 
 const items = signal([1, 2, 3]);
 document.body.append(
@@ -661,13 +666,13 @@ document.body.append(
 Stage0-style node-identity reconciliation, independently implemented for uele's bounded live regions. Inspired by the algorithm family compared at https://github.com/luwes/js-diff-benchmark (not a wrapper for the framework).
 
 ```jsx
-import { For } from 'uele';
+import { For } from 'uele/flow';
 import { ulive } from 'uele/signals/ulive'; // any signal preset works
 import { stage0 } from 'uele/diffs/stage0';
 import { signal } from 'ulive';
 
 ulive();
-stage0(); // sets api.diff (and api.udom, when the engine needs it)
+stage0(); // sets api.diff; engine-specific arguments stay inside the adapter
 
 const items = signal([1, 2, 3]);
 document.body.append(
@@ -682,13 +687,13 @@ document.body.append(
 `swapdom` - a keyed differ written for exactly uele's `api.diff` signature.
 
 ```jsx
-import { For } from 'uele';
+import { For } from 'uele/flow';
 import { ulive } from 'uele/signals/ulive'; // any signal preset works
 import { swapdom } from 'uele/diffs/swapdom';
 import { signal } from 'ulive';
 
 ulive();
-swapdom(); // sets api.diff (and api.udom, when the engine needs it)
+swapdom(); // sets api.diff; engine-specific arguments stay inside the adapter
 
 const items = signal([1, 2, 3]);
 document.body.append(
@@ -700,16 +705,16 @@ document.body.append(
 
 ### `uele/diffs/udomdiff` - `udomdiff()`
 
-`udomdiff` - takes `(parent, a, b, get, before)`; uele supplies the get callback through `api.udom` and passes the end marker as `before`.
+`udomdiff` - takes `(parent, a, b, get, before)`; the adapter supplies the identity/get callback and forwards the end marker as `before`. Core always uses four arguments.
 
 ```jsx
-import { For } from 'uele';
+import { For } from 'uele/flow';
 import { ulive } from 'uele/signals/ulive'; // any signal preset works
 import { udomdiff } from 'uele/diffs/udomdiff';
 import { signal } from 'ulive';
 
 ulive();
-udomdiff(); // sets api.diff (and api.udom, when the engine needs it)
+udomdiff(); // sets api.diff; engine-specific arguments stay inside the adapter
 
 const items = signal([1, 2, 3]);
 document.body.append(
@@ -785,8 +790,9 @@ stage0(); // main entry point
 // stage0(liteApi); // or pass the API object from uele/lite
 ```
 
-Short version: keep the **built-in** walk; reach for **swapdom** / **udomdiff** / **domdiff** for long keyed
-lists, **morphdom** / **nanomorph** when you must preserve DOM state (focus, media, CSS transitions).
+Short version: keep full's compact swapdom default, or core/lite's lightweight fallback.
+Select the explicit swapdom (inflate), udomdiff or domdiff presets for other keyed strategies;
+morphdom/nanomorph are alternatives for in-place DOM state preservation.
 
 ## Best practices
 

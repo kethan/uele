@@ -30,7 +30,6 @@ const runNpm = (args, cwd) => exec(npm.file, [...npm.args, ...args], cwd, npm.sh
 const runNode = (args, cwd) => exec(process.execPath, args, cwd);
 
 const work = mkdtempSync(join(tmpdir(), 'uele-pack-'));
-const pkgDir = join(work, 'consumer');
 
 try {
 	console.log('packing...');
@@ -42,7 +41,7 @@ const tarball = runNpm(['pack', '--pack-destination', work], root).trim().split(
 
 	writeFileSync(
 		join(work, 'check.mjs'),
-		`const specs = ['uele/setup', 'uele/signals/alien-signals', 'uele/signals/anod', 'uele/signals/lite-signal', 'uele/signals/maverick', 'uele/signals/mobx', 'uele/signals/nanostores', 'uele/signals/oby', 'uele/signals/preact', 'uele/signals/reactively', 'uele/signals/reflex', 'uele/signals/rescript-signals', 'uele/signals/rxjs', 'uele/signals/signals', 'uele/signals/sjs', 'uele/signals/solid', 'uele/signals/tanstack', 'uele/signals/ulive', 'uele/signals/usignal', 'uele/signals/vue', 'uele', 'uele/lite', 'uele/jsx-runtime', 'uele/jsx-dev-runtime', 'uele/props', 'uele/diffs/swapdom', 'uele/diffs/spect', 'uele/diffs/snabbdom', 'uele/diffs/stage0', 'uele/diffs/heckel', 'uele/diffs/list-difference', 'uele/ui', 'uele/reactive', 'uele/flow', 'uele/router', 'uele/hooks', 'uele/themes'];
+		`const specs = ['uele/tiny', 'uele/core', 'uele/setup', 'uele/signals/alien-signals', 'uele/signals/anod', 'uele/signals/lite-signal', 'uele/signals/maverick', 'uele/signals/mobx', 'uele/signals/nanostores', 'uele/signals/oby', 'uele/signals/preact', 'uele/signals/reactively', 'uele/signals/reflex', 'uele/signals/rescript-signals', 'uele/signals/rxjs', 'uele/signals/signals', 'uele/signals/sjs', 'uele/signals/solid', 'uele/signals/tanstack', 'uele/signals/ulive', 'uele/signals/usignal', 'uele/signals/vue', 'uele', 'uele/lite', 'uele/jsx-runtime', 'uele/jsx-dev-runtime', 'uele/props', 'uele/diffs/builtin', 'uele/diffs/udomdiff', 'uele/diffs/domdiff', 'uele/diffs/morphdom', 'uele/diffs/nanomorph', 'uele/diffs/fast-array-diff', 'uele/diffs/rebuild', 'uele/diffs/swapdom', 'uele/diffs/spect', 'uele/diffs/snabbdom', 'uele/diffs/stage0', 'uele/diffs/heckel', 'uele/diffs/list-difference', 'uele/ui', 'uele/reactive', 'uele/flow', 'uele/router', 'uele/hooks', 'uele/themes'];
 for (const spec of specs) {
 	const mod = await import(spec);
 	const keys = Object.keys(mod).sort();
@@ -54,10 +53,24 @@ for (const [slug, [old, name]] of Object.entries({"alien-signals": ["useAlienSig
   const preferred = await import('uele/signals/' + slug);
   if (typeof preferred[name] !== 'function' || old in preferred) throw new Error(slug + ' invalid public exports');
 }
-for (const spec of ['uele/signals/internal', 'uele/signals/util', 'uele/adapters/preact']) {
+for (const spec of ['uele/core/full', 'uele/diffs/util', 'uele/signals/internal', 'uele/signals/util', 'uele/adapters/preact']) {
   try { await import(spec); throw new Error(spec + ' unexpectedly public'); }
   catch (error) { if (error.code !== 'ERR_PACKAGE_PATH_NOT_EXPORTED') throw error; }
 }
+const core = await import('uele/core');
+if (typeof (await import('uele')).api.diff !== 'function' || (await import('uele/lite')).api.diff !== undefined || core.api.diff !== undefined)
+  throw new Error('incorrect default diff tier configuration');
+if ((await import('uele/tiny')).api !== core.api) throw new Error('tiny is not the bare core');
+const fullExports = await import('uele');
+for (const name of ['If', 'For', 'Switch', 'Dynamic', 'Show', 'Match']) if (name in fullExports) throw new Error(name + ' must move to flow');
+if (typeof fullExports.lazy !== 'function' || 'lazy' in await import('uele/flow')) throw new Error('lazy must remain in full');
+
+if (Object.keys(core).sort().join(',') !== 'add,api,h,props,r,useLive')
+  throw new Error('unexpected core exports');
+let reads = 0;
+if (core.api.get(() => ++reads) !== 1 || reads !== 1 || core.api.is({}) !== false || core.api.sub !== undefined)
+  throw new Error('core unexpectedly enables automatic reactivity');
+
 const { configure } = await import('uele/setup');
 const mainTarget = await import('uele');
 if (configure() !== mainTarget) throw new Error('setup default target differs');
@@ -93,7 +106,7 @@ console.log('ok shared module instance, Fragment is the main h');
 `
 	);
 
-	runNpm(['install', join(work, tarball), '@preact/signals-core', 'swapdom', '@volynets/reflex', '@reactively/core', 'anod', '@zakkster/lite-signal', 'rescript-signals', '@rescript/runtime', '@maverick-js/signals', 'oby', 'alien-signals@^3.2.1', 'mobx@^7.0.6', 'nanostores@^1.5.5', 'rxjs@^7.8.2', 's-js@^0.4.9', 'solid-js@^1.9.17', '@tanstack/store@^0.11.2', '@vue/reactivity@^3.5.44', '@webreflection/signals@^0.2.8', 'ulive@^1.0.7', 'usignal@^0.10.0', '--no-audit', '--no-fund', '--silent'], work); // explicitly install the optional peers exercised above
+	runNpm(['install', join(work, tarball), '@preact/signals-core', 'swapdom', 'udomdiff@^1.1.2', 'domdiff@^2.2.2', 'morphdom@^2.7.8', 'nanomorph@^5.4.3', 'fast-array-diff@^1.1.0', '@volynets/reflex', '@reactively/core', 'anod', '@zakkster/lite-signal', 'rescript-signals', '@rescript/runtime', '@maverick-js/signals', 'oby', 'alien-signals@^3.2.1', 'mobx@^7.0.6', 'nanostores@^1.5.5', 'rxjs@^7.8.2', 's-js@^0.4.9', 'solid-js@^1.9.17', '@tanstack/store@^0.11.2', '@vue/reactivity@^3.5.44', '@webreflection/signals@^0.2.8', 'ulive@^1.0.7', 'usignal@^0.10.0', '--no-audit', '--no-fund', '--silent'], work); // explicitly install the optional peers exercised above
 	const installed = join(work, 'node_modules', 'uele');
 	const files = readdirSync(installed);
 	console.log('published entries:', files.join(', '));
@@ -108,7 +121,7 @@ console.log('ok shared module instance, Fragment is the main h');
 		join(work, 'check.cjs'),
 		`// plain CommonJS consumers must get the full surface (a '.js' CJS build inside a
 // \"type\": \"module\" package resolves as ESM and yields an empty module - caught here)
-const specs = ['uele/setup', 'uele/signals/alien-signals', 'uele/signals/anod', 'uele/signals/lite-signal', 'uele/signals/maverick', 'uele/signals/mobx', 'uele/signals/nanostores', 'uele/signals/oby', 'uele/signals/preact', 'uele/signals/reactively', 'uele/signals/reflex', 'uele/signals/rescript-signals', 'uele/signals/rxjs', 'uele/signals/signals', 'uele/signals/sjs', 'uele/signals/solid', 'uele/signals/tanstack', 'uele/signals/ulive', 'uele/signals/usignal', 'uele/signals/vue', 'uele', 'uele/lite', 'uele/jsx-runtime', 'uele/jsx-dev-runtime', 'uele/props', 'uele/diffs/swapdom', 'uele/diffs/spect', 'uele/diffs/snabbdom', 'uele/diffs/stage0', 'uele/diffs/heckel', 'uele/diffs/list-difference', 'uele/ui', 'uele/reactive', 'uele/flow', 'uele/router', 'uele/hooks', 'uele/themes'];
+const specs = ['uele/tiny', 'uele/core', 'uele/setup', 'uele/signals/alien-signals', 'uele/signals/anod', 'uele/signals/lite-signal', 'uele/signals/maverick', 'uele/signals/mobx', 'uele/signals/nanostores', 'uele/signals/oby', 'uele/signals/preact', 'uele/signals/reactively', 'uele/signals/reflex', 'uele/signals/rescript-signals', 'uele/signals/rxjs', 'uele/signals/signals', 'uele/signals/sjs', 'uele/signals/solid', 'uele/signals/tanstack', 'uele/signals/ulive', 'uele/signals/usignal', 'uele/signals/vue', 'uele', 'uele/lite', 'uele/jsx-runtime', 'uele/jsx-dev-runtime', 'uele/props', 'uele/diffs/builtin', 'uele/diffs/udomdiff', 'uele/diffs/domdiff', 'uele/diffs/morphdom', 'uele/diffs/nanomorph', 'uele/diffs/fast-array-diff', 'uele/diffs/rebuild', 'uele/diffs/swapdom', 'uele/diffs/spect', 'uele/diffs/snabbdom', 'uele/diffs/stage0', 'uele/diffs/heckel', 'uele/diffs/list-difference', 'uele/ui', 'uele/reactive', 'uele/flow', 'uele/router', 'uele/hooks', 'uele/themes'];
 for (const spec of specs) {
 	const mod = require(spec);
 	const keys = Object.keys(mod).filter((k) => k !== 'default' && k !== '__esModule').sort();
@@ -121,10 +134,21 @@ for (const [slug, [old, name]] of Object.entries({"alien-signals": ["useAlienSig
   if (typeof preferred[name] !== 'function' || old in preferred) throw new Error(slug + ' invalid CJS exports');
   if (!require.resolve('uele/signals/' + slug).endsWith('.cjs')) throw new Error(slug + ' is not CJS');
 }
-for (const spec of ['uele/signals/internal', 'uele/signals/util', 'uele/adapters/preact']) {
+for (const spec of ['uele/core/full', 'uele/diffs/util', 'uele/signals/internal', 'uele/signals/util', 'uele/adapters/preact']) {
   try { require(spec); throw new Error(spec + ' unexpectedly public'); }
   catch (error) { if (error.code !== 'ERR_PACKAGE_PATH_NOT_EXPORTED') throw error; }
 }
+const core = require('uele/core');
+if (typeof require('uele').api.diff !== 'function' || require('uele/lite').api.diff !== undefined || core.api.diff !== undefined)
+  throw new Error('incorrect CJS default diff tier configuration');
+if (require('uele/tiny').api !== core.api) throw new Error('tiny CJS is not the bare core');
+
+if (Object.keys(core).sort().join(',') !== 'add,api,h,props,r,useLive')
+  throw new Error('unexpected core exports');
+let reads = 0;
+if (core.api.get(() => ++reads) !== 1 || reads !== 1 || core.api.is({}) !== false || core.api.sub !== undefined)
+  throw new Error('core unexpectedly enables automatic reactivity');
+
 const { configure } = require('uele/setup');
 const customTarget = { api: {}, props: new Map(), r() {} };
 if (configure({}, customTarget) !== customTarget) throw new Error('setup target differs');
@@ -172,7 +196,13 @@ console.log('ok require() consumer');
 	console.log('type checking a consumer tsx file...');
 	writeFileSync(
 		join(work, 'app.tsx'),
-		`import { useCounter, useWindowSize, useAsync } from 'uele/hooks';
+		`import { api as rendererApi, h as coreH } from 'uele/core';
+import { For as CoreFor } from 'uele/flow';
+rendererApi.is = value => typeof value === 'function';
+rendererApi.get = value => typeof value === 'function' ? value() : value;
+coreH('b', null, 'core');
+CoreFor({ each: [1], children: value => coreH('b', null, value) });
+import { useCounter, useWindowSize, useAsync } from 'uele/hooks';
 import { read } from 'uele/reactive';
 const typedCounter = useCounter(0);
 const typedCount: number = read(typedCounter.count);
@@ -185,7 +215,8 @@ import { appProps } from 'uele/props';
 import * as lite from 'uele/lite';
 configure({ signals: preactSignals, diff: stage0, props: [appProps] });
 configure({ signals: preactSignals, props: [appProps] }, lite);
-import { h, If, For, map, lazy, Dynamic, useLive, props, api } from 'uele';
+import { h, map, lazy, useLive, props, api } from 'uele';
+import { If, For, Dynamic } from 'uele/flow';
 
 const [live, setLive] = useLive(0);
 const items: string[] = ['a', 'b'];
@@ -206,7 +237,7 @@ const App = ({ id }: { id: string }) => (
 
 props.set('upper', (node, value, name, attrs) => {});
 api.get = (v: any) => v;
-api.diff = (parent, a, b, get, before) => {};
+api.diff = (parent, a, b, end) => {};
 const el = h(App, { id: 'a' });
 export default el;
 `

@@ -15,3 +15,16 @@ export declare const ErrorBoundary: (props?: {
 }) => Node;
 export declare const Portal: (props?: { mount?: string | Element; children?: Renderable }) => Node;
 export declare const Title: (props?: { children?: MaybeFn<Renderable> }) => Node;
+
+export { If, Show, Match, For, Switch, Dynamic } from '../core/types.js';
+export declare function createControlFlow(target: {
+    get: (value: any) => any;
+    map: typeof import('../core/types.js').map;
+}): {
+    If: typeof import('../core/types.js').If;
+    Show: typeof import('../core/types.js').Show;
+    Match: typeof import('../core/types.js').Match;
+    For: typeof import('../core/types.js').For;
+    Switch: typeof import('../core/types.js').Switch;
+    Dynamic: typeof import('../core/types.js').Dynamic;
+};

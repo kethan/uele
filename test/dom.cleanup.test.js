@@ -14,13 +14,14 @@
  * @vitest-environment jsdom
  */
 import { describe, expect, test, beforeEach, afterEach, vi } from 'vitest';
-import { h, add, useLive, For, If, Switch, Dynamic, lazy, api } from '../src/index.js';
+import { h, add, useLive, lazy, api } from '../src/index.js';
+import { For, If, Switch, Dynamic } from 'uele/flow';
 import { signal, effect } from 'ulive';
 import { ENGINES, installEngine, DEFAULT_DIFF } from './helpers/diff-engines.js';
 
-api.effect = effect;
-api.is = (v) => v?.peek;
-api.get = (v) => v.value;
+api.engine.effect = effect;
+api.engine.is = (v) => v?.peek;
+api.engine.get = (v) => v.value;
 
 const markers = (node) => [...node.childNodes].filter((n) => n.nodeType === 3 && n.nodeValue === '');
 const orphans = (...nodes) => nodes.every((node) => node.parentNode === null);
@@ -454,7 +455,7 @@ describe('cleanup under every differ', () => {
 	for (const engine of ENGINES) {
 		describe(engine.name, () => {
 			beforeEach(() => installEngine(api, engine, { effect, is: (v) => v?.peek, get: (v) => v.value }));
-			afterEach(() => Object.assign(api, DEFAULT_DIFF, { effect, is: (v) => v?.peek, get: (v) => v.value }));
+			afterEach(() => { Object.assign(api, DEFAULT_DIFF); Object.assign(api.engine, { effect, is: (v) => v?.peek, get: (v) => v.value }); });
 
 			test('a region update replaces its content and keeps its markers', () => {
 				const [nodes, set] = useLive('a');

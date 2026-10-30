@@ -3,6 +3,46 @@
 var uele = require('uele');
 var reactive = require('uele/reactive');
 
+// Shared internal helpers.
+const isFunction = x => typeof x === "function";
+
+// Explicit composition also permits using these controls with another renderer.
+const createControlFlow = ({ get, map }) => {
+// jsx hands one child over as-is; `If({ children: [fn] })` hands over an array
+const first = (c) => (Array.isArray(c) ? c[0] : c);
+
+const If =
+    ({ when, children, fallback = "" }) =>
+        () => !!get(when) ?
+            isFunction(first(children)) ?
+                first(children)(get(when)) :
+                children :
+            fallback;
+
+const Switch = ({ children, fallback = "" }) => () => {
+    for (let child of children) {
+        let result = isFunction(child) ? child() : child;
+        if (result) return result;
+    }
+    return fallback;
+};
+
+const Dynamic = ({ component, children, ...props }) =>
+    () =>
+        isFunction(component) ?
+            component({ ...props, children })
+            : component;
+
+const For = ({ each, children, fallback, key = v => v }) => {
+    const render = first(children); // `<For each={x}>{row}</For>` or `[row]`
+    if (!isFunction(render)) throw new TypeError('For: children must be a render function');
+    return map(each, render, fallback, key);
+};
+
+
+return { If, Show: If, Match: If, For, Switch, Dynamic };
+};
+
 // A private, inert marker uses the existing prop-disposer protocol. No effect
 // runner, public lifecycle API, MutationObserver, or core-size change is needed.
 const key = '__uele_cleanup';
@@ -27,6 +67,9 @@ const onTeardown = (cleanup) => {
  * them once. Direct cell bindings still subscribe on either kind. Resource
  * cleanup is owned by renderer markers, independent of engine cleanup hooks.
  */
+const { If, Show, Match, For, Switch, Dynamic } = createControlFlow({
+    get: value => uele.api.get(value), map: (...args) => uele.map(...args)
+});
 
 const ghost = () => uele.h('div', { style: { display: 'contents' } });
 /** jsx hands a component its children as the varargs array: a single child arrives as `[child]` */
@@ -140,7 +183,14 @@ const Title = ({ children } = {}) => {
 };
 
 exports.Await = Await;
+exports.Dynamic = Dynamic;
 exports.ErrorBoundary = ErrorBoundary;
+exports.For = For;
+exports.If = If;
+exports.Match = Match;
 exports.Portal = Portal;
+exports.Show = Show;
 exports.Suspense = Suspense;
+exports.Switch = Switch;
 exports.Title = Title;
+exports.createControlFlow = createControlFlow;

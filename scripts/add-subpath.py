@@ -1,5 +1,5 @@
-"""Wire a new subpath entry (ele/<name>) into package.json, the vitest configs and rollup."""
-import json, sys, re
+"""Wire a new subpath entry (uele/<name>) into package.json, the vitest configs and rollup."""
+import json, sys
 
 def main(names):
     NAME = json.load(open('package.json'))['name']

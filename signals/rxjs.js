@@ -6,7 +6,7 @@
  */
 import { api } from 'uele';
 import { BehaviorSubject } from 'rxjs';
-import { scoped, install } from './internal.js';
+import { install } from './internal.js';
 
 export const rxjs = (target = api) => {
 	return install(target, {

@@ -17,7 +17,7 @@
  * variables from `uele/themes` (with light-theme fallbacks), so a theme swap
  * restyles everything with one reactive write. Zero dependencies.
  */
-import { h, is, get, sub } from 'uele';
+import { h, api } from 'uele';
 import { write, read, signal, isCell } from 'uele/reactive';
 import { paginationRange } from 'uele/hooks';
 import { onTeardown } from '../props/internal.js';
@@ -27,7 +27,7 @@ export { paginationRange };
 /* --------------------------------------------------------------- helpers */
 
 /** unwrap a maybe-reactive value (cell, thunk or plain) to its current value */
-const val = (x) => (x == null || (typeof x !== 'object' && typeof x !== 'function') ? x : get(x));
+const val = (x) => (x == null || (typeof x !== 'object' && typeof x !== 'function') ? x : api.get(x));
 /** jsx hands `[]` for no children; direct calls hand anything */
 const hasKids = (c) => (Array.isArray(c) ? c.length > 0 : c != null && c !== '');
 const kidsOf = (c) => (hasKids(c) ? c : null);
@@ -91,7 +91,7 @@ const model = (el, cell, event, key) => {
 	if (!cell) return;
 	el.addEventListener(event, () => write(cell, key ? el[key] : el.value));
 };
-const modelCell = (cell, fallbackProp, handler) => cell ?? (handler === undefined && is(fallbackProp) ? fallbackProp : null);
+const modelCell = (cell, fallbackProp, handler) => cell ?? (handler === undefined && api.is(fallbackProp) ? fallbackProp : null);
 
 let uid = 0;
 const nextId = (prefix) => `${prefix}-${++uid}`;
@@ -142,7 +142,7 @@ export const Button = ({ variant, size, children, ...props } = {}) =>
 	}, children);
 
 export const Input = ({ model: cell, onInput, value, children, ...props } = {}) => {
-	const el = h('input', { type: 'text', ...props, value: value ?? (is(cell) ? cell : null), onInput });
+	const el = h('input', { type: 'text', ...props, value: value ?? (api.is(cell) ? cell : null), onInput });
 	model(el, modelCell(cell, value, onInput), 'input'); // model (or a writable value) = two-way
 	return el;
 };
@@ -151,13 +151,13 @@ export const Textarea = ({ model: cell, onInput, value, children, ...props } = {
 	// string children are the initial value, as in HTML; explicit value/model win
 	const kids = kidsOf(children);
 	const text = typeof kids === 'string' ? kids : (Array.isArray(kids) && kids.every((c) => typeof c === 'string') ? kids.join('') : null);
-	const el = h('textarea', { ...props, value: value ?? (is(cell) ? cell : null) ?? text, onInput });
+	const el = h('textarea', { ...props, value: value ?? (api.is(cell) ? cell : null) ?? text, onInput });
 	model(el, modelCell(cell, value, onInput), 'input');
 	return el;
 };
 
 export const Checkbox = ({ model: cell, onChange, checked, label, children, ...props } = {}) => {
-	const el = h('input', { type: 'checkbox', ...props, checked: checked ?? (is(cell) ? cell : null), onChange });
+	const el = h('input', { type: 'checkbox', ...props, checked: checked ?? (api.is(cell) ? cell : null), onChange });
 	model(el, modelCell(cell, checked, onChange), 'change', 'checked');
 	// like Radio: label text (children or `label`) wraps the input in a <label>
 	const content = kidsOf(children) ?? label;
@@ -169,7 +169,7 @@ export const Option = ({ children, ...props } = {}) => h('option', props, childr
 export const Select = ({ model: cell, onChange, value, options, children, ...props } = {}) => {
 	// jsx hands an empty `[]` over when there are no children, so fall back on `options`
 	const kids = Array.isArray(children) ? (children.length ? children : null) : children ?? null;
-	const el = h('select', { ...props, value: value ?? (is(cell) ? cell : null), onChange }, kids ?? (options || []).map((o) =>
+	const el = h('select', { ...props, value: value ?? (api.is(cell) ? cell : null), onChange }, kids ?? (options || []).map((o) =>
 		typeof o === 'object' ? h('option', { value: o.value }, o.label) : h('option', { value: o }, o)
 	));
 	model(el, modelCell(cell, value, onChange), 'change');
@@ -231,7 +231,7 @@ export const Switch = ({ model: cell, checked, onChange, onCheckedChange, label,
 	el.style.background = 'var(--uele-border, #e2e8f0)';
 	const paint = () => (el.style.background = on() ? 'var(--uele-accent, #2563eb)' : 'var(--uele-border, #e2e8f0)');
 	paint();
-	if (is(controlled)) offPaint = sub(controlled, paint, () => {});
+	if (api.is(controlled)) offPaint = api.sub(controlled, paint, () => {});
 	el.addEventListener('click', () => setOn(!on()));
 	return el;
 };
@@ -240,7 +240,7 @@ export const Switch = ({ model: cell, checked, onChange, onCheckedChange, label,
 export const Slider = ({ model: cell, value, min = 0, max = 100, step = 1, onChange, children, ...props } = {}) => {
 	const el = h('input', {
 		type: 'range', min, max, step, ...props,
-		value: value ?? (is(cell) ? cell : null),
+		value: value ?? (api.is(cell) ? cell : null),
 		'aria-valuemin': min, 'aria-valuemax': max, 'aria-valuenow': () => Number(val(cell ?? value) ?? min)
 	});
 	el.addEventListener('input', () => {
@@ -865,7 +865,7 @@ export const Dialog = ({ open, model: modelProp, defaultOpen = false, onOpenChan
 		document.addEventListener('keydown', onKey);
 		applyLock();
 		const source = modelProp ?? open;
-		if (is(source)) offSource = sub(source, applyLock, () => {});
+		if (api.is(source)) offSource = api.sub(source, applyLock, () => {});
 	}
 	const panel = () => {
 		if (!isOpen()) return '';
@@ -1029,7 +1029,7 @@ export const Toast = ({ open, model: modelProp, title, description, duration = 5
 		if (duration > 0 && isOpen()) timer = setTimeout(dismiss, duration);
 	};
 	const dismiss = () => (clearTimeout(timer), setOpen(false), onClose?.());
-	const offSource = is(source) ? sub(source, () => arm(), () => {}) : null;
+	const offSource = api.is(source) ? api.sub(source, () => arm(), () => {}) : null;
 	arm();
 	return h('div', { style: { display: 'contents' } }, () =>
 		isOpen()

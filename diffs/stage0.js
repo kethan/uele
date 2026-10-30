@@ -38,6 +38,5 @@ const reconcile = (parent, oldNodes, newNodes, end = null) => {
 
 export const stage0 = (target = api) => {
 	target.diff = reconcile;
-	target.udom = undefined;
 	return target;
 };

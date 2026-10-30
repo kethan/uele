@@ -6,7 +6,7 @@
  */
 import { api } from 'uele';
 import S from 's-js';
-import { scoped, install } from './internal.js';
+import { install } from './internal.js';
 
 /**
  * s-js cannot batch two different writes to the same node: `S.freeze()` throws

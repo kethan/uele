@@ -6,7 +6,7 @@
  */
 import { api } from 'uele';
 import { Store } from '@tanstack/store';
-import { scoped, install } from './internal.js';
+import { install } from './internal.js';
 
 /**
  * `Store.subscribe()` does not emit synchronously, so a cell created by this

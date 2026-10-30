@@ -1,8 +1,8 @@
 /**
  * Shared plumbing for the diff-engine presets. `morphAdapter` implements the
  * `api.diff` contract on top of an in-place morpher (morphdom/nanomorph):
- * surviving nodes are written back into `newNodes`, because uele keeps the
- * array it handed to `api.diff` as the region's current content.
+ * surviving nodes are written back into `newNodes` for adapter bookkeeping.
+ * The renderer snapshots actual DOM independently on the next replacement.
  */
 export const morphAdapter = (morphFn) => (parent, oldNodes, newNodes, end) => {
 	const oldSet = new Set(oldNodes);

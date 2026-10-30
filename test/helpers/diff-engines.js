@@ -6,12 +6,8 @@ import { stage0 } from '../../diffs/stage0.js';
 /**
  * Diff-engine adapters.
  *
- * uele calls `api.diff(parentNode, oldNodes, newNodes, end[, endForUdom])`
- * whenever a live region replaces its content (see `Live.replace` in
- * `src/index.js`). `api.udom` is the optional second half of the older
- * udomdiff-style contract: when it is set, the call becomes
- * `api.diff(parent, old, new, api.udom, em)` so the engine can use its own DOM
- * helpers.
+ * uele calls `api.diff(parentNode, oldNodes, newNodes, end)` when a live
+ * region replaces its content. Engine-specific arguments stay in adapters.
  *
  * Every adapter below conforms to that contract: after the call, `parent`
  * contains exactly `newNodes` in order, and untouched siblings (including the
@@ -29,7 +25,7 @@ import listDiff from 'list-diff2';
 // interop: CJS builds expose the differ as `default`, ESM builds as the export
 const fn = (mod) => (typeof mod === 'function' ? mod : mod.default);
 
-export const DEFAULT_DIFF = { diff: undefined, udom: undefined };
+export const DEFAULT_DIFF = { diff: undefined };
 
 /* ------------------------------------------------------------------ engines */
 
@@ -39,12 +35,11 @@ const swapdomEngine = (api) => {
 };
 
 /**
- * udomdiff takes `(parent, a, b, get, before)` - uele supplies the get callback
- * through `api.udom` and passes the em marker as `before`.
+ * udomdiff takes `(parent, a, b, get, before)` - the adapter supplies the identity callback
+ * and passes the end marker as `before`.
  */
 const udomdiffEngine = (api) => {
-	api.diff = udomdiff;
-	api.udom = (node) => node;
+	api.diff = (parent, oldNodes, newNodes, end) => udomdiff(parent, oldNodes, newNodes, node => node, end);
 };
 
 /** domdiff takes an options object instead of a node: `{ before: end }` */
@@ -225,10 +220,10 @@ export const ENGINES = [
 		notes: 'written for (parent, a, b, end): no adapter needed beyond api.diff'
 	},
 	{
-		name: 'udomdiff (+ api.udom)',
+		name: 'udomdiff (normalized adapter)',
 		install: udomdiffEngine,
 		keyed: true,
-		notes: '(parent, a, b, get, before): uele passes api.udom as the get callback and the em marker as before'
+		notes: '(parent, a, b, get, before): adapter supplies the identity callback and forwards the end marker'
 	},
 	{
 		name: 'domdiff',
@@ -279,7 +274,8 @@ export const ENGINES = [
 
 /** applies an engine to an api object (main or lite) */
 export const installEngine = (api, engine, overrides = {}) => {
-	Object.assign(api, DEFAULT_DIFF, { udom: undefined, diff: undefined }, overrides);
+	Object.assign(api, DEFAULT_DIFF, { diff: undefined });
+    Object.assign(api.engine || api, overrides);
 	engine.install(api);
 	return api;
 };

@@ -8,6 +8,5 @@ const require = createRequire(import.meta.url);
 const uele = require('../../dist/index.cjs');
 
 export const {
-	Dynamic, For, If, Match, Show, Switch,
-	add, api, f, get, h, is, lazy, map, props, r, sub, useLive
+	add, api, f, h, lazy, map, props, r, useLive
 } = uele;

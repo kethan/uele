@@ -1,0 +1,447 @@
+{
+  "node": "v22.22.3",
+  "date": "2026-10-30T16:23:38.105Z",
+  "rows": [
+    {
+      "variant": "baseline",
+      "tier": "core",
+      "minified": 1869,
+      "gzip": 977,
+      "brotli": 888,
+      "browser": {
+        "correctness": "passed",
+        "create": {
+          "medianUs": 8.666666666977108,
+          "minUs": 7.8333333336437745,
+          "maxUs": 10.583333333488554
+        },
+        "replace": {
+          "medianUs": 37.75000000062088,
+          "minUs": 37.24999999937912,
+          "maxUs": 40.333333332867674
+        },
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36"
+      }
+    },
+    {
+      "variant": "baseline",
+      "tier": "full",
+      "minified": 3377,
+      "gzip": 1756,
+      "brotli": 1622,
+      "browser": {
+        "correctness": "passed",
+        "create": {
+          "medianUs": 8.833333333798995,
+          "minUs": 8.333333333333334,
+          "maxUs": 10.583333332712451
+        },
+        "replace": {
+          "medianUs": 40.333333332867674,
+          "minUs": 38.00000000046566,
+          "maxUs": 54.50000000031044
+        },
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36"
+      }
+    },
+    {
+      "variant": "baseline",
+      "tier": "lite",
+      "minified": 2560,
+      "gzip": 1365,
+      "brotli": 1248,
+      "browser": {
+        "correctness": "passed",
+        "create": {
+          "medianUs": 8.583333333954215,
+          "minUs": 7.250000000155221,
+          "maxUs": 9.416666666511446
+        },
+        "replace": {
+          "medianUs": 41.91666666728755,
+          "minUs": 38.24999999953434,
+          "maxUs": 52.083333333333336
+        },
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36"
+      }
+    },
+    {
+      "variant": "passes-1",
+      "tier": "core",
+      "minified": 1869,
+      "gzip": 977,
+      "brotli": 888,
+      "browser": {
+        "correctness": "passed",
+        "create": {
+          "medianUs": 8.583333333954215,
+          "minUs": 7.666666666045785,
+          "maxUs": 10.499999999689559
+        },
+        "replace": {
+          "medianUs": 39.083333332867674,
+          "minUs": 35.66666666728755,
+          "maxUs": 43.166666666511446
+        },
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36"
+      }
+    },
+    {
+      "variant": "passes-1",
+      "tier": "full",
+      "minified": 3377,
+      "gzip": 1756,
+      "brotli": 1622,
+      "browser": {
+        "correctness": "passed",
+        "create": {
+          "medianUs": 7.999999999689559,
+          "minUs": 7.5833333330228925,
+          "maxUs": 8.833333333798995
+        },
+        "replace": {
+          "medianUs": 40.833333333333336,
+          "minUs": 36.75000000046566,
+          "maxUs": 52.75000000062088
+        },
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36"
+      }
+    },
+    {
+      "variant": "passes-1",
+      "tier": "lite",
+      "minified": 2560,
+      "gzip": 1365,
+      "brotli": 1248,
+      "browser": {
+        "correctness": "passed",
+        "create": {
+          "medianUs": 8.166666666511446,
+          "minUs": 7.166666667132328,
+          "maxUs": 10.24999999984478
+        },
+        "replace": {
+          "medianUs": 38.83333333302289,
+          "minUs": 36.25,
+          "maxUs": 49.91666666697711
+        },
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36"
+      }
+    },
+    {
+      "variant": "passes-5",
+      "tier": "core",
+      "minified": 1869,
+      "gzip": 977,
+      "brotli": 888,
+      "browser": {
+        "correctness": "passed",
+        "create": {
+          "medianUs": 7.8333333336437745,
+          "minUs": 7.000000000310441,
+          "maxUs": 9.916666666201005
+        },
+        "replace": {
+          "medianUs": 35.583333333488554,
+          "minUs": 34.583333333333336,
+          "maxUs": 47.416666666201
+        },
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36"
+      }
+    },
+    {
+      "variant": "passes-5",
+      "tier": "full",
+      "minified": 3377,
+      "gzip": 1756,
+      "brotli": 1622,
+      "browser": {
+        "correctness": "passed",
+        "create": {
+          "medianUs": 8.000000000465661,
+          "minUs": 7.166666667132328,
+          "maxUs": 10.333333332867673
+        },
+        "replace": {
+          "medianUs": 38.91666666682189,
+          "minUs": 38.08333333271245,
+          "maxUs": 43.08333333271245
+        },
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36"
+      }
+    },
+    {
+      "variant": "passes-5",
+      "tier": "lite",
+      "minified": 2560,
+      "gzip": 1365,
+      "brotli": 1248,
+      "browser": {
+        "correctness": "passed",
+        "create": {
+          "medianUs": 7.833333332867672,
+          "minUs": 7.5,
+          "maxUs": 10.24999999984478
+        },
+        "replace": {
+          "medianUs": 40.24999999984478,
+          "minUs": 36.74999999968956,
+          "maxUs": 44.08333333364377
+        },
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36"
+      }
+    },
+    {
+      "variant": "startsWith",
+      "tier": "core",
+      "minified": 1874,
+      "gzip": 981,
+      "brotli": 891,
+      "browser": {
+        "correctness": "passed",
+        "create": {
+          "medianUs": 7.666666666045785,
+          "minUs": 6.833333333488554,
+          "maxUs": 9.916666666201005
+        },
+        "replace": {
+          "medianUs": 38.91666666682189,
+          "minUs": 34.50000000031044,
+          "maxUs": 56.08333333317811
+        },
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36"
+      }
+    },
+    {
+      "variant": "startsWith",
+      "tier": "full",
+      "minified": 3382,
+      "gzip": 1762,
+      "brotli": 1632,
+      "browser": {
+        "correctness": "passed",
+        "create": {
+          "medianUs": 7.833333332867672,
+          "minUs": 7.4166666669771075,
+          "maxUs": 8.583333333178112
+        },
+        "replace": {
+          "medianUs": 40.24999999984478,
+          "minUs": 37.66666666682189,
+          "maxUs": 59.24999999968956
+        },
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36"
+      }
+    },
+    {
+      "variant": "startsWith",
+      "tier": "lite",
+      "minified": 2565,
+      "gzip": 1370,
+      "brotli": 1254,
+      "browser": {
+        "correctness": "passed",
+        "create": {
+          "medianUs": 7.999999999689559,
+          "minUs": 7.5,
+          "maxUs": 8.75
+        },
+        "replace": {
+          "medianUs": 39.75000000015522,
+          "minUs": 37.333333333954215,
+          "maxUs": 51.33333333302289
+        },
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36"
+      }
+    },
+    {
+      "variant": "attrs-for-of",
+      "tier": "core",
+      "minified": 1867,
+      "gzip": 979,
+      "brotli": 894,
+      "browser": {
+        "correctness": "passed",
+        "create": {
+          "medianUs": 7.333333333178113,
+          "minUs": 6.750000000465661,
+          "maxUs": 8.916666666821888
+        },
+        "replace": {
+          "medianUs": 36.08333333317811,
+          "minUs": 35.58333333271245,
+          "maxUs": 42.166666667132326
+        },
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36"
+      }
+    },
+    {
+      "variant": "attrs-for-of",
+      "tier": "full",
+      "minified": 3375,
+      "gzip": 1760,
+      "brotli": 1626,
+      "browser": {
+        "correctness": "passed",
+        "create": {
+          "medianUs": 8.166666667287549,
+          "minUs": 7.833333332867672,
+          "maxUs": 9.833333333178112
+        },
+        "replace": {
+          "medianUs": 40.916666667132326,
+          "minUs": 38.41666666635623,
+          "maxUs": 48.99999999984478
+        },
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36"
+      }
+    },
+    {
+      "variant": "attrs-for-of",
+      "tier": "lite",
+      "minified": 2558,
+      "gzip": 1365,
+      "brotli": 1255,
+      "browser": {
+        "correctness": "passed",
+        "create": {
+          "medianUs": 7.916666666666667,
+          "minUs": 7.5833333330228925,
+          "maxUs": 9.333333333488554
+        },
+        "replace": {
+          "medianUs": 40.50000000046566,
+          "minUs": 39.24999999968956,
+          "maxUs": 45.75000000031044
+        },
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36"
+      }
+    },
+    {
+      "variant": "recursive-add",
+      "tier": "core",
+      "minified": 1937,
+      "gzip": 993,
+      "brotli": 905,
+      "browser": {
+        "correctness": "passed",
+        "create": {
+          "medianUs": 7.083333333333333,
+          "minUs": 6.5833333336437745,
+          "maxUs": 7.333333333178113
+        },
+        "replace": {
+          "medianUs": 31.25,
+          "minUs": 30.166666666045785,
+          "maxUs": 39.74999999937912
+        },
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36"
+      }
+    },
+    {
+      "variant": "recursive-add",
+      "tier": "full",
+      "minified": 3445,
+      "gzip": 1774,
+      "brotli": 1638,
+      "browser": {
+        "correctness": "passed",
+        "create": {
+          "medianUs": 7.833333332867672,
+          "minUs": 6.750000000465661,
+          "maxUs": 15.833333333333334
+        },
+        "replace": {
+          "medianUs": 35.33333333364377,
+          "minUs": 33.50000000015522,
+          "maxUs": 37.5
+        },
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36"
+      }
+    },
+    {
+      "variant": "recursive-add",
+      "tier": "lite",
+      "minified": 2628,
+      "gzip": 1381,
+      "brotli": 1262,
+      "browser": {
+        "correctness": "passed",
+        "create": {
+          "medianUs": 7.4166666669771075,
+          "minUs": 6.666666666666667,
+          "maxUs": 10.166666666821888
+        },
+        "replace": {
+          "medianUs": 36.49999999984478,
+          "minUs": 32.666666666045785,
+          "maxUs": 43.16666666728755
+        },
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36"
+      }
+    },
+    {
+      "variant": "api-r",
+      "tier": "core",
+      "minified": 1843,
+      "gzip": 966,
+      "brotli": 875,
+      "browser": {
+        "correctness": "passed",
+        "create": {
+          "medianUs": 8.50000000015522,
+          "minUs": 7.333333333178113,
+          "maxUs": 16.49999999984478
+        },
+        "replace": {
+          "medianUs": 38.833333333799,
+          "minUs": 34.916666666201,
+          "maxUs": 50.49999999968956
+        },
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36"
+      }
+    },
+    {
+      "variant": "api-r",
+      "tier": "full",
+      "minified": 3423,
+      "gzip": 1779,
+      "brotli": 1644,
+      "browser": {
+        "correctness": "passed",
+        "create": {
+          "medianUs": 8.916666666821888,
+          "minUs": 7.916666666666667,
+          "maxUs": 11.666666666666666
+        },
+        "replace": {
+          "medianUs": 43.333333333333336,
+          "minUs": 38.333333333333336,
+          "maxUs": 70.41666666666667
+        },
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36"
+      }
+    },
+    {
+      "variant": "api-r",
+      "tier": "lite",
+      "minified": 2606,
+      "gzip": 1384,
+      "brotli": 1271,
+      "browser": {
+        "correctness": "passed",
+        "create": {
+          "medianUs": 8.166666666511446,
+          "minUs": 7.5,
+          "maxUs": 15.166666666821888
+        },
+        "replace": {
+          "medianUs": 43.083333333488554,
+          "minUs": 37.66666666682189,
+          "maxUs": 45.916666667132326
+        },
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36"
+      }
+    }
+  ]
+}

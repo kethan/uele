@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { h, get } from 'uele';
+import { h, api } from 'uele';
 import { ulive } from 'uele/signals/ulive';
 import { signal } from 'ulive';
 const g = signal;
@@ -100,20 +100,20 @@ describe('ui primitives — live props and two-way model', () => {
 		const i1 = Input({ model: c1 });
 		i1.value = 'typed';
 		i1.dispatchEvent(new Event('input'));
-		expect(get(c1)).toBe('typed');
+		expect(api.get(c1)).toBe('typed');
 		const i2 = Input({ model: (v) => s(c1, 'fn:' + v) });
 		i2.value = 'q';
 		i2.dispatchEvent(new Event('input'));
-		expect(get(c1)).toBe('fn:q');
+		expect(api.get(c1)).toBe('fn:q');
 		const c3 = { set: (v) => s(c1, 'set:' + v) };
 		Input({ model: c3 }).dispatchEvent(new Event('input'));
-		expect(get(c1)).toBe('set:');
+		expect(api.get(c1)).toBe('set:');
 		const c4 = { next: () => s(c1, 'next') };
 		Input({ model: c4 }).dispatchEvent(new Event('input'));
-		expect(get(c1)).toBe('next');
+		expect(api.get(c1)).toBe('next');
 		const c5 = { setState: () => s(c1, 'state') };
 		Input({ model: c5 }).dispatchEvent(new Event('input'));
-		expect(get(c1)).toBe('state');
+		expect(api.get(c1)).toBe('state');
 		Input({ model: null }).dispatchEvent(new Event('input'));
 		Input({ model: 42 }).dispatchEvent(new Event('input'));
 	});
@@ -124,7 +124,7 @@ describe('ui primitives — live props and two-way model', () => {
 		const i = Input({ value: v });
 		i.value = 'auto';
 		i.dispatchEvent(new Event('input'));
-		expect(get(v)).toBe('auto');
+		expect(api.get(v)).toBe('auto');
 		s(v, 'shown');
 		expect(i.value).toBe('shown');
 
@@ -132,7 +132,7 @@ describe('ui primitives — live props and two-way model', () => {
 		const i2 = Input({ value: v, onInput: () => calls++ });
 		i2.dispatchEvent(new Event('input'));
 		expect(calls).toBe(1);
-		expect(get(v)).toBe('shown'); // not rewritten by i2
+		expect(api.get(v)).toBe('shown'); // not rewritten by i2
 
 		const i3 = Input({ value: 'lit' });
 		i3.dispatchEvent(new Event('input'));
@@ -145,14 +145,14 @@ describe('ui primitives — live props and two-way model', () => {
 		const cb = Checkbox({ model: on });
 		cb.checked = true;
 		cb.dispatchEvent(new Event('change'));
-		expect(get(on)).toBe(true);
+		expect(api.get(on)).toBe(true);
 		s(on, false);
 		expect(cb.checked).toBe(false);
 
 		const cb2 = Checkbox({ checked: on });
 		cb2.checked = true;
 		cb2.dispatchEvent(new Event('change'));
-		expect(get(on)).toBe(true);
+		expect(api.get(on)).toBe(true);
 		expect(Checkbox({ model: null })).toBeTruthy();
 	});
 
@@ -162,13 +162,13 @@ describe('ui primitives — live props and two-way model', () => {
 		const sel = Select({ model: v, options: ['a', 'b'] });
 		sel.value = 'b';
 		sel.dispatchEvent(new Event('change'));
-		expect(get(v)).toBe('b');
+		expect(api.get(v)).toBe('b');
 		s(v, 'a');
 		expect(sel.value).toBe('a');
 		const sel2 = Select({ value: v, options: ['a', 'b'] });
 		sel2.value = 'b';
 		sel2.dispatchEvent(new Event('change'));
-		expect(get(v)).toBe('b');
+		expect(api.get(v)).toBe('b');
 		expect(Select({ model: null })).toBeTruthy();
 	});
 });

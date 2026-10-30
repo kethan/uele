@@ -5,7 +5,8 @@
  * @vitest-environment jsdom
  */
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import { api, add, h, For } from 'uele';
+import { api, add, h } from 'uele';
+import { For } from 'uele/flow';
 import { DEFAULT_API, DEFAULT_DIFF } from './helpers/signal-adapters.js';
 
 const host = () => {
@@ -15,10 +16,12 @@ const host = () => {
 };
 
 beforeEach(() => {
-	Object.assign(api, DEFAULT_API, DEFAULT_DIFF);
+	Object.assign(api.engine, DEFAULT_API);
+    Object.assign(api, DEFAULT_DIFF);
 });
 afterEach(() => {
-	Object.assign(api, DEFAULT_API, DEFAULT_DIFF);
+	Object.assign(api.engine, DEFAULT_API);
+    Object.assign(api, DEFAULT_DIFF);
 	document.body.replaceChildren();
 });
 
@@ -208,7 +211,7 @@ describe('diff engine presets', () => {
 	let ulive;
 	beforeEach(async () => {
 		const mod = await import('../signals/ulive.js');
-		mod.ulive(); // the differ presets only touch api.diff/api.udom
+		mod.ulive(); // the differ presets only touch api.diff
 		ulive = await import('ulive');
 	});
 
@@ -247,12 +250,10 @@ describe('diff engine presets', () => {
 	test('switching diff presets swaps the engine and builtin resets it', async () => {
 		swapdom();
 		expect(typeof api.diff).toBe('function');
-		expect(api.udom).toBeUndefined();
 		udomdiff();
 		expect(typeof api.diff).toBe('function');
-		expect(typeof api.udom).toBe('function');
+		expect('udom' in api).toBe(false);
 		builtinDiff();
 		expect(api.diff).toBeUndefined();
-		expect(api.udom).toBeUndefined();
 	});
 });
