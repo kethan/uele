@@ -3,12 +3,13 @@
  * @vitest-environment jsdom
  */
 import { expect, test, afterEach, vi } from 'vitest';
-import { h, For, map, add, api } from '../src/index.js';
+import { h, map, add, api } from '../src/index.js';
+import { For } from 'uele/flow';
 import { signal, effect } from 'ulive';
 
-api.effect = effect;
-api.is = (v) => v?.peek;
-api.get = (v) => v.value;
+api.engine.effect = effect;
+api.engine.is = (v) => v?.peek;
+api.engine.get = (v) => v.value;
 
 const mount = (...nodes) => {
 	const root = document.createElement('div');
@@ -18,7 +19,6 @@ const mount = (...nodes) => {
 
 afterEach(() => {
 	delete api.diff;
-	delete api.udom;
 });
 
 // ------------------------------------------------------------------------ map
@@ -238,7 +238,7 @@ test('api.diff is used to update lists and receives the old/new nodes', () => {
 	expect(calls).toEqual([[2, 3], [3, 4], [4, 1], [1, 1]]);
 });
 
-test('api.diff receives the end marker when no udom is configured', () => {
+test('api.diff receives the end marker as the fourth argument', () => {
 	const items = signal([1]);
 	const root = mount(map(items, (v) => h('i', null, v)));
 	expect(root.innerHTML).toBe('<i>1</i>');
@@ -252,18 +252,16 @@ test('api.diff receives the end marker when no udom is configured', () => {
 	expect(args[4]).toBe(undefined);
 });
 
-test('api.udom switches api.diff to the udomdiff signature', () => {
-	const udom = () => 'get';
+test('api.diff has exactly four arguments', () => {
 	const args = [];
-	api.udom = udom;
-	api.diff = (...a) => args.push(a.slice(3));
+	api.diff = (...a) => args.push(a);
 	const sig = signal([1]);
 	const root = document.createElement('div');
 	root.append(...add(map(sig, (v) => h('i', null, v))));
 	sig.value = [1, 2];
 	expect(args.length).toBe(1);
-	expect(args[0][0]).toBe(udom); // get
-	expect(args[0][1]).toBe(root.childNodes[2]); // before = end marker
+	expect(args[0]).toHaveLength(4);
+	expect(args[0][3]).toBe(root.childNodes[2]); // end marker
 });
 
 test('map still updates when api.diff is removed again', () => {

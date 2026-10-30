@@ -10,14 +10,15 @@
  * @vitest-environment jsdom
  */
 import { describe, expect, test, beforeEach, afterEach, vi } from 'vitest';
-import { h, For, map, add, api, useLive, If, Switch, Dynamic, r } from '../src/index.js';
+import { h, map, add, api, useLive, r } from '../src/index.js';
+import { For, If, Switch, Dynamic } from 'uele/flow';
 import { signal, effect } from 'ulive';
 import { Subject, throwError, of } from 'rxjs';
 import { ENGINES, installEngine, DEFAULT_DIFF } from './helpers/diff-engines.js';
 
-api.effect = effect;
-api.is = (v) => v?.peek;
-api.get = (v) => v.value;
+api.engine.effect = effect;
+api.engine.is = (v) => v?.peek;
+api.engine.get = (v) => v.value;
 
 const mount = (...nodes) => {
 	const root = document.createElement('div');

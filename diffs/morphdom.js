@@ -1,6 +1,5 @@
 /**
- * `morphdom` - updates nodes in place (the contract's write-back is handled
- * for you by the shared adapter).
+ * `morphdom` - updates nodes in place; the shared adapter handles pairing and ordering.
  *
  *     import { morphdom } from 'uele/diffs/morphdom';
  *     morphdom();
@@ -13,6 +12,5 @@ export const morphdom = (target = api) => {
 	/* istanbul ignore next -- CJS interop: the .default side only exists under require() */
 	const morph = typeof engine === 'function' ? engine : engine.default;
 	target.diff = morphAdapter(morph);
-	target.udom = undefined;
 	return target;
 };

@@ -1,0 +1,56 @@
+{
+  "node": "v22.22.3",
+  "rollup": "4.64.10",
+  "terser": "5.51.2",
+  "ulive": "1.0.7",
+  "build": "current working-tree build of public entries; not a claim about an already-published npm release",
+  "unit": "bytes; decimal kB = 1000 B",
+  "format": "complete bundled ESM application JavaScript",
+  "compression": "gzip level 9 and Node default level; Brotli quality 11",
+  "rows": [
+    {
+      "name": "hello",
+      "entry": "uele/tiny",
+      "minified": 1855,
+      "gzip": 966,
+      "gzipDefault": 966,
+      "brotli": 868,
+      "sha256": "de83096f48a09a6cf70684e710f4dabd7d0460f500b1097bd0a4807d8a58525a",
+      "budget": 1000,
+      "passed": true
+    },
+    {
+      "name": "counter",
+      "entry": "uele/tiny",
+      "minified": 2033,
+      "gzip": 1051,
+      "gzipDefault": 1051,
+      "brotli": 945,
+      "sha256": "18587de1d6c49dd5c1ca73cd403c67414b7870230cc5529b1ab5faf1f610d696",
+      "budget": 1400,
+      "passed": true
+    },
+    {
+      "name": "signal-counter",
+      "entry": "uele/tiny",
+      "minified": 2457,
+      "gzip": 1248,
+      "gzipDefault": 1248,
+      "brotli": 1131,
+      "sha256": "d3341990e6565b383ab4457b4fbe9b56890a59921bcfbda8e579a6c38c27388d",
+      "budget": 1400,
+      "passed": true
+    },
+    {
+      "name": "todo",
+      "entry": "uele/tiny",
+      "minified": 2906,
+      "gzip": 1473,
+      "gzipDefault": 1473,
+      "brotli": 1321,
+      "sha256": "bae3592adce60a6be2bece142b88110919f7bd68bb5f0f813abd02c5edc0972d",
+      "budget": 1800,
+      "passed": true
+    }
+  ]
+}

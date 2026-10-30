@@ -42,9 +42,9 @@ const snap = (nodes) => nodes.map(label).join('');
 describe('exhaustive diff transitions', () => {
 	beforeEach(() => {
 		Object.assign(apiTarget, DEFAULT_API, DEFAULT_DIFF);
-		apiTarget.effect = effect;
-		apiTarget.is = (v) => v?.peek;
-		apiTarget.get = (v) => v.value;
+		apiTarget.engine.effect = effect;
+		apiTarget.engine.is = (v) => v?.peek;
+		apiTarget.engine.get = (v) => v.value;
 	});
 	afterEach(() => {
 		Object.assign(apiTarget, DEFAULT_DIFF, DEFAULT_API);
@@ -81,7 +81,7 @@ describe('exhaustive diff transitions', () => {
 
 					// exactly how Live.replace invokes a differ (or its marker-walk fallback)
 					try {
-						if (apiTarget.diff) apiTarget.diff(root, oldNodes, newNodes, apiTarget.udom || em, apiTarget.udom && em);
+						if (apiTarget.diff) apiTarget.diff(root, oldNodes, newNodes, em);
 						else {
 							for (let node = sm.nextSibling; node && node !== em; node = sm.nextSibling) node.remove();
 							sm.after(...newNodes);

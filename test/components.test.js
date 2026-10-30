@@ -3,12 +3,13 @@
  * @vitest-environment jsdom
  */
 import { expect, test, beforeEach } from 'vitest';
-import { h, If, Show, Match, Switch, Dynamic, lazy, add, api } from '../src/index.js';
+import { h, lazy, add, api } from '../src/index.js';
+import { If, Show, Match, Switch, Dynamic } from 'uele/flow';
 import { signal, effect } from 'ulive';
 
-api.effect = effect;
-api.is = (v) => v?.peek;
-api.get = (v) => v.value;
+api.engine.effect = effect;
+api.engine.is = (v) => v?.peek;
+api.engine.get = (v) => v.value;
 
 const mount = (...nodes) => {
 	const root = document.createElement('div');

@@ -2,8 +2,7 @@
  * Shared plumbing for the reactivity presets.
  *
  * Every installer `(target = api)` call assigns a COMPLETE reactivity surface to the
- * target (the main `api` by default - pass `uele/lite`'s `api` for the tiny
- * core): hooks a library does not implement are explicitly cleared, so
+ * target (the main `api` by default - pass `uele/lite`'s `api` to configure lite): hooks a library does not implement are explicitly cleared, so
  * switching presets can never leave a stale hook behind. `scoped` wraps a
  * library effect runner into uele's `(api.effect, api.cleanup)` pair.
  *
@@ -62,4 +61,9 @@ export const HOOKS = {
 };
 
 /** assigns the full surface - unused hooks are cleared, not left stale */
-export const install = (target, overrides) => Object.assign(target, { ...HOOKS }, overrides);
+export const install = (target, overrides) => {
+    Object.assign(target.engine || target, HOOKS, overrides);
+    if (target.engine) for (const name of ['effect', 'cleanup', 'any', 'signal', 'computed', 'set', 'batch', 'untracked'])
+        target[name] = target.engine[name];
+    return target;
+};

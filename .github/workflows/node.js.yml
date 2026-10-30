@@ -28,11 +28,22 @@ jobs:
             - run: npm run build
             # vitest enforces 100% coverage (statements/branches/functions/lines) on every shipped module
             - run: npm run test:coverage
+            - run: npm run test:core
             # the same behavioural suites against the built ESM and CJS output
             - run: npm run test:bundles
             - run: npm run test:types
+            - run: npm run audit:release
             # every shipped bundle has a raw and gzip budget
             - run: npm run size
+            - run: npm run size:core
+            - run: npm run size:apps
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: runnable-app-size-proofs
+                  path: |
+                      examples/size-proof/results.json
+                      examples/size-proof/dist/*.js
+                      examples/size-proof/dist/*.js.gz
             # packs the tarball, installs it in a clean project, checks exports and published types
             - run: npm run test:pack
             # Chromium (binary pinned via @sparticuz/chromium) links libnspr4/libnss3 at launch

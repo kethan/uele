@@ -11,6 +11,5 @@ export const domdiff = (target = api) => {
 	/* istanbul ignore next -- CJS interop: the .default side only exists under require() */
 	const diff = typeof engine === 'function' ? engine : engine.default;
 	target.diff = (parent, oldNodes, newNodes, end) => diff(parent, oldNodes, newNodes, { before: end || null });
-	target.udom = undefined;
 	return target;
 };

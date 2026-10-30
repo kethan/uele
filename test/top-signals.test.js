@@ -59,7 +59,7 @@ for (const [slug, hook] of entries) {
 			});
 			test('subscription cleanup runs exactly once on disposal', () => {
 				const api = setup(), cell = api.signal(0); let cleaned = 0;
-				const stop = mod.sub(cell, () => {}, undefined, () => { cleaned++; });
+				const stop = mod.api.sub(cell, () => {}, undefined, () => { cleaned++; });
 				stop(); expect(cleaned).toBe(1);
 			});
 		});

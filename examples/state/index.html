@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Simple State todos — uele</title>
+    <script type="importmap">
+    {"imports":{
+        "uele":"/dist/index.es.js",
+        "uele/flow":"/flow/index.js",
+        "uele/reactive":"/reactive/index.js"
+    }}
+    </script>
+</head>
+<body>
+    <script type="module">
+        import { mountTodos } from '../todos/state.js';
+        mountTodos(document.body).id = 'state-todos';
+    </script>
+</body>
+</html>

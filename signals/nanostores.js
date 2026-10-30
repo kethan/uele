@@ -6,7 +6,7 @@
  */
 import { api } from 'uele';
 import { atom, batch } from 'nanostores';
-import { scoped, install } from './internal.js';
+import { install } from './internal.js';
 
 export const nanostores = (target = api) => {
 	return install(target, {

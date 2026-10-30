@@ -4,7 +4,8 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, beforeEach } from 'vitest';
-import { h, add, For } from 'uele';
+import { h, add } from 'uele';
+import { For } from 'uele/flow';
 import { signal, computed, read, write, effect, batch, untracked, isCell, canEffect, canCompute } from 'uele/reactive';
 import { Button, Input, Card, Stack, Label } from 'uele/ui';
 import { Suspense, ErrorBoundary, Await, Portal, Title } from 'uele/flow';

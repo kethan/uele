@@ -13,7 +13,8 @@
  * dispose the graph; the signals are created at the top level here to keep the
  * example readable.
  */
-import { For } from 'uele';
+
+import { For } from 'uele/flow';
 import { Form, Row, Card, Stack, Button, Input, Checkbox, Label } from 'uele/ui';
 import { solid } from 'uele/signals/solid';
 // node resolves `solid-js` to its no-op server build; apps bundle the client build

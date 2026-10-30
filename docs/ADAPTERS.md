@@ -30,7 +30,6 @@ mechanism — there is no registration, no plugin list, no build step.
 | `api.cleanup(fn)` | `(fn) => void` | register a teardown for the *current* effect run |
 | `api.any(src)` | `(src) => (next) => unsubscribe` | subscribe to a non-cell source (promise, observable…) |
 | `api.diff` | `(parent, old, next, end)` | apply a list update (see [§3](#3-a-diff-engine-preset)) |
-| `api.udom` | `(node, key) => node` | `get` helper for engines with the udomdiff signature |
 | `authoring hooks` | see [§2](#2-the-authoring-hooks-what-uelereactive-needs) | used by `uele/reactive` |
 
 `api.get` is the read half of the contract and `api.is` the gate in front of it: uele calls `api.is`
@@ -155,15 +154,16 @@ export const swapdom = (target = api) => {
 ```
 
 Engines with the [udomdiff](https://github.com/WebReflection/udomdiff) signature take a `get` callback
-instead; set `api.udom` and uele calls `api.diff(parent, old, next, api.udom, end)`:
+as an extra argument; supply it inside the adapter, not on the renderer API:
 
 ```js
-target.udom = (node, key) => node.__key === key ? node : null; // or your own key store
-target.diff = (parent, oldNodes, newNodes, get, end) => udomdiff(parent, oldNodes, newNodes, get, end);
+const getNode = node => node;
+target.diff = (parent, oldNodes, newNodes, end) =>
+  udomdiff(parent, oldNodes, newNodes, getNode, end);
 ```
 
 Engines that **mutate in place** (morphdom, nanomorph) keep the old element and write the new content
-into it, so the nodes uele holds afterwards are not the ones it passed in. `diffs/util.js` exports
+into it; the next renderer update snapshots those surviving DOM nodes. `diffs/util.js` exports
 `morphAdapter(morphFn)` for exactly that: it runs the engine over matching pairs, writes the surviving
 nodes back into the `newNodes` array uele owns, and reconciles the order afterwards (a morpher never
 moves nodes itself).
@@ -183,13 +183,11 @@ export const rebuild = (target = api) => {
     oldNodes.forEach((node) => parent.removeChild(node));
     newNodes.forEach((node) => parent.insertBefore(node, end || null));
   };
-  target.udom = undefined; // never mix the two signatures
   return target;
 };
 ```
 
-Note the two habits in those nine lines, both of which the conformance suite enforces: clear `api.udom`
-when you set `api.diff` (the two signatures are mutually exclusive), and insert relative to `end`, never
+Use the uniform four-argument hook and insert relative to `end`, never
 `parent.appendChild` — the region uele is updating is bounded by a marker node, and siblings after it
 must stay where they are.
 
@@ -313,12 +311,13 @@ Any prop can be a cell, so `api.get` is called inside an effect run. It must not
 registers a dependency of an unrelated effect. `usignal` attributes a read to every enclosing effect;
 that is documented in its preset because it changes how a user writes computed values.
 
-### Diff engines mutate the array you hand them
+### Diff engines receive the current bounded DOM
 
-In-place morphing engines replace nodes. If your `api.diff` does not write the surviving nodes back
-into the `newNodes` array, uele's next update operates on detached nodes and the region goes blank
-after two updates. Use `morphAdapter` from `diffs/util.js`, and run the 4 225-transition conformance
-suite (`test/diff.transitions.test.js`) — it catches this on the second transition.
+Every replacement snapshots the current nodes between the region's markers,
+including independently updated nested regions. In-place morphers may update
+newNodes for bookkeeping, but write-back is not required for future renderer
+updates. `morphAdapter` from `diffs/util.js` handles pairing and ordering. Run the
+4,225-transition conformance matrix (`test/diff.transitions.test.js`).
 
 ## 6. Testing a preset
 

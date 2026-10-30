@@ -41,6 +41,5 @@ const reconcile = (parent, oldNodes, newNodes, end = null) => {
 
 export const snabbdom = (target = api) => {
 	target.diff = reconcile;
-	target.udom = undefined;
 	return target;
 };

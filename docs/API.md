@@ -37,8 +37,8 @@ import * as lite from 'uele/lite';
 configure({ signals: preactSignals, diff: stage0, props: [appProps] }, lite);
 ```
 
-This is not a new isolated runtime. Module instances still share their underlying
-API objects. `uele/reactive` follows the main API, not a configured lite target.
+Full and lite use separate core instances and signal integration API objects, with one shared
+renderer implementation. Changing one entry's hooks does not change the other. `uele/reactive` follows the main API, not a configured lite target.
 Use native signal APIs or lite's installed API hooks when authoring for lite.
 
 ## Direct calls are still available
@@ -65,8 +65,9 @@ signals entry point, so unrelated optional peers are never auto-imported.
 
 `signals/internal.js` is integration-author plumbing, not application reactivity:
 
-- `install(target, hooks)` resets the managed signal-hook surface before
-  installing an integration. Unrelated diff configuration is preserved.
+- `install(target, hooks)` resets the managed signal integration-hook surface on `target.engine`
+  (or a plain signal integration target), and installs authoring hooks on the renderer. The
+  renderer's generic is/get/sub hooks and unrelated diff configuration are preserved.
 - `HOOKS` defines those managed slots.
 - `scoped(run)` adapts the integration's effect/disposal protocol for the renderer.
   It does not provide component ownership or automatic cleanup for application hooks.
@@ -89,13 +90,32 @@ Subscribe-only presets do not support effects/computed: check `canEffect()` and
 `canCompute()`. Existing batch/untracked fallbacks are unchanged. Bound reactive
 facades and isolated renderer factories are intentionally not part of this API.
 
+## Diff hook
+
+Every engine uses `api.diff(parent, oldNodes, newNodes, end)`. The `api.udom`
+signature switch has been removed; udomdiff-specific arguments live in its adapter.
+Full defaults to upstream `swapdom/deflate`; core/tiny and lite keep basic marker
+replacement. `builtinDiff()` explicitly selects the basic fallback on any entry.
+Each update snapshots current bounded DOM, so independent nested-region changes
+are visible to the differ. In-place morphers need not write survivors into
+newNodes for the renderer's next update.
+
 ## Measured size and validation
 
-The main minified bundle remains 3,862 raw / 1,966 gzip bytes; lite remains
-2,595 / 1,362. SHA-256 comparison against the pre-change build confirms the main
-minified/ESM and lite minified artifacts are identical. The optional setup module
-is 141 raw / 133 gzip bytes when minified in isolation with Terser (including its
-external `uele` import); application bundling/compression can produce different totals.
+The renderer layout is now `src/core.js` -> tiny/core, full composition in
+`src/index.js`, lite composition in `lite/index.js`, and shared `utils/index.js`.
+Full keeps `map`, `f`, and `lazy`. Import If/For/Show/Match/Switch/Dynamic from
+`uele/flow`; Portal and the other existing flow components stay there.
+
+This is a breaking API migration: standalone is/get/sub exports are removed in
+favor of renderer `api.is/get/sub`. Configure library-specific hooks through
+`api.engine` or the signal presets. Bare tiny/core needs explicit renderer-hook
+configuration and includes no usub signal integration or namespace policy.
+
+Current full minified build is 3,666 raw / 1,881 gzip bytes; lite is 2,581 / 1,359.
+Bare core bundled ESM measures 1,870 / 975, without optional signal integration or namespace
+policy. These are whole-entry measurements, not sums of compressed components.
+See [the detailed tier/migration guide](../core/README.md).
 Existing size gates and 100% coverage thresholds are unchanged.
 
 ## Hooks and ownership
@@ -173,3 +193,7 @@ ESM tests and 1,422 CJS tests, including native-require DOM teardown checks.
 Published-package smoke tests and strict declaration checks pass. Main minified,
 main ESM and lite minified hashes still match the pre-lifecycle baseline; size
 budgets and memory/coverage assertions were not loosened.
+
+### Minimal callback State example
+
+See [the State todo](../examples/README.md#todos--your-dead-simple-state-no-signal-package) for the supplied getter/setter/subscriber function and its example-only `.subscribe()` bridge. Full uele owns those subscriptions; no new public state API or renderer variant is introduced. Private helpers such as `uele/diffs/util` are not public entry points.

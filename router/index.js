@@ -14,13 +14,13 @@
  *     app.get('/', () => h('h1', null, 'Home'));
  *
  * Both then render the same way: `useRouter(app, initial)` returns a live
- * `[view, linkProps]` pair — `view` is a cell you render, `linkProps()` returns the props
+ * `{ view, props, navigate, dispose }` object — `view` is a cell you render, and `props` contains the handlers
  * that turn
  * every `<a href="/…">` inside the element into a client-side navigation.
  */
-import { h, add } from 'uele';
+import { h } from 'uele';
 import { onTeardown } from '../props/internal.js';
-import { signal, read, write } from 'uele/reactive';
+import { signal, write } from 'uele/reactive';
 
 /* ----------------------------------------------------------- path matching */
 

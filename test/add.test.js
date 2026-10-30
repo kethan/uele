@@ -7,9 +7,9 @@ import { expect, test } from 'vitest';
 import { signal, effect } from 'ulive'; // Adjust based on your signal library
 
 // Set up API as per your code
-api.effect = effect;
-api.is = (v) => v?.peek;
-api.get = (v) => v.value;
+api.engine.effect = effect;
+api.engine.is = (v) => v?.peek;
+api.engine.get = (v) => v.value;
 
 const node = (...nodes) => {
   const result = document.createElement('div');

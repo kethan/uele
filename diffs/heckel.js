@@ -31,6 +31,5 @@ const reconcile = (parent, oldNodes, newNodes, end = null) => {
 
 export const heckel = (target = api) => {
 	target.diff = reconcile;
-	target.udom = undefined;
 	return target;
 };

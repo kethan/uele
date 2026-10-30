@@ -9,6 +9,5 @@ import engine from 'swapdom';
 
 export const swapdom = (target = api) => {
 	target.diff = engine;
-	target.udom = undefined;
 	return target;
 };

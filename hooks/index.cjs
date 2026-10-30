@@ -22,7 +22,7 @@ var reactive = require('uele/reactive');
 
 const noop = () => {};
 
-const val = (x) => (x == null || (typeof x !== 'object' && typeof x !== 'function') ? x : uele.get(x));
+const val = (x) => (x == null || (typeof x !== 'object' && typeof x !== 'function') ? x : uele.api.get(x));
 const targetOf = (t) => {
 	if (t == null) return typeof window !== 'undefined' ? window : null;
 	if (typeof t === 'function') return t();
@@ -113,7 +113,7 @@ const useControllable = (controlled, initial, onChange) => {
 const usePrevious = (source) => {
 	const previous = reactive.signal(undefined);
 	let last = val(source);
-	const off = uele.sub(source, (v) => {
+	const off = uele.api.sub(source, (v) => {
 		if (v !== last) {
 			reactive.write(previous, last);
 			last = v;
@@ -210,7 +210,7 @@ const useList = (initial = []) => {
 const useDebounce = (source, delay = 300) => {
 	const debounced = reactive.signal(val(source));
 	let timer;
-	const off = uele.sub(source, (v) => {
+	const off = uele.api.sub(source, (v) => {
 		clearTimeout(timer);
 		timer = setTimeout(() => reactive.write(debounced, v), delay);
 	});
@@ -614,7 +614,7 @@ const useThrottle = (source, interval = 300) => {
 	let last = 0;
 	let timer = null;
 	let pending;
-	const off = uele.sub(source, (v) => {
+	const off = uele.api.sub(source, (v) => {
 		const wait = interval - (Date.now() - last);
 		if (wait <= 0) {
 			last = Date.now();
@@ -1042,14 +1042,14 @@ const useInView = (target, options) => {
 const useTitle = (title) => {
 	const previous = typeof document === 'undefined' ? '' : document.title;
 	const apply = (v) => { if (typeof document !== 'undefined') document.title = v == null ? '' : String(v); };
-	const off = uele.is(title) || typeof title === 'function' ? uele.sub(title, apply, noop) : (apply(val(title)), noop);
+	const off = uele.api.is(title) || typeof title === 'function' ? uele.api.sub(title, apply, noop) : (apply(val(title)), noop);
 	return owned({}, () => (off(), apply(previous)));
 };
 
 /** a cell that always mirrors the latest value of a source (read it in callbacks) */
 const useLatest = (source) => {
 	const latest = reactive.signal(val(source));
-	return owned({ latest }, uele.sub(source, (v) => reactive.write(latest, v)));
+	return owned({ latest }, uele.api.sub(source, (v) => reactive.write(latest, v)));
 };
 
 exports.paginationRange = paginationRange;

@@ -13,7 +13,12 @@
  * them once. Direct cell bindings still subscribe on either kind. Resource
  * cleanup is owned by renderer markers, independent of engine cleanup hooks.
  */
-import { h, add, useLive } from 'uele';
+import { h, add, useLive, api, map } from 'uele';
+import { createControlFlow } from './control.js';
+export { createControlFlow } from './control.js';
+export const { If, Show, Match, For, Switch, Dynamic } = createControlFlow({
+    get: value => api.get(value), map: (...args) => map(...args)
+});
 import { onTeardown } from '../props/internal.js';
 import { signal, read, write, isCell, canEffect } from 'uele/reactive';
 

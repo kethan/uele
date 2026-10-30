@@ -1,5 +1,5 @@
+/** @jsxImportSource uele */
 /** Single/multiple select and select-all state. Install a signal adapter first. */
-import { h } from 'uele';
 import { signal, read, write } from 'uele/reactive';
 import { appProps } from 'uele/props';
 

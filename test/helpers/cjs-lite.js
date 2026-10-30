@@ -5,4 +5,4 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const lite = require('../../lite/dist/index.cjs');
 
-export const { add, api, get, h, is, props, r, sub, useLive } = lite;
+export const { add, api, h, props, r, useLive } = lite;

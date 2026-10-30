@@ -40,14 +40,13 @@ export default defineConfig({
 			{ find: /^ele\/jsx-runtime$/, replacement: src('./test/helpers/cjs-jsx-runtime.js') },
 			{ find: /^ele\/jsx-dev-runtime$/, replacement: src('./test/helpers/cjs-jsx-dev-runtime.js') },
 			// one native-require instance for the package and its api (see test/helpers/cjs-ele.js)
-			{ find: /^uele$/, replacement: src('./test/helpers/cjs-ele.js') },
+			{ find: /^uele\/lite$/, replacement: src('./test/helpers/cjs-lite.js') },
+            { find: /^uele$/, replacement: src('./test/helpers/cjs-ele.js') },
 			{ find: /^uele\/router$/, replacement: src('./router/index.cjs') },
 			{ find: /^uele\/flow$/, replacement: src('./flow/index.cjs') },
 			{ find: /^uele\/reactive$/, replacement: src('./reactive/index.cjs') },
 			{ find: /^uele\/ui$/, replacement: src('./ui/index.cjs') },
 			{ find: /^uele\/diffs\/(.*)$/, replacement: src('./diffs/$1.cjs') },
-			{ find: /^usub\/tiny$/, replacement: src('./test/helpers/cjs-lite.js') },
-			{ find: /^usub$/, replacement: src('./test/helpers/cjs-ele.js') },
 			{ find: /^\.\.\/src\/index\.js$/, replacement: src('./test/helpers/cjs-ele.js') },
 			{ find: /^\.\.\/lite\/index\.js$/, replacement: src('./test/helpers/cjs-lite.js') }
 		]
@@ -63,7 +62,8 @@ export default defineConfig({
 		// is not enough on a slower or loaded machine
 		testTimeout: 30000,
 		include: [
-			'test/h.test.js', 'test/r.test.js', 'test/map.test.js', 'test/for.test.js',
+			'test/simple-state.test.js', 'test/default-diff.test.js', 'test/source-lifecycle.test.js', 'test/flow.stress.test.js',
+            'test/h.test.js', 'test/r.test.js', 'test/map.test.js', 'test/for.test.js',
 			'test/dom.test.js', 'test/dom.cleanup.test.js', 'test/components.test.js',
 			'test/realtime.test.js', 'test/props.test.js', 'test/lite.test.js',
 			'test/jsx.test.tsx', 'test/signals.conformance.test.js', 'test/signals.libraries.test.js',

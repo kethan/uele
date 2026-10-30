@@ -5,7 +5,8 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, beforeEach } from 'vitest';
-import { For } from "uele";
+
+import { For } from 'uele/flow';
 import { preactSignals } from "uele/signals/preact";
 import { signal } from "@preact/signals-core";
 import { Form, Row, Card, Stack, Button, Input, Checkbox, Label } from "uele/ui";

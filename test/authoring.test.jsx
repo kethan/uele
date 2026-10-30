@@ -10,7 +10,8 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, beforeEach } from 'vitest';
-import { h, r, props, api, For } from 'uele';
+import { h, r, props, api } from 'uele';
+import { For } from 'uele/flow';
 import { scoped, install } from '../signals/internal.js';
 
 /* ----------------------------------------------------------------- a library */
@@ -93,7 +94,6 @@ const useMySignals = (target = api) => {
 
 const useMyDiff = (target = api) => {
 	const calls = [];
-	target.udom = undefined;
 	target.diff = (parent, oldNodes, newNodes, end) => {
 		calls.push(newNodes.length);
 		const keep = new Set(newNodes);
@@ -118,7 +118,6 @@ describe('the README authoring snippets', () => {
 		props.clear();
 		useMySignals(); // a thunk only re-runs once a preset is installed
 		api.diff = undefined;
-		api.udom = undefined;
 	});
 
 	it('a plugin is a function that returns its own undo', () => {

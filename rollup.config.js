@@ -1,8 +1,8 @@
 import terser from '@rollup/plugin-terser';
 import node from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
-import { copyFileSync, mkdirSync } from 'node:fs';
-import { basename } from 'node:path';
+import { copyFileSync, mkdirSync, readFileSync } from 'node:fs';
+import { basename, dirname, resolve as resolvePath } from 'node:path';
 import { gzipSync } from 'node:zlib';
 
 /**
@@ -37,6 +37,20 @@ const copyFile = (from, toDir) => ({
 	}
 });
 
+
+// Native ESM resource queries give full/lite independent API objects while
+// reusing src/core.js. Rollup needs the same explicit module-id semantics.
+const coreInstances = () => ({
+    name: 'core-entry-instances',
+    resolveId(id, importer) {
+        if (/core\.js\?(full|lite)$/.test(id))
+            return resolvePath(dirname(importer.split('?')[0]), id);
+    },
+    load(id) {
+        if (/core\.js\?(full|lite)$/.test(id)) return readFileSync(id.split('?')[0], 'utf8');
+    }
+});
+
 const resolve = (pkg, {
 	input = "src/index",
 	output = "dist/index",
@@ -48,6 +62,7 @@ const resolve = (pkg, {
 	input: `${input}.${ext}`,
 	external,
 	plugins: [
+        coreInstances(),
 		node(),
 		commonjs(),
 		bundleSize(),
@@ -170,7 +185,20 @@ const presetsConfig = presetFiles.map((file) => ({
 	}
 }));
 
+// Core and tiny are aliases of this one generated entry.
+const coreConfig = {
+    input: { index: 'core/index.js' },
+    plugins: [bundleSize()],
+    output: [
+        { dir: 'core/dist/es', format: 'es', entryFileNames: '[name].js',
+          chunkFileNames: 'chunks/[name]-[hash].js' },
+        { dir: 'core/dist', format: 'cjs', exports: 'named',
+          entryFileNames: '[name].cjs', chunkFileNames: 'chunks/[name]-[hash].cjs' }
+    ]
+};
+
 export default [
+    coreConfig,
 	resolve("uele", { copyFiles: ["src/index.d.ts", "dist/"] }),
 	jsx("jsx-runtime"),
 	jsx("jsx-dev-runtime"),

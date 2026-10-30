@@ -5,7 +5,7 @@
  * @vitest-environment jsdom
  */
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { add, h, map, useLive, sub, is, get, r, api } from '../src/index.js';
+import { add, h, map, useLive, r, api } from '../src/index.js';
 import { DEFAULT_API, install } from './helpers/signal-adapters.js';
 
 const host = () => {
@@ -85,9 +85,9 @@ describe('@preact/signals-core', () => {
 		expect(el.textContent).toBe('1');
 		// without api.is/api.get the synchronous read path still returns the cell,
 		// so register the library when you need map/For/If to read it
-		expect(get(count) === count || get(count) === 0).toBe(true);
+		expect(api.get(count) === count || api.get(count) === 0).toBe(true);
 		install(api, { overrides: { is: (v) => v instanceof m.Signal, get: (v) => v.value } });
-		expect(get(count)).toBe(1);
+		expect(api.get(count)).toBe(1);
 		root.remove();
 	});
 
@@ -130,7 +130,7 @@ describe('@vue/reactivity', () => {
 		});
 		const root = host();
 		const cell = m.ref('a');
-		const stop = sub(cell, () => disposals.push('sub'), undefined, () => disposals.push('cleanup'));
+		const stop = api.sub(cell, () => disposals.push('sub'), undefined, () => disposals.push('cleanup'));
 		stop();
 		expect(disposals).toEqual(['sub', 'cleanup']);
 		root.remove();
@@ -187,9 +187,9 @@ describe('usignal', () => {
 		const m = await import('usignal');
 		install(api, { overrides: { is: (v) => v instanceof m.Signal, get: (v) => v.value, effect: m.effect } });
 		const s = m.signal(3);
-		expect(is(s)).toBe(true);
+		expect(api.is(s)).toBe(true);
 		expect(s.peek()).toBe(3);
-		expect(get(s)).toBe(3);
+		expect(api.get(s)).toBe(3);
 	});
 });
 
@@ -210,7 +210,7 @@ describe('alien-signals', () => {
 		m.endBatch();
 		expect(root.textContent).toBe('10');
 		expect(m.isSignal(a)).toBe(true);
-		expect(is(a)).toBe(true);
+		expect(api.is(a)).toBe(true);
 		root.remove();
 	});
 
@@ -227,7 +227,7 @@ describe('alien-signals', () => {
 		});
 		const root = host();
 		const cell = m.signal(1);
-		const stop = sub(cell, () => {}, undefined, () => teardowns.push('user'));
+		const stop = api.sub(cell, () => {}, undefined, () => teardowns.push('user'));
 		cell(2);
 		expect(teardowns.length).toBeGreaterThan(0);
 		stop();
@@ -335,7 +335,7 @@ describe('rxjs', () => {
 		const doubled = ticks.pipe(m.map((v) => v * 2), m.distinctUntilChanged());
 		const [nodes, set] = useLive([]);
 		root.append(...nodes);
-		sub(doubled, (v) => set([h('i', null, String(v))]));
+		api.sub(doubled, (v) => set([h('i', null, String(v))]));
 		expect(root.textContent).toBe('2');
 		ticks.next(3);
 		expect(root.textContent).toBe('6');
@@ -432,7 +432,7 @@ describe('nanostores', () => {
 			return () => {};
 		});
 		m.onStop(store, () => stopped++);
-		const stop = sub(store, () => {});
+		const stop = api.sub(store, () => {});
 		expect(mounted).toBe(1);
 		expect(store.lc).toBe(1);
 		stop();
@@ -498,7 +498,7 @@ describe('@tanstack/store', () => {
 		expect(el.textContent).toBe('');
 		store.setState(2);
 		expect(el.textContent).toBe('2');
-		expect(get(store)).toBe(2);
+		expect(api.get(store)).toBe(2);
 		root.remove();
 	});
 });
@@ -551,8 +551,8 @@ describe('library-agnostic integration', () => {
 		const root = host();
 		const cell = make();
 		root.append(h('p', null, cell));
-		expect(is(cell)).toBe(true);
-		expect(get(cell)).toBe(0);
+		expect(api.is(cell)).toBe(true);
+		expect(api.get(cell)).toBe(0);
 		cell.value = 5;
 		expect(root.textContent).toBe('5');
 		root.append(...useLive(h('i', null, cell))[0]);
@@ -605,7 +605,7 @@ describe('library-agnostic integration', () => {
 		expect(root.innerHTML).toBe('<div>kid</div>');
 		root.append(...add(() => h('b', null, 'thunk')));
 		expect(root.querySelector('b').textContent).toBe('thunk');
-		expect(is(cell)).toBe(true);
+		expect(api.is(cell)).toBe(true);
 		root.remove();
 	});
 });

@@ -1,5 +1,5 @@
+/** @jsxImportSource uele */
 /** Simulated live presence + draft composer. Install a signal adapter before mounting. */
-import { h } from 'uele';
 import { signal, read, write } from 'uele/reactive';
 import { appProps, autoScroll } from 'uele/props';
 

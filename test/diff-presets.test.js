@@ -6,10 +6,9 @@ import { snabbdom } from 'uele/diffs/snabbdom';
 import { stage0 } from 'uele/diffs/stage0';
 
 for (const install of [spect, snabbdom, stage0, heckel, listDifference]) {
-	test(`${install.name}: clears udom, returns target and supports an unbounded region`, () => {
-		const target = { udom: () => {} };
+	test(`${install.name}: returns target and supports an unbounded region`, () => {
+		const target = {};
 		expect(install(target)).toBe(target);
-		expect(target.udom).toBeUndefined();
 		const parent = document.createElement('div');
 		const a = document.createTextNode('a');
 		const b = document.createTextNode('b');

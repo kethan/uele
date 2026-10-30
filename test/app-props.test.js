@@ -7,7 +7,7 @@ import { signal, effect } from 'ulive';
 for (const [label, target] of [['main', main], ['lite', lite]]) {
 	describe(`app props: ${label}`, () => {
 		const original = new Map(target.props);
-		Object.assign(target.api, { effect, is: (value) => value?.peek, get: (value) => value.value });
+		Object.assign(target.api.engine, { effect, is: (value) => value?.peek, get: (value) => value.value });
 		afterEach(() => {
 			target.props.clear();
 			original.forEach((value, key) => target.props.set(key, value));

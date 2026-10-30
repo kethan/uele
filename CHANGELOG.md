@@ -4,6 +4,26 @@ All notable changes to `uele` are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/) and the project uses
 [semver](https://semver.org/): minor releases add features, patches fix bugs.
 
+## Unreleased — breaking renderer migration
+
+- Exactly three variants: `uele/core` / `uele/tiny` are aliases; `uele/lite`
+  adds compact source/namespace integration; root `uele` retains the full API.
+- One renderer implementation in `src/core.js`, shared utilities, independently
+  configured full/lite compositions, four-argument diff hooks; removed `api.udom`
+  and standalone `is` / `get` exports. Use dynamic `api.is()` / `api.get()`.
+- Control-flow components are imported from `uele/flow`; full retains `map`, `f`,
+  `lazy` and exported `r`. Default full reconciliation uses upstream swapdom/deflate.
+- Preserved signals, router, hooks, UI, themes, reactive, props, setup, diff and
+  JSX modules. Private `uele/diffs/util` is explicitly blocked as a public entry.
+- Added the callback-only State todo, with an example-only `.subscribe()` bridge
+  and renderer-owned cleanup. No new public state primitive or renderer variant.
+- Added reproducible complete-app size proofs, flow/ownership stress tests,
+  static release audit and `npm run test:release` (also the prepublish gate).
+- Removed an unused private helper re-export, unused imports and a redundant
+  preset-install allocation. Updated the build-only serializer security fix.
+
+Choose the release version deliberately before publishing these breaking changes.
+
 ## 0.11.0 — 2026-10-16
 
 The UI release: `uele/ui` grows from a dozen wrappers into a full

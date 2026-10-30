@@ -43,7 +43,9 @@ export default defineConfig({
 			{ find: /^uele\/setup$/, replacement: src('./setup/index.js') },
 			{ find: /^uele\/signals\/(.*)$/, replacement: src('./signals/$1.js') },
 			{ find: /^uele\/props$/, replacement: src('./props/index.js') },
-			{ find: /^uele$/, replacement: src('./src/index.js') },
+			{ find: /^uele\/tiny$/, replacement: src('./tiny/index.js') },
+            { find: /^uele\/lite$/, replacement: src('./lite/index.js') },
+            { find: /^uele$/,  replacement: src('./src/index.js') },
 			{ find: /^uele\/router$/, replacement: src('./router/index.js') },
 			{ find: /^uele\/flow$/, replacement: src('./flow/index.js') },
 			{ find: /^uele\/reactive$/, replacement: src('./reactive/index.js') },
@@ -68,7 +70,7 @@ export default defineConfig({
 		coverage: {
 			provider: 'v8',
 			include: [
-				'src/**/*.js', 'lite/index.js', 'jsx-runtime/index.ts', 'jsx-dev-runtime/index.ts',
+				'src/**/*.js', 'lite/index.js', 'utils/**/*.js', 'flow/control.js', 'jsx-runtime/index.ts', 'jsx-dev-runtime/index.ts',
 				'ui/index.js', 'hooks/index.js', 'themes/index.js', 'reactive/index.js',
 				'props/internal.js', 'setup/index.js', 'flow/index.js', 'router/index.js', 'signals/*.js', 'diffs/*.js'
 			],

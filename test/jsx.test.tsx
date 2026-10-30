@@ -5,12 +5,13 @@
  */
 import { expect, test } from 'vitest';
 import { signal, effect } from 'ulive';
-import { h, add, api, For, If, Switch, Match, Dynamic, map, useLive } from 'uele';
+import { h, add, api, map, useLive } from 'uele';
+import { For, If, Switch, Match, Dynamic } from 'uele/flow';
 import { jsxDev } from 'uele/jsx-dev-runtime';
 
-api.effect = effect;
-api.is = (v: any) => v?.peek;
-api.get = (v: any) => v.value;
+api.engine.effect = effect;
+api.engine.is = (v: any) => v?.peek;
+api.engine.get = (v: any) => v.value;
 
 const mount = (...nodes: any[]) => {
 	const root = document.createElement('div');

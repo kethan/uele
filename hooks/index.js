@@ -12,14 +12,14 @@
  * a `ref` callback you spread on the element. Every listener/timer hook
  * exposes its own teardown; no implicit component lifecycle is assumed.
  */
-import { get, is, sub } from 'uele';
+import { api } from 'uele';
 import { signal, computed, read, write, isCell, canCompute } from 'uele/reactive';
 
 /* --------------------------------------------------------------- helpers */
 
 const noop = () => {};
 
-const val = (x) => (x == null || (typeof x !== 'object' && typeof x !== 'function') ? x : get(x));
+const val = (x) => (x == null || (typeof x !== 'object' && typeof x !== 'function') ? x : api.get(x));
 const targetOf = (t) => {
 	if (t == null) return typeof window !== 'undefined' ? window : null;
 	if (typeof t === 'function') return t();
@@ -110,7 +110,7 @@ export const useControllable = (controlled, initial, onChange) => {
 export const usePrevious = (source) => {
 	const previous = signal(undefined);
 	let last = val(source);
-	const off = sub(source, (v) => {
+	const off = api.sub(source, (v) => {
 		if (v !== last) {
 			write(previous, last);
 			last = v;
@@ -207,7 +207,7 @@ export const useList = (initial = []) => {
 export const useDebounce = (source, delay = 300) => {
 	const debounced = signal(val(source));
 	let timer;
-	const off = sub(source, (v) => {
+	const off = api.sub(source, (v) => {
 		clearTimeout(timer);
 		timer = setTimeout(() => write(debounced, v), delay);
 	});
@@ -611,7 +611,7 @@ export const useThrottle = (source, interval = 300) => {
 	let last = 0;
 	let timer = null;
 	let pending;
-	const off = sub(source, (v) => {
+	const off = api.sub(source, (v) => {
 		const wait = interval - (Date.now() - last);
 		if (wait <= 0) {
 			last = Date.now();
@@ -1039,12 +1039,12 @@ export const useInView = (target, options) => {
 export const useTitle = (title) => {
 	const previous = typeof document === 'undefined' ? '' : document.title;
 	const apply = (v) => { if (typeof document !== 'undefined') document.title = v == null ? '' : String(v); };
-	const off = is(title) || typeof title === 'function' ? sub(title, apply, noop) : (apply(val(title)), noop);
+	const off = api.is(title) || typeof title === 'function' ? api.sub(title, apply, noop) : (apply(val(title)), noop);
 	return owned({}, () => (off(), apply(previous)));
 };
 
 /** a cell that always mirrors the latest value of a source (read it in callbacks) */
 export const useLatest = (source) => {
 	const latest = signal(val(source));
-	return owned({ latest }, sub(source, (v) => write(latest, v)));
+	return owned({ latest }, api.sub(source, (v) => write(latest, v)));
 };

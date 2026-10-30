@@ -1,5 +1,10 @@
 # uele — analysis and conformance report
 
+> Historical investigation. Current rendering uses bounded DOM snapshots and full defaults
+> to compact swapdom. See [the production cutover](../benchmarks/production-cutover.md);
+> old retained-array/write-back descriptions below record the earlier implementation.
+
+
 Analysis basis: full read-through of `kethan/uele` at `c5ec3c4`, extended by the conformance pass on
 `arena/b5381494-uele` (commits `c4a5975`, `54582f6`, `3cfe748`, `91fe0a1`, `26b3858`). Updated 2026-10-15.
 
@@ -40,7 +45,7 @@ thresholds. All size budgets green. Node v22.22.3.
 * `If`/`Switch`/`Dynamic` swap branches inside their own region; `lazy()` resolves a module/promise into the
   region and sweeps the placeholder; thunks are only reactive with `api.effect` adapters (`reactiveThunks`).
 * `Live.replace` (post-`3cfe748`): with `api.diff` the differ owns the region
-  (`api.diff(parent, oldNodes, newNodes, end)`; `api.udom` swaps the last two args to `(get, end)`); otherwise
+  (`api.diff(parent, oldNodes, newNodes, end)`; adapters normalize engine-specific arguments); otherwise
   the nodes between the markers are walked off and the new ones inserted. **Both paths end with
   `oldNodes = newNodes`.** A region whose markers were removed is inert.
 
@@ -160,8 +165,7 @@ honest.
 ### 8.2 Eight diff engines
 
 `api.diff` is the only insertion point for a differ, and the documented contract is
-`api.diff(parent, oldNodes, newNodes, end)` - or `api.diff(parent, oldNodes, newNodes, api.udom, end)` when
-`api.udom` is set. `test/diff.conformance.test.js` (125 tests) checks that afterwards `parent` holds exactly
+`api.diff(parent, oldNodes, newNodes, end)` for every engine. `test/diff.conformance.test.js` (125 tests) checks that afterwards `parent` holds exactly
 `newNodes` in order, that untouched siblings (including the `em` marker) are where they were, and that uele keeps
 the same nodes as the region's current content:
 
@@ -169,7 +173,7 @@ the same nodes as the region's current content:
 | --- | --- |
 | built-in marker walk (no `api.diff`) | the default: no engine at all |
 | `swapdom` | written for exactly this signature |
-| `udomdiff` (+ `api.udom`) | needs the `get` helper and the `before` node |
+| `udomdiff` | adapter supplies the `get` helper and forwards the `before` node |
 | `domdiff` | takes an options bag (`{ before: end }`) |
 | `morphdom` | morphs in place and consumes `to` |
 | `nanomorph` | same pairing, different merge rules |

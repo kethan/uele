@@ -1,4 +1,5 @@
-import { h, For } from 'uele';
+import { h } from 'uele';
+import { For } from 'uele/flow';
 import { store } from 'ustor';
 import { region } from './setup.js';
 

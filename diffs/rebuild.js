@@ -12,6 +12,5 @@ export const rebuild = (target = api) => {
 		oldNodes.forEach((node) => parent.removeChild(node));
 		newNodes.forEach((node) => parent.insertBefore(node, end || null));
 	};
-	target.udom = undefined;
 	return target;
 };

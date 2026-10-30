@@ -10,23 +10,23 @@
  * A cell is whatever the library calls a mutable reactive value: a signal,
  * a ref, an atom, a boxed observable, a BehaviorSubject, a store, a data fn...
  */
-import { api } from 'usub';
-import { api as tinyApi } from 'usub/tiny';
+import { api } from 'uele';
+import { api as tinyApi } from 'uele/lite';
 
 /** the pristine usub hooks, so a suite can always restore them */
 export const DEFAULT_API = {
-	is: api.is,
-	get: api.get,
-	effect: api.effect,
-	any: api.any,
-	cleanup: api.cleanup
+	is: api.engine.is,
+	get: api.engine.get,
+	effect: api.engine.effect,
+	any: api.engine.any,
+	cleanup: api.engine.cleanup
 };
 
 /** uele ships two reactivity instances: the main one and `usub/tiny` for lite */
 export const APIS = { main: api, lite: tinyApi };
 
 /** installs an adapter's hooks on top of the pristine ones */
-export const install = (target, adapter) => Object.assign(target, DEFAULT_API, adapter.overrides);
+export const install = (target, adapter) => Object.assign(target.engine || target, DEFAULT_API, adapter.overrides);
 
 /**
  * Wraps a library effect runner into the `(api.effect, api.cleanup)` pair uele

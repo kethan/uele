@@ -12,7 +12,7 @@ import { signal, effect } from 'ulive';
 
 test('ele and its jsx runtime share one instance', () => {
 	const probe = { peek: 1 };
-	apiA.is = (v) => v === probe;
+	apiA.engine.is = (v) => v === probe;
 	const report = {
 		runtimeH: hB === hA,
 		apiShared: runtimeNs.api === undefined || runtimeNs.api === apiA, // wrappers re-export api, built runtimes do not
@@ -26,9 +26,9 @@ test('ele and its jsx runtime share one instance', () => {
 });
 
 test('differential: raw h vs jsx factory on one signal', () => {
-	apiA.effect = effect;
-	apiA.is = (v) => v?.peek;
-	apiA.get = (v) => v.value;
+	apiA.engine.effect = effect;
+	apiA.engine.is = (v) => v?.peek;
+	apiA.engine.get = (v) => v.value;
 	const count = signal(0);
 	const raw = hA('div', null, count);
 	const viaJsx = jsxB('div', { children: count });

@@ -3,12 +3,13 @@
  */
 import { describe, expect, test, vi } from 'vitest';
 import { signal, effect, computed } from 'ulive'; // Adjust based on your signal library
-import { h, r, api, add, props, For, map, useLive } from '../src/index.js';
+import { h, r, api, add, props, map, useLive } from '../src/index.js';
+import { For } from 'uele/flow';
 
 // Set up API as per your code
-api.effect = effect;
-api.is = (v) => v?.peek;
-api.get = (v) => v.value;
+api.engine.effect = effect;
+api.engine.is = (v) => v?.peek;
+api.engine.get = (v) => v.value;
 
 test('simple', () => {
   expect(h('h1').outerHTML).toBe('<h1></h1>');

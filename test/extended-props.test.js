@@ -12,7 +12,7 @@ for (const [label, target] of [['main', main], ['lite', lite]]) {
 			document.body.replaceChildren();
 		});
 		const setup = () => {
-			Object.assign(target.api, { effect, is: (value) => value?.peek, get: (value) => value.value });
+			Object.assign(target.api.engine, { effect, is: (value) => value?.peek, get: (value) => value.value });
 			appProps(target); return target.h;
 		};
 		test('single select updates source and DOM, including empty and missing values', () => {

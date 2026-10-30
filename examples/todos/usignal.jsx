@@ -9,7 +9,8 @@
  * `TodoApp`/`mountTodos`). Everything below the actions is the same JSX you
  * would write with any other preset.
  */
-import { For } from 'uele';
+
+import { For } from 'uele/flow';
 import { Form, Row, Card, Stack, Button, Input, Checkbox, Label } from 'uele/ui';
 import { usignal } from 'uele/signals/usignal';
 import { signal, computed } from 'usignal';
