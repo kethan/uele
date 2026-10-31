@@ -42,13 +42,17 @@ Sources, hashes, commands and methodology: [application proof](../examples/size-
 | --- | ---: | ---: |
 | Core/tiny, all-export bundled ESM | 1870 | 975 |
 | Lite, built IIFE | 2581 | 1359 |
-| Full, built IIFE | 3666 | 1881 |
+| Full, built IIFE | 3619 | 1864 |
 
 Do not compare unlike formats as if they were the same artifact. All original
 size limits remain unchanged. The full entry is not claimed to fit the tiny-app
 limits above.
 
-## Current validation after the production audit
+## Recorded validation after the production audit
+
+These counts record the full release run before the README/preset-guide rewrite.
+Documentation test counts change with the number of examples; current examples
+are also executed directly by the documentation suites.
 
 - Default suite and production-core suite: **2,560 tests each**, 100% statements,
   branches, functions and lines.

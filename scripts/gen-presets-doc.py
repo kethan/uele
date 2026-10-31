@@ -1,182 +1,136 @@
 #!/usr/bin/env python3
-"""Regenerate docs/PRESETS.md from the sources (JSX snippets, measured tables).
+"""Generate the exact install/use catalog from sources and package metadata.
 
     python3 scripts/gen-presets-doc.py
 
-The preset descriptions come from the jsdoc block of every `signals/*.js` and
-`diffs/*.js`, the preferred installer name from its export alias, the cell idioms from
-the table below, and the comparison tables from README.md (they are measured
-data, so the README stays the single place they are edited).
+No README comparison tables or hand-maintained preset-name lists are required.
 """
-import os
+import json
 import re
+import textwrap
+from pathlib import Path
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PKG = re.search(r'"name":\s*"([^"]+)"', open(os.path.join(ROOT, 'package.json')).read()).group(1)
-
-# slug, hook, package, import line, how to create a cell
-SIGNAL_IMPORTS = {
-    'ulive': "import { signal } from 'ulive';",
-    'preact': "import { signal } from '@preact/signals-core';",
-    'vue': "import { ref } from '@vue/reactivity';",
-    'usignal': "import { signal } from 'usignal';",
-    'signals': "import { signal } from '@webreflection/signals';",
-    'alien-signals': "import { signal } from 'alien-signals';",
-    'sjs': "import S from 's-js';",
-    'mobx': "import { observable } from 'mobx';",
-    'rxjs': "import { BehaviorSubject } from 'rxjs';",
-    'nanostores': "import { atom } from 'nanostores';",
-    'tanstack': "import { Store } from '@tanstack/store';",
-    'solid': ("// node resolves `solid-js` to its no-op server build; apps bundle the client build\n"
-              "import { createSignal } from 'solid-js/dist/solid.js';"),
-}
-SIGNAL_CELLS = {
-    'ulive': ('signal(%s)', 'count.value', 'count.value = count.value + 1'),
-    'preact': ('signal(%s)', 'count.value', 'count.value = count.value + 1'),
-    'vue': ('ref(%s)', 'count.value', 'count.value = count.value + 1'),
-    'usignal': ('signal(%s)', 'count.value', 'count.value = count.value + 1'),
-    'signals': ('signal(%s)', 'count.value', 'count.value = count.value + 1'),
-    'alien-signals': ('signal(%s)', 'count()', 'count(count() + 1)'),
-    'sjs': ('S.data(%s)', 'count()', 'count(count() + 1)'),
-    'mobx': ('observable.box(%s)', 'count.get()', 'count.set(count.get() + 1)'),
-    'rxjs': ('new BehaviorSubject(%s)', 'count.value', 'count.next(count.value + 1)'),
-    'nanostores': ('atom(%s)', 'count.get()', 'count.set(count.get() + 1)'),
-    'tanstack': ('new Store(%s)', 'count.state', 'count.setState(count.state + 1)'),
-    'solid': ('createSignal(%s)', 'count()', 'setCount(count() + 1)'),
-}
-
-JSX_NOTE = ('All examples below are JSX; point your bundler at the automatic runtime\n'
-            '(`{ "jsx": "react-jsx", "jsxImportSource": "%s" }`, or\n'
-            '`esbuild: { jsx: "automatic", jsxImportSource: "%s" }`).' % (PKG, PKG))
+ROOT = Path(__file__).resolve().parent.parent
+PACKAGE = json.loads((ROOT / 'package.json').read_text())
+NAME = PACKAGE['name']
 
 
-def read(path):
-    return open(os.path.join(ROOT, path)).read()
+def presets(folder):
+    for path in sorted((ROOT / folder).glob('*.js')):
+        if path.stem in ('internal', 'util'):
+            continue
+        source = path.read_text()
+        installer = re.findall(r'export const (\w+) =', source)[-1]
+        peers = []
+        for spec in re.findall(r"from ['\"]([^'\"]+)['\"]", source):
+            if spec.startswith('.') or spec == NAME or spec.startswith(NAME + '/'):
+                continue
+            parts = spec.split('/')
+            package = '/'.join(parts[:2]) if spec.startswith('@') else parts[0]
+            if package not in peers:
+                peers.append(package)
+        if path.stem == 'rescript-signals':
+            peers.append('@rescript/runtime')
+        body = source.split('*/')[0].split('/**')[1]
+        lines = [line.strip(' *').strip() for line in body.splitlines()]
+        summary = ' '.join(line for line in lines if line
+                           and not line.startswith('import ')
+                           and not re.match(r'^\w+\(\);?$', line))
+        yield path.stem, installer, peers, summary
 
 
-def description(path):
-    """the jsdoc summary of a preset, without the usage example lines"""
-    body = read(path).split('*/')[0].split('/**')[1]
-    lines = [line.strip(' *').strip() for line in body.strip().split('\n')]
-    return ' '.join(line for line in lines
-                    if line and not line.startswith('import ') and not re.match(r'^\w+\(\);?$', line))
-
-
-def hooks(path):
-    return re.findall(r'export const (\w+) =', read(path))
-
-
-def slugs(folder):
-    return sorted(s[:-3] for s in os.listdir(os.path.join(ROOT, folder))
-                  if s.endswith('.js') and s not in ('util.js', 'internal.js'))
+def install(peers):
+    # Prefer the stable compatible range declared in this repository's dev graph
+    # when a peer admits multiple release lines (e.g. stable Vue and Vue RC).
+    packages = [NAME]
+    for peer in peers:
+        version = PACKAGE['peerDependencies'][peer]
+        if '||' in version:
+            version = PACKAGE['devDependencies'][peer]
+        packages.append('"' + peer + '@' + version + '"')
+    command = 'npm install ' + ' '.join(packages)
+    if len(command) > 72:
+        return 'npm install ' + NAME + ' \\\n  ' + ' \\\n  '.join(packages[1:])
+    return command
 
 
 def main():
-    out = []
-    w = out.append
-    w('# %s presets' % PKG)
-    w('')
-    w('One import, one call. Each preset assigns the complete surface (unused hooks are cleared, so switching')
-    w('presets can never leave stale configuration behind) and returns the configured `api` object.')
-    w('')
-    w('```jsx')
-    w('import { preactSignals } from "%s/signals/preact";' % PKG)
-    w('')
-    w('preactSignals(); // that is the whole setup')
-    w('```')
-    w('')
-    w('Every signal preset accepts an optional target - pass the `api` exported by `%s/lite` to' % PKG)
-    w('configure lite instead. The signal/diff library itself is a peer dependency: install the one')
-    w('you use (`npm i @preact/signals-core`), nothing else is pulled in.')
-    w('')
-    w(JSX_NOTE)
-    w('')
-    w('Install presets at startup, before creating state or rendering. See [API.md](API.md)')
-    w('for optional `configure()` and lite setup.')
-    w('')
-    w('## Signal presets')
-    w('')
-    for slug in slugs('signals'):
-        name = hooks('signals/%s.js' % slug)[-1]
-        create, read_as, write_as = SIGNAL_CELLS.get(slug, ('api.signal(%s)', 'api.get(count)', 'api.set(count, api.get(count) + 1)'))
-        w('### `%s/signals/%s` - `%s()`' % (PKG, slug, name))
-        w('')
-        w(description('signals/%s.js' % slug))
-        w('')
-        w('```jsx')
-        w(SIGNAL_IMPORTS.get(slug, "import { api } from '%s';" % PKG))
-        w("import { %s } from '%s/signals/%s';" % (name, PKG, slug))
-        w('')
-        w('%s(); // one call, whole api configured' % name)
-        w('')
-        w('const count = %s;' % create % '0') if slug != 'solid' else w('const [count, setCount] = %s;' % create % '0')
-        w('')
-        w('document.body.append(')
-        w('  <button onclick={() => %s}>' % write_as)
-        w('    clicked {count} times')
-        w('  </button>')
-        w(');')
-        w('```')
-        w('')
-        w('Read it as `%s`, write it as `%s` - and `%s/reactive` writes that code for you' % (read_as, write_as, PKG))
-        w('(`signal()`, `read()`, `write()` work on every preset).')
-        w('')
-
-    w('## Diff engine presets')
-    w('')
-    w('Full defaults to compact swapdom/deflate; core/tiny and lite use basic replacement.')
-    w('builtinDiff() selects that basic fallback; the explicit swapdom preset selects inflate.')
-    w('')
-    w('A diff engine is chosen the same way - one call. It only changes how a list update is applied, so the')
-    w('example is the same for all of them:')
-    w('')
-    for slug in slugs('diffs'):
-        name = hooks('diffs/%s.js' % slug)[-1]
-        w('### `%s/diffs/%s` - `%s()`' % (PKG, slug, name))
-        w('')
-        w(description('diffs/%s.js' % slug))
-        w('')
-        w('```jsx')
-        w("import { For } from '%s/flow';" % PKG)
-        w("import { ulive } from '%s/signals/ulive'; // any signal preset works" % PKG)
-        w("import { %s } from '%s/diffs/%s';" % (name, PKG, slug))
-        w("import { signal } from 'ulive';")
-        w('')
-        w('ulive();')
-        w('%s(); // sets api.diff; engine-specific arguments stay inside the adapter' % name)
-        w('')
-        w('const items = signal([1, 2, 3]);')
-        w('document.body.append(')
-        w('  <ul>')
-        w('    <For each={items} key={(item) => item}>{(item) => <li>{item}</li>}</For>')
-        w('  </ul>')
-        w(');')
-        w('```')
-        w('')
-
-    # the comparison tables live in the README (measured data, edited in one place)
-    readme = read('README.md')
-    tables = readme[readme.index('## Which one should I use?'):readme.index('## Cleanup Support')]
-    w(tables.rstrip())
-    w('')
-    w('## Complete example apps')
-    w('')
-    w('[`examples/todos/`](../examples/todos) holds the same todos app written for every signal preset - add,')
-    w('toggle, delete, filter (all/active/completed), clear-completed. Every file is JSX and runnable as is:')
-    w('')
-    w('```jsx')
-    w('import { mountTodos } from "./examples/todos/preact.jsx";')
-    w('mountTodos(document.body);')
-    w('```')
-    w('')
-    w('`test/examples.test.js` runs all eleven through the same scenarios, so the examples cannot rot.')
-    w('Writing your own preset - a signal adapter or a diff engine - is documented in')
-    w('[ADAPTERS.md](ADAPTERS.md).')
-    w('')
-
-    open(os.path.join(ROOT, 'docs/PRESETS.md'), 'w').write('\n'.join(out))
-    print('docs/PRESETS.md regenerated (%d signal presets, %d diff presets)'
-          % (len(slugs('signals')), len(slugs('diffs'))))
+    signals, diffs = list(presets('signals')), list(presets('diffs'))
+    out = [
+        '# uele presets', '',
+        f'Exactly **{len(signals)} signal presets** and **{len(diffs)} diff presets** are available.',
+        'Commands below use the compatible package ranges declared by this repository.',
+        'Install only the preset dependencies you choose, not the entire catalog.', '',
+        'Signal presets connect a library; diff presets choose DOM reconciliation.',
+        'Install one of each at startup, before creating cells or rendering.',
+        'Omit a diff preset to keep the renderer default.', '',
+        'Examples are ordinary JavaScript modules with a bundler and browser DOM.',
+        'They use the portable `uele/reactive` API so the counter code is identical',
+        'across libraries. Native library APIs remain available too.', '',
+        'Full `uele` defaults to compact `swapdom/deflate`; core/tiny and lite use',
+        'basic marker replacement. The explicit swapdom preset selects inflate.',
+        '`builtinDiff()` resets any configured entry to basic replacement.', '',
+        'Signal/diff installers accept an optional target, such as `lite.api`.',
+        '`uele/reactive` and the examples below follow the main entry; for lite,',
+        'use native signal APIs or its configured hooks. Bare tiny needs explicit',
+        'renderer source integration, not just a signal installer. See [API.md](API.md).', '',
+        '## Signal presets', ''
+    ]
+    for slug, name, peers, description in signals:
+        out += [f'### `{NAME}/signals/{slug}` - `{name}()`', '',
+                textwrap.fill(description, 72), '',
+                '```sh', install(peers), '```', '',
+                '```js', f"import {{ h }} from '{NAME}';",
+                f"import {{ {name} }} from '{NAME}/signals/{slug}';",
+                f"import {{ signal, read, write }} from '{NAME}/reactive';", '',
+                f'{name}();', 'const count = signal(0);',
+                'const increment = () => write(count, read(count) + 1);', '',
+                "const button = h('button', { onclick: increment }, count);",
+                'document.body.append(button);', '```', '']
+        if slug in ('rxjs', 'nanostores', 'tanstack'):
+            out += ['Subscribe-only: direct cell bindings work. Arbitrary derived thunks,',
+                    '`computed()` and automatic `effect()` tracking are not provided.', '']
+    out += ['Use `canEffect()` / `canCompute()` from `uele/reactive` to feature-detect',
+            'capabilities. Do not switch libraries while existing cells/views are live.', '',
+            '## Diff engine presets', '',
+            'All 13 installers share `api.diff(parent, oldNodes, newNodes, end)`.',
+            'The example reorders the same two DOM nodes inside an owned live region.', '',
+            'Spect, Snabbdom, Heckel, list-difference and Stage0 are dependency-free',
+            'node-identity algorithms inspired by',
+            '[js-diff-benchmark](https://github.com/luwes/js-diff-benchmark), not framework wrappers.', '']
+    for slug, name, peers, description in diffs:
+        out += [f'### `{NAME}/diffs/{slug}` - `{name}()`', '',
+                textwrap.fill(description, 72), '',
+                '```sh', install(peers), '```', '',
+                '```js', f"import {{ h, useLive }} from '{NAME}';",
+                f"import {{ {name} }} from '{NAME}/diffs/{slug}';", '',
+                f'{name}();', "const first = h('li', null, 'First');",
+                "const second = h('li', null, 'Second');",
+                'const [nodes, replace] = useLive([first, second]);', '',
+                "document.body.append(h('ul', null, nodes));",
+                'replace([second, first]);', '```', '']
+    out += ['## Complete example apps', '',
+            '[The todos](../examples/todos/) include twelve signal-library versions',
+            'and a callback-only State example. See [all examples](../examples/README.md).',
+            '[The UStor cart](../examples/ustor/README.md) demonstrates nested writes,',
+            'computed totals, keyed rows and explicit teardown without a named region helper.', '',
+            'For custom adapters, use [the authoring guide](AUTHORING.md) and',
+            '[the integration contract](ADAPTERS.md).', '']
+    (ROOT / 'docs/PRESETS.md').write_text('\n'.join(out))
+    # Keep the README inventory concise; commands and runnable code live here.
+    catalog = ['<details>', '<summary>All 19 signal presets</summary>', '',
+               'Import installers from `uele/signals/<suffix>`.', '',
+               '| Suffix → installer | Signal package |', '| --- | --- |']
+    for slug, name, peers, _ in signals:
+        catalog.append(f"| `{slug}` → `{name}()` | " + ', '.join(f'`{p}`' for p in peers) + ' |')
+    catalog += ['', '</details>']
+    path = ROOT / 'README.md'
+    readme = path.read_text()
+    readme = re.sub(r'<!-- signal-catalog:start -->[\s\S]*?<!-- signal-catalog:end -->',
+                    '<!-- signal-catalog:start -->\n' + '\n'.join(catalog) +
+                    '\n<!-- signal-catalog:end -->', readme)
+    path.write_text(readme)
+    print(f'Generated {len(signals)} signal and {len(diffs)} diff install/use recipes.')
 
 
 if __name__ == '__main__':

@@ -172,7 +172,7 @@ const Link = ({ to, children, ...props } = {}) => uele.h('a', { ...props, href: 
  * `<Router app={app} initial={…} notFound={…} />` — renders the live view
  * in place, with link interception on the wrapper.
  */
-const Router = ({ app, initial = '', notFound = null, ...props } = {}) => {
+const Router = ({ app, initial = '', notFound = null, children, ...props } = {}) => {
 	const router = useRouter(app, initial, notFound);
 	return uele.h('div', { ...props, ...router.props }, router.view, onTeardown(router.dispose));
 };

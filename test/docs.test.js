@@ -97,7 +97,7 @@ const slugs = (folder) =>
 const hooksOf = (folder, slug) => [...read(folder + '/' + slug + '.js').matchAll(/export const (\w+) =/g)].map((m) => m[1]);
 
 describe('every code snippet in the docs parses', () => {
-	const docs = ['README.md', 'docs/PRESETS.md', 'docs/ADAPTERS.md', 'docs/API.md', 'docs/HOOKS.md', 'docs/USTOR.md', 'examples/ustor/README.md'].map((p) => [p, read(p)]);
+	const docs = ['README.md', 'docs/PRESETS.md', 'docs/ADAPTERS.md', 'docs/AUTHORING.md', 'docs/ROUTER.md', 'docs/API.md', 'docs/HOOKS.md', 'docs/USTOR.md', 'examples/ustor/README.md'].map((p) => [p, read(p)]);
 
 	it.each(
 		docs.flatMap(([file, text]) =>

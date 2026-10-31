@@ -114,12 +114,17 @@ migration/coverage map is in [benchmarks/production-cutover.md](../benchmarks/pr
 
 ## HTML compatibility details
 
-Full installs the optional attrs.children property handler. Those children follow
-positional children. It runs during property iteration, so an earlier ref handler
-can run before attrs.children are appended; it does not mutate the caller's attrs.
-This differs from the old full renderer's children pre-pass. Lite retains its old
-lack of attrs.children handling; bare core also needs an explicit property plugin
-if that convention is desired. Normal positional children work in every tier.
+All three variants use positional children: `h('div', attrs, ...children)`.
+No variant installs a special `attrs.children` handler. Normal JSX remains
+supported: the JSX runtime extracts `props.children` before calling `h()`.
+Components forwarding props to a DOM element should extract children explicitly:
+
+```js
+const Box = ({ children, ...attrs }) => h('div', attrs, children);
+```
+
+Passing `children` directly in a DOM attrs object is unsupported; DOM elements
+already expose a read-only `children` collection.
 
 ## Runnable app proofs
 

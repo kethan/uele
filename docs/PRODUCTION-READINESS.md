@@ -1,4 +1,4 @@
-# Production-readiness review — 2026-10-30
+# Production-readiness review — 2026-10-31
 
 This is working-tree validation, not a publication or deployment. Run on Node 22.
 
@@ -47,9 +47,20 @@ npm run test:release
 
 The release command runs build, 100%-coverage source/core suites, built ESM/CJS suites, type tests, static audit, unchanged library/app size gates, a packed clean consumer, and Chromium. It is also the `prepublishOnly` gate. CI explicitly includes core coverage, core size and static audit.
 
-### Final clean-install results
+### Follow-up: removing the full-only children handler
 
-`npm ci` and `npm run test:release` both completed successfully:
+Removed the optional `attrs.children` handler from full. JSX and positional
+children remain supported; structured UI controls and Router explicitly consume
+component children before forwarding DOM props. The full release suite was rerun
+successfully after this change; full IIFE gzip decreased from 1,881 to 1,864 B.
+
+### Recorded clean-install results
+
+`npm ci` and `npm run test:release` both completed successfully in the recorded
+renderer-audit run below, before the later README/preset-guide rewrite. The
+latest documentation pass additionally executed all 19 signal/13 diff recipes
+and passed 2,574 source tests at 100% coverage; the older full-release counts
+below are a snapshot, not a fresh clean-install result for that docs pass:
 
 | Check | Result |
 | --- | --- |
@@ -66,8 +77,8 @@ The release command runs build, 100%-coverage source/core suites, built ESM/CJS 
 Complete tiny app gzip sizes remain **966 / 1,051 / 1,248 / 1,473 bytes** for
 hello, counter, ulive counter and ulive todo respectively. These are not size
 claims for the new **full-renderer** State demo. Core remains 975 B gzip, lite
-1,359 B gzip and full 1,881 B gzip for their previously documented artifact formats.
-The unminified full ESM artifact is 9,401 B / 3,480 B gzip. All byte counts exclude
+1,359 B gzip and full 1,864 B gzip for their previously documented artifact formats.
+The unminified full ESM artifact is 9,327 B / 3,450 B gzip. All byte counts exclude
 HTML/transport headers; see the [size methodology](../examples/size-proof/README.md).
 
 `git diff --check` is clean. There is no claim that passing tests guarantees a

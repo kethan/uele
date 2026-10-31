@@ -1,14 +1,17 @@
-import { h } from 'uele';
+import { h, useLive } from 'uele';
 import { For } from 'uele/flow';
 import { store } from 'ustor';
-import { region } from './setup.js';
 
 export const createCart = (items = []) => {
     const state = store({
         items: items.map(item => ({ ...item })),
-        get total() { return this.items.reduce((sum, item) => sum + item.price * item.quantity, 0); }
+        get total() {
+            return this.items.reduce(
+                (sum, item) => sum + item.price * item.quantity, 0
+            );
+        }
     });
-    const dom = region(h('section', { 'aria-label': 'Store cart' },
+    const content = h('section', { 'aria-label': 'Store cart' },
         h('ul', null, For({
             each: () => state.items,
             key: item => item.id,
@@ -19,7 +22,12 @@ export const createCart = (items = []) => {
             )
         })),
         h('output', { 'data-total': '' }, () => state.total.toFixed(2))
-    ));
+    );
     // Use unique, stable item IDs. Mutate returned proxies, not the raw input.
-    return { ...dom, state };
+    const [nodes, replace] = useLive(content);
+    return {
+        view: h('div', nodes),
+        dispose: () => replace(null),
+        state
+    };
 };

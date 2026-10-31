@@ -1,11 +1,11 @@
 /** @jsxImportSource uele */
 /**
- * The three snippets printed under "Authoring guides" in README.md, run exactly
- * as documented - copy-paste code must not rot.
+ * Reference fixtures for the contracts described in docs/AUTHORING.md and
+ * docs/ADAPTERS.md: custom props, signal adapters and diff engines.
  *
- * The signal library below is a 25-line stand-in for any of the eleven real
- * ones: a cell, an effect runner with dependency tracking and a computed cell.
- * The plugin and the diff engine are the ones printed in the README.
+ * The signal library below is a 25-line stand-in for the supported
+ * libraries: a cell, an effect runner with dependency tracking and a computed cell.
+ * The fixtures exercise the same plugin and diff contracts as the guides.
  *
  * @vitest-environment jsdom
  */
@@ -112,7 +112,7 @@ const useMyDiff = (target = api) => {
 
 const text = (root) => [...root.querySelectorAll('li')].map((n) => n.textContent);
 
-describe('the README authoring snippets', () => {
+describe('the advanced authoring contracts', () => {
 	beforeEach(() => {
 		document.body.innerHTML = '';
 		props.clear();

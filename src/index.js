@@ -7,7 +7,6 @@ import { createMap } from './map.js';
 import swapdom from 'swapdom/deflate';
 install(api, engine, is, get, sub);
 api.diff = swapdom;
-props.set('children', (node, value) => node.append(...add(value ?? [])));
 const map = createMap(api, r, useLive);
 export { h, r, api, add, props, useLive, map };
 export { f, lazy } from './full-helpers.js';

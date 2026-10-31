@@ -6,6 +6,10 @@ All notable changes to `uele` are documented here. The format follows
 
 ## Unreleased — breaking renderer migration
 
+- Removed the full-only `attrs.children` handler; use positional children or JSX.
+  Components forwarding DOM props must extract `children` first; structured UI
+  controls and Router now consume JSX children instead of forwarding them to DOM attrs.
+
 - Exactly three variants: `uele/core` / `uele/tiny` are aliases; `uele/lite`
   adds compact source/namespace integration; root `uele` retains the full API.
 - One renderer implementation in `src/core.js`, shared utilities, independently
