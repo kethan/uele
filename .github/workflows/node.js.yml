@@ -50,3 +50,7 @@ jobs:
             - run: sudo apt-get update && sudo apt-get install -y libnspr4 libnss3
             # real-browser pass: boots the built bundles in Chromium, axe-checked
             - run: npm run test:browser
+            # Standalone Vite starter: local checkout, development + production browser checks
+            - run: npm ci --prefix examples/vite-starter
+            - run: npm run build --prefix examples/vite-starter
+            - run: npm run test:starter
