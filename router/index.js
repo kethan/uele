@@ -161,7 +161,7 @@ export const Link = ({ to, children, ...props } = {}) => h('a', { ...props, href
  * `<Router app={app} initial={…} notFound={…} />` — renders the live view
  * in place, with link interception on the wrapper.
  */
-export const Router = ({ app, initial = '', notFound = null, ...props } = {}) => {
+export const Router = ({ app, initial = '', notFound = null, children, ...props } = {}) => {
 	const router = useRouter(app, initial, notFound);
 	return h('div', { ...props, ...router.props }, router.view, onTeardown(router.dispose));
 };

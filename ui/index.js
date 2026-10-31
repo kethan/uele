@@ -252,7 +252,7 @@ export const Slider = ({ model: cell, value, min = 0, max = 100, step = 1, onCha
 };
 
 /** star rating: `role="radiogroup"` of `role="radio"` star buttons, two-way via `model` */
-export const Rating = ({ model: cell, value, max = 5, onChange, label, ...props } = {}) => {
+export const Rating = ({ model: cell, value, max = 5, onChange, label, children, ...props } = {}) => {
 	const [current, setCurrent] = controllable(cell ?? value, 0, onChange);
 	return h('div', {
 		role: 'radiogroup', 'aria-label': label || 'Rating', ...props,
@@ -275,7 +275,7 @@ export const Rating = ({ model: cell, value, max = 5, onChange, label, ...props 
 };
 
 /** number stepper: − / input / + with clamping, two-way via `model` */
-export const NumberInput = ({ model: cell, value, min = -Infinity, max = Infinity, step = 1, onChange, ...props } = {}) => {
+export const NumberInput = ({ model: cell, value, min = -Infinity, max = Infinity, step = 1, onChange, children, ...props } = {}) => {
 	const [current, setCurrent] = controllable(cell ?? value, 0, onChange);
 	const clamp = (v) => Math.min(max, Math.max(min, v));
 	const input = h('input', {
@@ -294,7 +294,7 @@ export const NumberInput = ({ model: cell, value, min = -Infinity, max = Infinit
 };
 
 /** search input with a clear button */
-export const SearchInput = ({ model: cell, value, onInput, onSearch, placeholder = 'Search…', ...props } = {}) => {
+export const SearchInput = ({ model: cell, value, onInput, onSearch, placeholder = 'Search…', children, ...props } = {}) => {
 	const input = Input({ model: cell, value, onInput, type: 'search', placeholder, ...props });
 	const clear = h('button', {
 		type: 'button', 'aria-label': 'Clear search',
@@ -314,7 +314,7 @@ export const SearchInput = ({ model: cell, value, onInput, onSearch, placeholder
  * One-time-code / PIN input: `length` boxes, auto-advance, backspace-back,
  * paste-to-fill, `onComplete(code)` when full. Two-way via `model` (a string cell).
  */
-export const OTPInput = ({ length = 6, model: cell, value, onChange, onComplete, label, ...props } = {}) => {
+export const OTPInput = ({ length = 6, model: cell, value, onChange, onComplete, label, children, ...props } = {}) => {
 	const [code, setCode] = controllable(cell ?? value, '', onChange);
 	const inputs = [];
 	const digitsOf = () => String(code() || '').padEnd(length, '').slice(0, length).split('');
@@ -358,7 +358,7 @@ export const OTPInput = ({ length = 6, model: cell, value, onChange, onComplete,
 };
 
 /** tag/chip editor over an array cell: Enter or comma adds, × / Backspace removes */
-export const TagInput = ({ model: cell, value, placeholder = 'Add a tag…', onChange, ...props } = {}) => {
+export const TagInput = ({ model: cell, value, placeholder = 'Add a tag…', onChange, children, ...props } = {}) => {
 	const [tags, setTags] = controllable(cell ?? value, [], onChange);
 	const input = h('input', {
 		type: 'text', placeholder,
@@ -417,7 +417,7 @@ export const Dropzone = ({ onFiles, accept, multiple, children, ...props } = {})
 };
 
 /** combobox: filterable single-select over `options`, two-way via `model` */
-export const Combobox = ({ model: cell, value, options = [], placeholder = 'Select…', onChange, label, ...props } = {}) => {
+export const Combobox = ({ model: cell, value, options = [], placeholder = 'Select…', onChange, label, children, ...props } = {}) => {
 	const [current, setCurrent] = controllable(cell ?? value, '', onChange);
 	const open = own(false);
 	const query = own(val(cell ?? value) || '');
@@ -480,11 +480,11 @@ export const Center = ({ children, ...props } = {}) =>
 	h('div', { ...props, style: { display: 'flex', alignItems: 'center', justifyContent: 'center', ...props.style } }, children);
 
 /** flexible spacer (`size` pins it, otherwise it grows) */
-export const Spacer = ({ size, ...props } = {}) =>
+export const Spacer = ({ size, children, ...props } = {}) =>
 	h('div', { 'aria-hidden': 'true', ...props, style: size ? { width: size, height: size, flex: 'none' } : { flex: '1 1 auto' } });
 
 /** horizontal/vertical rule with separator semantics */
-export const Separator = ({ orientation = 'horizontal', decorative = true, ...props } = {}) =>
+export const Separator = ({ orientation = 'horizontal', decorative = true, children, ...props } = {}) =>
 	h('div', {
 		role: decorative ? undefined : 'separator',
 		'aria-orientation': decorative ? undefined : orientation,
@@ -584,13 +584,13 @@ export const Avatar = ({ src, alt, name, size = 40, fallback, children, ...props
 	}, () => initials());
 };
 
-export const Skeleton = ({ width = '100%', height = '1rem', circle, ...props } = {}) =>
+export const Skeleton = ({ width = '100%', height = '1rem', circle, children, ...props } = {}) =>
 	h('div', {
 		'aria-hidden': 'true', 'data-uele-skeleton': '', ...props,
 		style: { width, height, borderRadius: circle ? '50%' : 'var(--uele-radius, 10px)', background: 'var(--uele-surface-hover, #f1f5f9)', ...props.style }
 	});
 
-export const Spinner = ({ label = 'Loading', ...props } = {}) =>
+export const Spinner = ({ label = 'Loading', children, ...props } = {}) =>
 	h('span', {
 		role: 'status', 'aria-label': label, 'data-uele-spinner': '', ...props,
 		style: {
@@ -610,7 +610,7 @@ export const Alert = ({ tone = 'info', title, children, ...props } = {}) => {
 	}, title ? h('strong', null, title) : null, title && hasKids(children) ? ' ' : null, children);
 };
 
-export const Progress = ({ value, max = 100, label, ...props } = {}) => {
+export const Progress = ({ value, max = 100, label, children, ...props } = {}) => {
 	const pct = () => Math.min(100, Math.max(0, ((Number(val(value)) || 0) / (Number(val(max)) || 100)) * 100));
 	return h('div', {
 		role: 'progressbar', 'aria-label': label || 'Progress',
@@ -682,7 +682,7 @@ export const Breadcrumb = ({ items, separator = '/', children, ...props } = {}) 
  * Pagination bar: `page`/`model` cell (or `defaultPage`), either `totalPages`
  * or `total` + `pageSize`, `siblingCount` around the current page, `onChange`.
  */
-export const Pagination = ({ page, model: modelProp, defaultPage = 1, totalPages, total, pageSize = 10, siblingCount = 1, onChange, ...props } = {}) => {
+export const Pagination = ({ page, model: modelProp, defaultPage = 1, totalPages, total, pageSize = 10, siblingCount = 1, onChange, children, ...props } = {}) => {
 	const [current, setCurrent] = controllable(modelProp ?? page, defaultPage, onChange);
 	const pages = () => {
 		if (totalPages !== undefined) return Math.max(1, Number(val(totalPages)) || 1);
@@ -1160,7 +1160,7 @@ export const ToggleGroup = ({ model: cell, value, type = 'single', options, defa
 };
 
 /** segmented control: a radiogroup rendered as one joined pill bar */
-export const SegmentedControl = ({ model: cell, value, options = [], defaultValue, onChange, label, ...props } = {}) => {
+export const SegmentedControl = ({ model: cell, value, options = [], defaultValue, onChange, label, children, ...props } = {}) => {
 	const [current, setCurrent] = controllable(cell ?? value, defaultValue ?? (typeof options[0] === 'object' ? options[0]?.value : options[0]), onChange);
 	return h('div', {
 		role: 'radiogroup', 'aria-label': label, 'data-uele-segmented': '', ...props,
@@ -1198,7 +1198,7 @@ export const SkipLink = ({ href = '#main', children, ...props } = {}) => {
 
 const STATUS_COLORS = { online: '#22c55e', away: '#f59e0b', busy: '#ef4444', offline: '#94a3b8' };
 /** presence dot with an accessible label */
-export const StatusDot = ({ status = 'online', label, ...props } = {}) =>
+export const StatusDot = ({ status = 'online', label, children, ...props } = {}) =>
 	h('span', {
 		role: 'status', 'aria-label': label || status, 'data-status': status, ...props,
 		style: { display: 'inline-block', width: '0.625rem', height: '0.625rem', borderRadius: '50%', background: STATUS_COLORS[status] || STATUS_COLORS.offline, ...props.style }
@@ -1225,7 +1225,7 @@ export const InputGroup = ({ prefix, suffix, children, ...props } = {}) =>
 		suffix != null ? h('span', { 'data-addon': 'suffix', style: { display: 'inline-flex', alignItems: 'center', padding: '0 0.625rem', background: 'var(--uele-surface-hover, #f8fafc)', color: 'var(--uele-text-muted, #64748b)' } }, suffix) : null);
 
 /** password field with a show/hide toggle and an optional strength meter */
-export const PasswordInput = ({ model: cell, value, showStrength, onChange, ...props } = {}) => {
+export const PasswordInput = ({ model: cell, value, showStrength, onChange, children, ...props } = {}) => {
 	const visible = own(false);
 	const [current, setCurrent] = controllable(cell ?? value, '', onChange);
 	const strength = () => {
@@ -1258,7 +1258,7 @@ export const PasswordInput = ({ model: cell, value, showStrength, onChange, ...p
 };
 
 /** copy-to-clipboard button with transient "Copied" feedback */
-export const CopyButton = ({ text, label = 'Copy', copiedLabel = 'Copied', ...props } = {}) => {
+export const CopyButton = ({ text, label = 'Copy', copiedLabel = 'Copied', children, ...props } = {}) => {
 	const copied = own(false);
 	let timer = null, dead = false;
 	return h('button', {
@@ -1285,7 +1285,7 @@ export const CopyButton = ({ text, label = 'Copy', copiedLabel = 'Copied', ...pr
 };
 
 /** colour picker: native swatch input + hex text + preset swatches, two-way via `model` */
-export const ColorPicker = ({ model: cell, value, swatches = ['#2563eb', '#059669', '#e11d48', '#d97706', '#7c3aed', '#0f172a'], onChange, ...props } = {}) => {
+export const ColorPicker = ({ model: cell, value, swatches = ['#2563eb', '#059669', '#e11d48', '#d97706', '#7c3aed', '#0f172a'], onChange, children, ...props } = {}) => {
 	const [current, setCurrent] = controllable(cell ?? value, '#2563eb', onChange);
 	return h('div', { 'data-uele-color': '', ...props, style: { display: 'inline-flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', ...props.style } },
 		h('input', { type: 'color', 'aria-label': 'Pick a colour', value: () => current(), onInput: (e) => setCurrent(e.target.value), style: { width: '2.5rem', height: '2.5rem', padding: 0, border: 'none', background: 'none', cursor: 'pointer' } }),
@@ -1298,7 +1298,7 @@ export const ColorPicker = ({ model: cell, value, swatches = ['#2563eb', '#05966
 };
 
 /** custom listbox (the non-native Select): click or ArrowKeys + Enter to choose */
-export const Listbox = ({ model: cell, value, options = [], label, onChange, ...props } = {}) => {
+export const Listbox = ({ model: cell, value, options = [], label, onChange, children, ...props } = {}) => {
 	const [current, setCurrent] = controllable(cell ?? value, undefined, onChange);
 	const active = own(0);
 	const opts = () => (val(options) || []).map((o) => (typeof o === 'object' ? o : { value: o, label: o }));
@@ -1323,7 +1323,7 @@ export const Listbox = ({ model: cell, value, options = [], label, onChange, ...
 };
 
 /** multi-select dropdown: checkbox list + chips/count summary, array model */
-export const MultiSelect = ({ model: cell, value, options = [], placeholder = 'Select…', label, onChange, ...props } = {}) => {
+export const MultiSelect = ({ model: cell, value, options = [], placeholder = 'Select…', label, onChange, children, ...props } = {}) => {
 	const [current, setCurrent] = controllable(cell ?? value, [], onChange);
 	const open = own(false);
 	const opts = () => (val(options) || []).map((o) => (typeof o === 'object' ? o : { value: o, label: o }));
@@ -1373,7 +1373,7 @@ const sameDay = (a, b) => a && b && a.getFullYear() === b.getFullYear() && a.get
  * Month calendar: `model` holds a Date or an ISO `yyyy-mm-dd` string (the
  * written type follows the held type), `onChange(date, iso)`, `min`/`max` clamp.
  */
-export const Calendar = ({ model: cell, value, defaultValue, onChange, min, max, weekStartsOn = 0, ...props } = {}) => {
+export const Calendar = ({ model: cell, value, defaultValue, onChange, min, max, weekStartsOn = 0, children, ...props } = {}) => {
 	const [current, setCurrent] = controllable(cell ?? value, defaultValue ?? null);
 	const initial = parseDateValue(current()) || new Date();
 	const cursor = own(new Date(initial.getFullYear(), initial.getMonth(), 1));
@@ -1420,7 +1420,7 @@ export const Calendar = ({ model: cell, value, defaultValue, onChange, min, max,
 };
 
 /** date input + calendar popover; `model` is an ISO `yyyy-mm-dd` string cell */
-export const DatePicker = ({ model: cell, value, placeholder = 'Pick a date', label, onChange, ...props } = {}) => {
+export const DatePicker = ({ model: cell, value, placeholder = 'Pick a date', label, onChange, children, ...props } = {}) => {
 	const [current, setCurrent] = controllable(cell ?? value, '', onChange);
 	const open = own(false);
 	const input = h('input', {
@@ -1455,7 +1455,7 @@ const relativeParts = (diffMs) => {
 	return [Math.floor(months / 12), 'year'];
 };
 /** live "3 minutes ago" text; re-renders every `interval` ms (span, `dateTime` on hover via title) */
-export const TimeAgo = ({ date, value, interval = 30000, ...props } = {}) => {
+export const TimeAgo = ({ date, value, interval = 30000, children, ...props } = {}) => {
 	const tick = own(Date.now());
 	let timer = null;
 	if (interval != null && typeof setInterval !== 'undefined') timer = setInterval(() => write(tick, Date.now()), interval);
@@ -1475,7 +1475,7 @@ export const TimeAgo = ({ date, value, interval = 30000, ...props } = {}) => {
 };
 
 /** ticking countdown to a date (or from `seconds`), `onComplete` at zero; renders `hh:mm:ss` */
-export const CountdownTimer = ({ to, seconds, onComplete, ...props } = {}) => {
+export const CountdownTimer = ({ to, seconds, onComplete, children, ...props } = {}) => {
 	const tick = own(Date.now());
 	const done = own(false);
 	const target = to != null ? parseDateValue(val(to))?.getTime() : null;
@@ -1506,7 +1506,7 @@ export const CountdownTimer = ({ to, seconds, onComplete, ...props } = {}) => {
  * Sortable data table: `columns={[{key,label,sortable,render}]}`, rows from
  * `data` (array or cell), `pageSize` adds the Pagination bar, `onRowClick`.
  */
-export const DataTable = ({ columns = [], data, rows, pageSize, empty = 'No rows', onRowClick, ...props } = {}) => {
+export const DataTable = ({ columns = [], data, rows, pageSize, empty = 'No rows', onRowClick, children, ...props } = {}) => {
 	const sort = own({ key: null, dir: 1 });
 	const page = own(1);
 	const all = () => val(data ?? rows) || [];
@@ -1547,7 +1547,7 @@ export const DataTable = ({ columns = [], data, rows, pageSize, empty = 'No rows
 };
 
 /** expandable tree: `items={[{label,value,children}]}`, `model` = selected value, `defaultExpanded` values */
-export const Tree = ({ items, model: cell, value, defaultExpanded = [], onSelect, ...props } = {}) => {
+export const Tree = ({ items, model: cell, value, defaultExpanded = [], onSelect, children, ...props } = {}) => {
 	const [selected, setSelected] = controllable(cell ?? value, undefined, onSelect);
 	const expanded = own(new Set(defaultExpanded));
 	const toggleExpand = (v) => {
@@ -1576,7 +1576,7 @@ export const Tree = ({ items, model: cell, value, defaultExpanded = [], onSelect
  * Windowed list for very long data: only the visible slice (+ overscan) is
  * in the DOM. `items` array/cell, fixed `itemHeight`, `renderItem(item, i)`.
  */
-export const VirtualList = ({ items, itemHeight = 32, height = 320, overscan = 3, renderItem, ...props } = {}) => {
+export const VirtualList = ({ items, itemHeight = 32, height = 320, overscan = 3, renderItem, children, ...props } = {}) => {
 	const scrollTop = own(0);
 	const list = () => val(items) || [];
 	// `height` may be a CSS px string ('320px'); the windowing math needs a number (fallback: the 320 default)
@@ -1629,7 +1629,7 @@ export const InfiniteScroll = ({ onLoadMore, loading, hasMore = true, children, 
  * navigation. Controlled via `model`/`open` or opened by its `trigger`.
  * `items={[{label, hint, keywords, onSelect}]}`.
  */
-export const CommandPalette = ({ open, model: modelProp, defaultOpen = false, trigger, items = [], placeholder = 'Type a command or search…', onSelect, onOpenChange, ...props } = {}) => {
+export const CommandPalette = ({ open, model: modelProp, defaultOpen = false, trigger, items = [], placeholder = 'Type a command or search…', onSelect, onOpenChange, children, ...props } = {}) => {
 	const source = modelProp ?? open;
 	const controlledCell = isCell(source) ? source : null;
 	// a plain boolean `open`/`model` seeds the state (props are mount-time here); a cell stays controlled
@@ -1725,7 +1725,7 @@ export const ContextMenu = ({ items = [], onSelect, children, ...props } = {}) =
 };
 
 /** site navigation with dropdown panels: `items={[{label, href, content | links:[{label,href}]}]` */
-export const NavigationMenu = ({ items = [], ...props } = {}) => {
+export const NavigationMenu = ({ items = [], children, ...props } = {}) => {
 	const open = own('');
 	return h('nav', { 'aria-label': 'Main', 'data-uele-nav-menu': '', ...props, onmouseleave: () => write(open, '') },
 		h('ul', { style: { display: 'flex', gap: '0.25rem', listStyle: 'none', margin: 0, padding: 0 } },
@@ -1812,7 +1812,7 @@ export const SplitPane = ({ first, second, children, direction = 'horizontal', m
 };
 
 /** click-to-edit inline text: Enter/blur commits, Escape cancels */
-export const Editable = ({ model: cell, value, placeholder = 'Click to edit', onChange, label, ...props } = {}) => {
+export const Editable = ({ model: cell, value, placeholder = 'Click to edit', onChange, label, children, ...props } = {}) => {
 	const [current, setCurrent] = controllable(cell ?? value, '', onChange);
 	const editing = own(false);
 	let draft = '';
@@ -1844,7 +1844,7 @@ export const Editable = ({ model: cell, value, placeholder = 'Click to edit', on
 };
 
 /** thumbnail gallery with a lightbox viewer (prev/next/close, Escape closes) */
-export const Lightbox = ({ images = [], ...props } = {}) => {
+export const Lightbox = ({ images = [], children, ...props } = {}) => {
 	const list = () => (val(images) || []).map((img) => (typeof img === 'string' ? { src: img, alt: '' } : img));
 	const open = own(false);
 	const index = own(0);
@@ -1890,7 +1890,7 @@ const formatBytes = (bytes) => {
 	return `${n.toFixed(i ? 1 : 0)} ${units[i]}`;
 };
 /** uploaded-file list with progress + status + remove: `files={[{name,size,progress,status}]}` */
-export const FileList = ({ files, onRemove, ...props } = {}) =>
+export const FileList = ({ files, onRemove, children, ...props } = {}) =>
 	h('ul', { 'data-uele-file-list': '', ...props, style: { listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem', ...props.style } },
 		() => (val(files) || []).map((file, i) => h('li', {
 			'data-file': file.name, 'data-status': file.status || 'done',
@@ -1906,7 +1906,7 @@ export const FileList = ({ files, onRemove, ...props } = {}) =>
 			onRemove ? h('button', { type: 'button', 'aria-label': `Remove ${file.name}`, onclick: () => onRemove(file, i) }, '×') : null)));
 
 /** multi-step wizard: Stepper header + panel + Back/Next/Finish over `steps={[{label,content}]}` */
-export const Wizard = ({ steps = [], model: cell, defaultStep = 0, onChange, onFinish, finishLabel = 'Finish', ...props } = {}) => {
+export const Wizard = ({ steps = [], model: cell, defaultStep = 0, onChange, onFinish, finishLabel = 'Finish', children, ...props } = {}) => {
 	const [step, setStep] = controllable(cell, defaultStep, onChange);
 	const list = val(steps) || [];
 	const last = list.length - 1;

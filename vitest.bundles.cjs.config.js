@@ -37,8 +37,8 @@ export default defineConfig({
 			// uele's own, which are signature-compatible.
 			{ find: /^react\/jsx-dev-runtime$/, replacement: src('./test/helpers/cjs-jsx-dev-runtime.js') },
 			{ find: /^react\/jsx-runtime$/, replacement: src('./test/helpers/cjs-jsx-runtime.js') },
-			{ find: /^ele\/jsx-runtime$/, replacement: src('./test/helpers/cjs-jsx-runtime.js') },
-			{ find: /^ele\/jsx-dev-runtime$/, replacement: src('./test/helpers/cjs-jsx-dev-runtime.js') },
+			{ find: /^uele\/jsx-runtime$/, replacement: src('./test/helpers/cjs-jsx-runtime.js') },
+			{ find: /^uele\/jsx-dev-runtime$/, replacement: src('./test/helpers/cjs-jsx-dev-runtime.js') },
 			// one native-require instance for the package and its api (see test/helpers/cjs-ele.js)
 			{ find: /^uele\/lite$/, replacement: src('./test/helpers/cjs-lite.js') },
             { find: /^uele$/, replacement: src('./test/helpers/cjs-ele.js') },
@@ -62,7 +62,7 @@ export default defineConfig({
 		// is not enough on a slower or loaded machine
 		testTimeout: 30000,
 		include: [
-			'test/simple-state.test.js', 'test/default-diff.test.js', 'test/source-lifecycle.test.js', 'test/flow.stress.test.js',
+			'test/readme.test.jsx', 'test/simple-state.test.js', 'test/default-diff.test.js', 'test/source-lifecycle.test.js', 'test/flow.stress.test.js',
             'test/h.test.js', 'test/r.test.js', 'test/map.test.js', 'test/for.test.js',
 			'test/dom.test.js', 'test/dom.cleanup.test.js', 'test/components.test.js',
 			'test/realtime.test.js', 'test/props.test.js', 'test/lite.test.js',
