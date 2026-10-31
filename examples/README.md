@@ -1,5 +1,13 @@
 # Examples
 
+## Vite starter — start here
+
+[`vite-starter/`](vite-starter/README.md) is a complete Vite 8 + JavaScript/JSX
+app with full uele and Preact Signals. It includes a responsive todo UI,
+keyed lists, derived counts, filtering, keyboard controls and HMR cleanup.
+Follow its checkout/build instructions before starting the dev server.
+
+
 ## todos — your dead-simple State (no signal package)
 
 [`todos/state.js`](todos/state.js) uses the exact getter/setter/subscriber function in

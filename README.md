@@ -14,6 +14,13 @@ npm install uele
 Examples below use JavaScript modules with a bundler and a browser DOM.
 JSX examples also need an automatic JSX transform.
 
+## Vite starter
+
+Want a complete app to edit? Start with the
+[Vite + JSX starter](examples/vite-starter/README.md): full uele, Preact
+Signals, a responsive todo app, and working dev/build/preview commands.
+No React plugin or additional state layer is needed.
+
 ## Quick start
 
 No signal library or JSX is needed for this counter:

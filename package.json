@@ -220,7 +220,9 @@
     "size:apps": "node scripts/check-app-size.mjs",
     "test:flow": "vitest run test/map.test.js test/for.test.js test/components.test.js test/flow.test.jsx test/flow.stress.test.js test/ownership.test.js test/diff.conformance.test.js test/diff.transitions.test.js",
     "audit:release": "node scripts/audit-release.mjs",
-    "test:release": "npm run build && npm run test:coverage && npm run test:core && npm run test:bundles && npm run test:types && npm run audit:release && npm run size && npm run size:apps && npm run size:core && npm run test:pack && npm run test:browser"
+    "test:release": "npm run build && npm run test:coverage && npm run test:core && npm run test:bundles && npm run test:types && npm run audit:release && npm run size && npm run size:apps && npm run size:core && npm run test:pack && npm run test:browser",
+    "pretest:starter": "node scripts/ensure-browser.mjs",
+    "test:starter": "playwright test --config playwright.starter.config.js"
   },
   "files": [
     "dist",
